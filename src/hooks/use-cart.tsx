@@ -1,8 +1,8 @@
-
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/integrations/supabase/client';
+import { Json } from '@/integrations/supabase/types';
 
 export interface Product {
   id: string;
@@ -132,8 +132,9 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
             .single();
           
           if (!error && data && data.cart_data) {
-            // Se encontrar um carrinho salvo, carregá-lo
-            dispatch({ type: 'LOAD_CART', payload: data.cart_data as CartState });
+            // Fix for TS2352: Convert to unknown first, then to CartState
+            const cartData = data.cart_data as unknown as CartState;
+            dispatch({ type: 'LOAD_CART', payload: cartData });
             console.log("Carrinho carregado do banco de dados para o usuário:", user.id);
           } else {
             // Verificar se existe carrinho no localStorage e salvá-lo no banco de dados
@@ -158,11 +159,12 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   // Função para salvar o carrinho no banco de dados
   const saveCartToDatabase = async (userId: string, cartData: CartState) => {
     try {
+      // Fix for TS2769: Convert CartState to Json type for Supabase
       const { error } = await supabase
         .from('user_carts')
         .upsert({
           user_id: userId,
-          cart_data: cartData,
+          cart_data: cartData as unknown as Json,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id'
