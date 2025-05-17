@@ -15,14 +15,24 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { host, port, user, password, from_email, from_name, to_email } = await req.json();
+    const body = await req.json();
+    const { host, port, user, password, from_email, from_name, to_email } = body;
+    
+    console.log("SMTP Test request received with params:", { 
+      host, 
+      port, 
+      user, 
+      from_email, 
+      from_name, 
+      to_email 
+    });
     
     if (!host || !port || !user || !password || !from_email || !to_email) {
-      throw new Error("Todos os campos são obrigatórios");
+      throw new Error("Todos os campos obrigatórios devem ser preenchidos");
     }
     
-    // Create SMTP client
-    const client = new SMTPClient({
+    // Create SMTP client configuration
+    const clientConfig = {
       connection: {
         hostname: host,
         port: parseInt(port),
@@ -32,8 +42,15 @@ serve(async (req: Request) => {
           password: password,
         },
       },
-    });
+    };
+    
+    console.log("Creating SMTP client with config:", clientConfig);
+    
+    // Create SMTP client
+    const client = new SMTPClient(clientConfig);
 
+    console.log("SMTP client created, attempting to send test email...");
+    
     // Send test email
     await client.send({
       from: `${from_name || "Sistema"} <${from_email}>`,
@@ -51,6 +68,9 @@ serve(async (req: Request) => {
       `,
     });
 
+    console.log("Test email sent successfully");
+    
+    // Close connection
     await client.close();
     
     return new Response(
@@ -71,10 +91,11 @@ serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: false,
-        message: error.message || "Erro ao enviar email de teste.",
+        message: `Erro ao testar SMTP: ${error.message || "Erro desconhecido"}`,
+        error: error.toString(),
       }),
       {
-        status: 400,
+        status: 200, // Mudando de 400 para 200 para que não seja tratado como erro HTTP
         headers: {
           "Content-Type": "application/json",
           ...corsHeaders,

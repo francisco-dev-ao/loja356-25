@@ -256,7 +256,7 @@ const CompanySettings = () => {
   const handleTestSmtp = async () => {
     setTestingSmtp(true);
     try {
-      const { data, error } = await supabase.functions.invoke('test-smtp', {
+      const response = await supabase.functions.invoke('test-smtp', {
         body: {
           host: settings.smtp_host,
           port: settings.smtp_port,
@@ -268,7 +268,13 @@ const CompanySettings = () => {
         }
       });
       
-      if (error) throw new Error(error.message);
+      if (response.error) throw new Error(response.error.message);
+      
+      const data = response.data;
+      
+      if (!data.success) {
+        throw new Error(data.message || 'Falha no teste de conexão');
+      }
       
       toast.success('Teste de email enviado com sucesso!');
     } catch (error: any) {
