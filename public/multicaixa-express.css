@@ -1,0 +1,48 @@
+
+/* MulticaixaExpress custom styling */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.payment-container {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.payment-title {
+  color: #0078d4;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.payment-form {
+  background-color: #f8f8f8;
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.input-field {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+.submit-button {
+  background-color: #0078d4;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.submit-button:hover {
+  background-color: #0056a3;
+}

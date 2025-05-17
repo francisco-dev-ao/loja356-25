@@ -23,11 +23,16 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
   const { user } = useAuth();
   const { clearCart } = useCart();
 
+  // Generate a unique reference ID based on order ID
+  const generateReference = () => {
+    return `${orderId}-AH-${Math.random().toString(36).substring(2, 15).toUpperCase()}`;
+  };
+
   // Listen for messages from the iframe
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      // Verify origin for security (should match EMIS domain in production)
-      const allowedOrigins = ['https://multicaixaexpress.co.ao', 'https://test.multicaixaexpress.co.ao'];
+      // Verify origin for security (EMIS domain in production)
+      const allowedOrigins = ['https://pagamentonline.emis.co.ao', 'https://test-mcx.emis.co.ao'];
       
       if (!allowedOrigins.includes(event.origin)) {
         console.log('Received message from unauthorized origin:', event.origin);
@@ -36,7 +41,7 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
       
       try {
         // Handle payment success message from EMIS iframe
-        if (event.data && event.data.status === 'payment_success') {
+        if (event.data && event.data.status === 'ACCEPTED') {
           toast.success('Pagamento efetuado com sucesso!');
           
           // Update order status in the database
@@ -50,7 +55,7 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
         }
         
         // Handle payment failure message from EMIS iframe
-        if (event.data && event.data.status === 'payment_failed') {
+        if (event.data && event.data.status === 'DECLINED') {
           toast.error('Falha no pagamento. Por favor, tente novamente.');
           setIsProcessing(false);
           setShowIframe(false);
@@ -107,11 +112,18 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
     setIsProcessing(true);
     
     try {
-      // In a real production environment, this would be an API call to your backend
-      // that would generate a payment session with EMIS and return the payment URL
+      // Generate payment reference
+      const reference = generateReference();
       
-      // For now, we'll simulate getting a payment URL from a backend
-      const emisPaymentUrl = generatePaymentUrl(amount, orderId);
+      // Create EMIS payment session
+      const emisPaymentUrl = await createEmisSession(amount, reference);
+      
+      if (!emisPaymentUrl) {
+        throw new Error('Falha ao gerar sessão de pagamento');
+      }
+      
+      // Store reference in local storage (similar to PHP session)
+      localStorage.setItem(`refer_rce_${orderId}`, reference);
       
       // Show the iframe and set its source to the payment URL
       setShowIframe(true);
@@ -125,20 +137,59 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
     }
   };
   
-  // Helper function to generate the payment URL
-  // In production, this would come from your backend after registering the payment with EMIS
-  const generatePaymentUrl = (amount: number, orderId: string) => {
-    // In production, replace with the actual EMIS payment URL
-    const baseUrl = "https://multicaixaexpress.co.ao/payment";
-    
-    // Add relevant parameters
-    const url = new URL(baseUrl);
-    url.searchParams.append("amount", amount.toString());
-    url.searchParams.append("orderId", orderId);
-    url.searchParams.append("merchantId", "YOUR_MERCHANT_ID"); // Replace with your merchant ID in production
-    url.searchParams.append("returnUrl", window.location.origin + "/checkout/success");
-    
-    return url.toString();
+  // Create EMIS payment session
+  const createEmisSession = async (amount: number, reference: string): Promise<string> => {
+    try {
+      // These would be your production values from EMIS
+      const frameToken = "YOUR_FRAME_TOKEN"; // Replace with actual token from EMIS
+      const callbackUrl = window.location.origin + "/api/payment-callback";
+      const cssUrl = window.location.origin + "/multicaixa-express.css";
+      
+      // In a real production app, this should be an API call to your backend
+      // that would make the secure request to EMIS API
+      
+      // For now, we'll build the payment URL directly
+      // IMPORTANT: In production, this should be done server-side for security
+      const emisBaseUrl = "https://pagamentonline.emis.co.ao/online-payment-gateway/portal/frame";
+      
+      // URL parameters for EMIS payment page
+      const params = new URLSearchParams({
+        reference: reference,
+        amount: amount.toString(),
+        token: frameToken,
+        mobile: 'PAYMENT',
+        card: 'DISABLED',
+        qrCode: 'PAYMENT',
+        cssUrl: cssUrl,
+        callbackUrl: callbackUrl,
+      });
+      
+      return `${emisBaseUrl}?${params.toString()}`;
+    } catch (error) {
+      console.error('Error creating EMIS session:', error);
+      return '';
+    }
+  };
+
+  // Function to verify payment status
+  const checkPaymentStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('status, payment_status')
+        .eq('id', orderId)
+        .single();
+      
+      if (error) throw error;
+      
+      if (data && data.payment_status === 'paid') {
+        toast.success('Pagamento confirmado!');
+        clearCart();
+        navigate(`/checkout/success?orderId=${orderId}`);
+      }
+    } catch (error) {
+      console.error('Error checking payment status:', error);
+    }
   };
 
   if (!orderId) {
@@ -160,14 +211,14 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
       
       {showIframe ? (
         <div className={`transition-all duration-300 ${iframeLoaded ? 'opacity-100' : 'opacity-40'}`}>
-          <div className="bg-gray-50 p-4 rounded-lg mb-4">
-            <p className="text-sm text-center text-gray-500 mb-2">Carregando página de pagamento segura...</p>
-            {!iframeLoaded && (
+          {!iframeLoaded && (
+            <div className="bg-gray-50 p-4 rounded-lg mb-4">
+              <p className="text-sm text-center text-gray-500 mb-2">Carregando página de pagamento segura...</p>
               <div className="flex justify-center">
                 <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
           <iframe
             ref={iframeRef}
             onLoad={handleIframeLoad}
