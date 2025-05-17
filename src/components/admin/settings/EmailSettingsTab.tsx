@@ -3,12 +3,14 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSettings } from './SettingsContext';
 
 const EmailSettingsTab = () => {
   const { 
     settings, 
     handleInputChange, 
+    handleSelectChange,
     saving, 
     testingSmtp, 
     handleSaveSettings, 
@@ -102,6 +104,28 @@ const EmailSettingsTab = () => {
                 className="mt-1"
                 placeholder="Minha Empresa"
               />
+            </label>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              Segurança da Conexão
+              <Select 
+                name="smtp_secure" 
+                value={settings.smtp_secure?.toString() || 'true'} 
+                onValueChange={(value) => handleSelectChange('smtp_secure', value)}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Selecionar tipo de conexão" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">SSL/TLS</SelectItem>
+                  <SelectItem value="false">Sem criptografia</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Use SSL/TLS para conexões seguras (recomendado).
+              </p>
             </label>
           </div>
         </div>

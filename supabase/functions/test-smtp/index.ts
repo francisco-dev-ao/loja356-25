@@ -16,7 +16,7 @@ serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    const { host, port, user, password, from_email, from_name, to_email } = body;
+    const { host, port, user, password, from_email, from_name, to_email, secure = true } = body;
     
     console.log("SMTP Test request received with params:", { 
       host, 
@@ -24,7 +24,8 @@ serve(async (req: Request) => {
       user, 
       from_email, 
       from_name, 
-      to_email 
+      to_email,
+      secure
     });
     
     if (!host || !port || !user || !password || !from_email || !to_email) {
@@ -36,7 +37,7 @@ serve(async (req: Request) => {
       connection: {
         hostname: host,
         port: parseInt(port),
-        tls: true,
+        tls: secure === true || secure === "true", // Convert to boolean
         auth: {
           username: user,
           password: password,

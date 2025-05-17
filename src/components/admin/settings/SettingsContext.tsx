@@ -19,6 +19,7 @@ export type CompanySettings = {
   smtp_password: string | null;
   smtp_from_email: string | null;
   smtp_from_name: string | null;
+  smtp_secure: boolean | null;
   currency_locale: string;
   currency_code: string;
   currency_min_digits: number;
@@ -43,6 +44,7 @@ export const defaultSettings: CompanySettings = {
   smtp_password: '',
   smtp_from_email: '',
   smtp_from_name: '',
+  smtp_secure: true,
   currency_locale: 'pt-AO',
   currency_code: 'AOA',
   currency_min_digits: 2,
@@ -127,6 +129,7 @@ type SettingsContextType = {
   testingSmtp: boolean;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   handleNumberInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleSelectChange: (name: string, value: string) => void;
   handleSaveSettings: () => Promise<void>;
   handleTestSmtp: () => Promise<void>;
 };
@@ -205,6 +208,13 @@ export const SettingsProvider: React.FC<{children: React.ReactNode}> = ({ childr
       [name]: parseInt(value) || 0
     }));
   };
+
+  const handleSelectChange = (name: string, value: string) => {
+    setSettings(prev => ({
+      ...prev,
+      [name]: value === 'true'
+    }));
+  };
   
   const handleSaveSettings = async () => {
     setSaving(true);
@@ -224,6 +234,7 @@ export const SettingsProvider: React.FC<{children: React.ReactNode}> = ({ childr
         smtp_password: settings.smtp_password,
         smtp_from_email: settings.smtp_from_email,
         smtp_from_name: settings.smtp_from_name,
+        smtp_secure: settings.smtp_secure,
         currency_locale: settings.currency_locale,
         currency_code: settings.currency_code,
         currency_min_digits: settings.currency_min_digits,
@@ -288,6 +299,7 @@ export const SettingsProvider: React.FC<{children: React.ReactNode}> = ({ childr
           from_email: settings.smtp_from_email,
           from_name: settings.smtp_from_name,
           to_email: settings.email, // Send test email to company email
+          secure: settings.smtp_secure
         }
       });
       
@@ -322,6 +334,7 @@ export const SettingsProvider: React.FC<{children: React.ReactNode}> = ({ childr
     testingSmtp,
     handleInputChange,
     handleNumberInputChange,
+    handleSelectChange,
     handleSaveSettings,
     handleTestSmtp
   };

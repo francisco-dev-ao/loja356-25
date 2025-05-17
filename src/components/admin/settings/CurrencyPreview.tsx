@@ -6,6 +6,7 @@ import { useSettings } from './SettingsContext';
 const CurrencyPreview = () => {
   const { settings } = useSettings();
   const [previewAmount, setPreviewAmount] = useState(1000);
+  const [inputValue, setInputValue] = useState('1.000,00');
   const [formattedPreview, setFormattedPreview] = useState('');
   
   useEffect(() => {
@@ -25,39 +26,32 @@ const CurrencyPreview = () => {
     }
   }, [settings.currency_locale, settings.currency_code, settings.currency_min_digits, settings.currency_max_digits, previewAmount]);
 
+  useEffect(() => {
+    // Update input value when previewAmount changes
+    setInputValue(formatInputValue(previewAmount));
+  }, [previewAmount]);
+
   const handlePreviewAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value;
+    const newValue = e.target.value;
+    setInputValue(newValue);
     
-    // Permitir tanto vírgulas quanto pontos como separadores
-    // Primeiro removemos todos os pontos e substituímos vírgulas por pontos para o parseFloat
-    const cleanedValue = rawValue.replace(/\./g, '').replace(',', '.');
+    // Remove all dots and replace commas with dots for numerical conversion
+    const cleanedValue = newValue.replace(/\./g, '').replace(',', '.');
     const numValue = parseFloat(cleanedValue);
     
     if (!isNaN(numValue)) {
       setPreviewAmount(numValue);
-    } else if (rawValue === '' || rawValue === '.' || rawValue === ',') {
-      // Allow empty input or just a decimal separator
-      setPreviewAmount(0);
     }
   };
   
   // Função para formatar o valor com separadores de milhares para exibição
   const formatInputValue = (value: number): string => {
-    // Converte para string com , como separador decimal
-    const valueStr = value.toString().replace('.', ',');
+    if (isNaN(value)) return '';
     
-    // Se não houver parte decimal, adiciona ,00
-    if (!valueStr.includes(',')) {
-      return valueStr + ',00';
-    }
-    
-    // Se a parte decimal tiver apenas um dígito, adiciona outro zero
-    const parts = valueStr.split(',');
-    if (parts[1] && parts[1].length === 1) {
-      return parts[0] + ',' + parts[1] + '0';
-    }
-    
-    return valueStr;
+    // Converte para string usando formatação brasileira/portuguesa
+    const parts = value.toFixed(2).split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return parts.join(',');
   };
   
   return (
@@ -67,7 +61,7 @@ const CurrencyPreview = () => {
         <div className="flex-grow">
           <Input
             type="text"
-            value={formatInputValue(previewAmount)}
+            value={inputValue}
             onChange={handlePreviewAmountChange}
             placeholder="Valor (ex: 1.000,00)"
           />
