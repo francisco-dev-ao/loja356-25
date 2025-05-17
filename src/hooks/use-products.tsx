@@ -37,11 +37,12 @@ export const useProducts = (category?: string) => {
       throw new Error('Failed to fetch products');
     }
     
-    // Initialize quantity for all products
+    // Initialize quantity for all products and handle discount_type properly
     return (data || []).map(item => ({
       ...item,
+      discount_type: item.discount_type as 'percentage' | 'fixed' | null,
       quantity: 1  // Default quantity to 1 for compatibility with cart
-    })) as unknown as Product[];
+    })) as Product[];
   };
 
   return useQuery({

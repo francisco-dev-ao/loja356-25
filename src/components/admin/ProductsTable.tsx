@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -397,14 +396,14 @@ const ProductsTable = () => {
               <label className="text-sm font-medium">
                 Tipo de Desconto
                 <Select 
-                  value={currentProduct.discount_type || ''} 
+                  value={currentProduct.discount_type || 'none'} 
                   onValueChange={handleDiscountTypeChange}
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Selecione o tipo de desconto" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Sem desconto</SelectItem>
+                    <SelectItem value="none">Sem desconto</SelectItem>
                     <SelectItem value="percentage">Percentual (%)</SelectItem>
                     <SelectItem value="fixed">Valor Fixo (kz)</SelectItem>
                   </SelectContent>
