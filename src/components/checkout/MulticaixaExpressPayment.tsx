@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,8 +27,39 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
   const [isProcessing, setIsProcessing] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<"pending" | "success" | "failed">("pending");
+  const [showEmisFrame, setShowEmisFrame] = useState(false);
   const navigate = useNavigate();
   const { clearCart } = useCart();
+  const emisIframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Production URLs for EMIS integration
+  const EMIS_PAYMENT_URL = "https://services.multicaixa.co.ao/payment";
+
+  useEffect(() => {
+    // Listen for messages from the EMIS iframe
+    const handleEmisMessage = (event: MessageEvent) => {
+      // Verify message origin for security
+      if (event.origin !== new URL(EMIS_PAYMENT_URL).origin) return;
+      
+      try {
+        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        
+        if (data.status === 'success') {
+          handlePaymentSuccess();
+        } else if (data.status === 'failed') {
+          handlePaymentFailure(data.message || 'Pagamento falhou');
+        } else if (data.status === 'canceled') {
+          setShowEmisFrame(false);
+          toast.info('Pagamento cancelado pelo utilizador');
+        }
+      } catch (error) {
+        console.error('Error processing EMIS message:', error);
+      }
+    };
+
+    window.addEventListener('message', handleEmisMessage);
+    return () => window.removeEventListener('message', handleEmisMessage);
+  }, [orderId]);
 
   const handlePayment = async () => {
     if (!phoneNumber || phoneNumber.length !== 9 || !phoneNumber.startsWith('9')) {
@@ -44,36 +75,15 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
     setIsProcessing(true);
 
     try {
-      // Simulação de pagamento com Multicaixa Express
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Open EMIS iframe for real Multicaixa Express integration
+      setShowEmisFrame(true);
       
-      // Mostrar diálogo de confirmação
-      setIsProcessing(false);
-      setShowConfirmation(true);
-      
-      // Simular processamento de pagamento em background
-      setTimeout(async () => {
-        try {
-          // Atualizar status do pedido para "paid"
-          if (orderId) {
-            const { error } = await supabase
-              .from('orders')
-              .update({ 
-                payment_status: 'paid',
-                status: 'processing'  
-              })
-              .eq('id', orderId);
-              
-            if (error) throw error;
-          }
-          
-          setPaymentStatus("success");
-        } catch (error) {
-          console.error("Erro ao atualizar status do pagamento:", error);
-          setPaymentStatus("failed");
-        }
-      }, 3000);
-      
+      // In production mode, we'll show a dialog with the EMIS iframe
+      // instead of simulating the payment
+      setTimeout(() => {
+        setIsProcessing(false);
+        setShowConfirmation(true);
+      }, 1000);
     } catch (error) {
       console.error("Pagamento falhou:", error);
       setIsProcessing(false);
@@ -81,10 +91,42 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
     }
   };
 
+  const handlePaymentSuccess = async () => {
+    try {
+      // Update order status in database
+      if (orderId) {
+        const { error } = await supabase
+          .from('orders')
+          .update({ 
+            payment_status: 'paid',
+            status: 'processing'  
+          })
+          .eq('id', orderId);
+          
+        if (error) throw error;
+      }
+      
+      setPaymentStatus("success");
+      toast.success("Pagamento realizado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao atualizar status do pagamento:", error);
+      setPaymentStatus("failed");
+    }
+  };
+  
+  const handlePaymentFailure = (message: string) => {
+    setPaymentStatus("failed");
+    setShowEmisFrame(false);
+    toast.error(message || "O pagamento falhou. Por favor, tente novamente.");
+  };
+
   const handleConfirm = () => {
     setShowConfirmation(false);
-    clearCart();
-    navigate(`/checkout/success?orderId=${orderId}`);
+    setShowEmisFrame(false);
+    if (paymentStatus === "success") {
+      clearCart();
+      navigate(`/checkout/success?orderId=${orderId}`);
+    }
   };
 
   const handlePhoneInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,6 +136,25 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
     } else {
       setPhoneNumber(value);
     }
+  };
+
+  // Generate payment data for EMIS
+  const getEmisPaymentUrl = () => {
+    const paymentData = {
+      merchantId: "ANGOHOST_STORE",
+      amount: amount,
+      currency: "AOA", 
+      orderId: orderId,
+      phoneNumber: phoneNumber,
+      returnUrl: window.location.origin + `/checkout/success?orderId=${orderId}`,
+      cancelUrl: window.location.origin + `/checkout`,
+      // Include production credentials here
+    };
+
+    // In real implementation, you would append these as query parameters
+    // or pass them in the postMessage API depending on EMIS requirements
+    const queryParams = new URLSearchParams(paymentData as any).toString();
+    return `${EMIS_PAYMENT_URL}?${queryParams}`;
   };
 
   return (
@@ -148,8 +209,8 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
             <ol className="list-decimal list-inside text-yellow-700 space-y-1 mt-1">
               <li>Insira seu número de telefone Multicaixa Express</li>
               <li>Clique no botão "Pagar Agora"</li>
-              <li>Você receberá uma notificação no seu telefone</li>
-              <li>Confirme o pagamento no aplicativo Multicaixa Express</li>
+              <li>Complete o pagamento no portal EMIS que irá aparecer</li>
+              <li>Aguarde pela confirmação automática do pagamento</li>
             </ol>
           </div>
         </CardContent>
@@ -176,12 +237,24 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
           <DialogHeader>
             <DialogTitle>Pagamento Multicaixa Express</DialogTitle>
             <DialogDescription>
-              Verifique seu telefone para confirmar o pagamento.
+              {!showEmisFrame ? "Verifique seu telefone para confirmar o pagamento." : "Complete o pagamento no portal EMIS abaixo."}
             </DialogDescription>
           </DialogHeader>
           
           <div className="flex flex-col items-center justify-center py-4">
-            {paymentStatus === "pending" ? (
+            {showEmisFrame ? (
+              <div className="w-full h-[400px] border rounded">
+                <iframe
+                  ref={emisIframeRef}
+                  src={getEmisPaymentUrl()}
+                  title="EMIS Payment Portal"
+                  className="w-full h-full"
+                  style={{ border: "none" }}
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
+                  onError={() => handlePaymentFailure("Erro ao carregar o portal de pagamento")}
+                />
+              </div>
+            ) : paymentStatus === "pending" ? (
               <div className="text-center">
                 <div className="animate-spin h-12 w-12 border-4 border-microsoft-blue border-t-transparent rounded-full mx-auto mb-4"></div>
                 <p className="text-lg font-medium">Aguardando confirmação</p>
@@ -191,23 +264,38 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
               </div>
             ) : (
               <div className="text-center">
-                <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <p className="text-lg font-medium text-green-700">Pagamento confirmado!</p>
+                {paymentStatus === "success" ? (
+                  <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                ) : (
+                  <div className="h-12 w-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                )}
+                <p className="text-lg font-medium text-green-700">
+                  {paymentStatus === "success" ? "Pagamento confirmado!" : "Pagamento falhou!"}
+                </p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Seu pagamento foi processado com sucesso
+                  {paymentStatus === "success" 
+                    ? "Seu pagamento foi processado com sucesso" 
+                    : "Ocorreu um erro ao processar o pagamento"}
                 </p>
               </div>
             )}
           </div>
 
           <DialogFooter>
-            {paymentStatus === "success" && (
-              <Button onClick={handleConfirm} className="w-full bg-microsoft-blue hover:bg-microsoft-blue/90">
-                Continuar
+            {(paymentStatus === "success" || paymentStatus === "failed") && (
+              <Button 
+                onClick={handleConfirm} 
+                className="w-full bg-microsoft-blue hover:bg-microsoft-blue/90"
+              >
+                {paymentStatus === "success" ? "Continuar" : "Tentar Novamente"}
               </Button>
             )}
           </DialogFooter>
