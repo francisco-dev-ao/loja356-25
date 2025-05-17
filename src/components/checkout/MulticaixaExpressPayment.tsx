@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { useCart } from "@/hooks/use-cart";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MulticaixaExpressPaymentProps {
   amount: number;
@@ -26,38 +28,54 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<"pending" | "success" | "failed">("pending");
   const navigate = useNavigate();
-
-  // Configure Multicaixa Express settings
-  const multicaixaConfig = {
-    frametoken: "a53787fd-b49e-4469-a6ab-fa6acf19db48",
-    callback: `${window.location.origin}/api/multicaixa/callback`,
-    success: `${window.location.origin}/checkout/success`,
-    error: `${window.location.origin}/checkout/error`
-  };
+  const { clearCart } = useCart();
 
   const handlePayment = async () => {
     if (!phoneNumber || phoneNumber.length !== 9 || !phoneNumber.startsWith('9')) {
       toast.error("Por favor, insira um número de telefone válido (9 dígitos começando com 9)");
       return;
     }
+    
+    if (!orderId) {
+      toast.error("Erro no pedido. Por favor, tente novamente.");
+      return;
+    }
 
     setIsProcessing(true);
 
     try {
-      // In a real implementation, this would be an API call to your payment gateway
+      // Simulação de pagamento com Multicaixa Express
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Show payment confirmation dialog
+      // Mostrar diálogo de confirmação
       setIsProcessing(false);
       setShowConfirmation(true);
       
-      // Simulate payment processing in background
-      setTimeout(() => {
-        setPaymentStatus("success");
+      // Simular processamento de pagamento em background
+      setTimeout(async () => {
+        try {
+          // Atualizar status do pedido para "paid"
+          if (orderId) {
+            const { error } = await supabase
+              .from('orders')
+              .update({ 
+                payment_status: 'paid',
+                status: 'processing'  
+              })
+              .eq('id', orderId);
+              
+            if (error) throw error;
+          }
+          
+          setPaymentStatus("success");
+        } catch (error) {
+          console.error("Erro ao atualizar status do pagamento:", error);
+          setPaymentStatus("failed");
+        }
       }, 3000);
       
     } catch (error) {
-      console.error("Payment failed:", error);
+      console.error("Pagamento falhou:", error);
       setIsProcessing(false);
       toast.error("O pagamento falhou. Por favor, tente novamente.");
     }
@@ -65,6 +83,7 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
 
   const handleConfirm = () => {
     setShowConfirmation(false);
+    clearCart();
     navigate(`/checkout/success?orderId=${orderId}`);
   };
 
@@ -90,7 +109,7 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
           <div className="flex items-center justify-center mb-4">
             <div className="bg-gray-100 p-4 rounded-lg">
               <img 
-                src="/placeholder.svg" 
+                src="https://www.bai.ao/wp-content/uploads/2021/12/MCX-LOGO-768x492.jpg" 
                 alt="Multicaixa Express" 
                 className="h-16 object-contain mx-auto" 
               />
@@ -138,7 +157,7 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
           <Button
             onClick={handlePayment}
             className="w-full bg-microsoft-blue hover:bg-microsoft-blue/90 py-6"
-            disabled={isProcessing}
+            disabled={isProcessing || !orderId}
           >
             {isProcessing ? (
               <span className="flex items-center">

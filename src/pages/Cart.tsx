@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -11,28 +11,6 @@ import { toast } from 'sonner';
 const Cart = () => {
   const { items, total, clearCart } = useCart();
   const navigate = useNavigate();
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  const handleCheckout = () => {
-    if (items.length === 0) {
-      toast.error('Seu carrinho está vazio');
-      return;
-    }
-    
-    setIsProcessing(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsProcessing(false);
-      
-      // Generate order ID and redirect to success page
-      const orderId = `ORD-${Date.now().toString().slice(-6)}`;
-      navigate(`/checkout/success?orderId=${orderId}`);
-      
-      // Clear the cart
-      clearCart();
-    }, 2000);
-  };
 
   if (items.length === 0) {
     return (
@@ -128,23 +106,12 @@ const Cart = () => {
               <div className="p-6 border-t border-gray-200">
                 <Button 
                   className="w-full bg-microsoft-blue hover:bg-microsoft-blue/90 text-lg py-6"
-                  onClick={handleCheckout}
-                  disabled={isProcessing}
+                  onClick={() => navigate('/checkout')}
                 >
-                  {isProcessing ? (
-                    <span className="flex items-center">
-                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Processando...
-                    </span>
-                  ) : (
-                    <span className="flex items-center">
-                      Finalizar Compra
-                      <ArrowRight size={18} className="ml-2" />
-                    </span>
-                  )}
+                  <span className="flex items-center">
+                    Prosseguir para Checkout
+                    <ArrowRight size={18} className="ml-2" />
+                  </span>
                 </Button>
                 
                 <div className="mt-4 text-center text-sm text-muted-foreground">

@@ -12,6 +12,7 @@ import Index from "./pages/Index";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
 import Contact from "./pages/Contact";
 import Register from "./pages/Register";
@@ -36,6 +37,7 @@ const AppWithProviders = () => {
                 <Route path="/produtos" element={<Products />} />
                 <Route path="/produtos/:id" element={<ProductDetail />} />
                 <Route path="/carrinho" element={<Cart />} />
+                <Route path="/checkout" element={<Checkout />} />
                 <Route path="/checkout/success" element={<CheckoutSuccess />} />
                 <Route path="/contato" element={<Contact />} />
                 <Route path="/cadastro" element={<Register />} />

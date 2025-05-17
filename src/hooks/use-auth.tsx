@@ -2,88 +2,116 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { Session, User } from '@supabase/supabase-js';
 
-interface User {
+interface Profile {
   id: string;
-  name: string;
-  email: string;
-  role: 'customer' | 'admin';
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  nif: string | null;
+  address: string | null;
 }
 
 interface AuthContextType {
   user: User | null;
+  profile: Profile | null;
+  session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   register: (name: string, email: string, password: string) => Promise<void>;
+  updateProfile: (data: Partial<Profile>) => Promise<void>;
 }
-
-// Mock user data for demo purposes
-const mockUsers = [
-  {
-    id: '1',
-    name: 'Admin User',
-    email: 'admin@example.com',
-    password: 'admin123',
-    role: 'admin' as const
-  },
-  {
-    id: '2',
-    name: 'Cliente Demo',
-    email: 'cliente@example.com',
-    password: 'cliente123',
-    role: 'customer' as const
-  },
-];
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is already logged in via localStorage
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
+    // Configurar o listener de mudança de estado de autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+
+        if (currentSession?.user) {
+          // Buscar o perfil do usuário após autenticação
+          setTimeout(async () => {
+            try {
+              const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', currentSession.user.id)
+                .single();
+
+              if (error) {
+                console.error('Erro ao buscar perfil:', error);
+              } else {
+                setProfile(data as Profile);
+              }
+            } catch (error) {
+              console.error('Erro inesperado:', error);
+            }
+          }, 0);
+        } else {
+          setProfile(null);
+        }
+      }
+    );
+
+    // Verificar se já existe uma sessão
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+
+      if (currentSession?.user) {
+        // Buscar o perfil do usuário se estiver autenticado
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', currentSession.user.id)
+          .single()
+          .then(({ data, error }) => {
+            if (error) {
+              console.error('Erro ao buscar perfil:', error);
+            } else {
+              setProfile(data as Profile);
+            }
+            setIsLoading(false);
+          });
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
       
-      // Check if user exists in our mock data
-      const foundUser = mockUsers.find(
-        u => u.email === email && u.password === password
-      );
-      
-      if (!foundUser) {
-        throw new Error('Credenciais inválidas');
+      if (error) {
+        throw new Error(error.message);
       }
-      
-      // Create user object without password
-      const { password: _, ...userWithoutPassword } = foundUser;
-      setUser(userWithoutPassword);
-      
-      // Store user in localStorage
-      localStorage.setItem('user', JSON.stringify(userWithoutPassword));
-      toast.success('Login bem-sucedido!');
 
-      // Redirect based on user role
-      if (userWithoutPassword.role === 'admin') {
-        navigate('/admin/dashboard');
-      } else {
-        navigate('/cliente/dashboard');
-      }
-    } catch (error) {
-      toast.error('Falha no login. Verifique suas credenciais.');
+      toast.success('Login bem-sucedido!');
+      
+      // Redirecionamento será feito automaticamente pelo onAuthStateChange
+    } catch (error: any) {
+      toast.error(error.message || 'Falha no login. Verifique suas credenciais.');
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -93,53 +121,75 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const register = async (name: string, email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name
+          }
+        }
+      });
       
-      // Check if user already exists
-      const userExists = mockUsers.some(u => u.email === email);
-      
-      if (userExists) {
-        throw new Error('Este e-mail já está em uso');
+      if (error) {
+        throw new Error(error.message);
       }
       
-      // In a real app, we would save this to a database
-      const newUser = {
-        id: String(Date.now()),
-        name,
-        email,
-        role: 'customer' as const
-      };
-      
-      setUser(newUser);
-      
-      // Store user in localStorage
-      localStorage.setItem('user', JSON.stringify(newUser));
-      toast.success('Registro completo! Bem-vindo!');
-      navigate('/cliente/dashboard');
-    } catch (error) {
-      toast.error('Falha no registro. Tente novamente.');
+      toast.success('Registro completo! Verifique seu email para confirmar sua conta.');
+    } catch (error: any) {
+      toast.error(error.message || 'Falha no registro. Tente novamente.');
       console.error(error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
-    toast.info('Você foi desconectado');
-    navigate('/');
+  const updateProfile = async (data: Partial<Profile>) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(data)
+        .eq('id', user.id);
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      // Atualiza o perfil localmente
+      setProfile(prev => prev ? { ...prev, ...data } : null);
+      toast.success('Perfil atualizado com sucesso!');
+    } catch (error: any) {
+      toast.error(error.message || 'Falha ao atualizar perfil.');
+      console.error(error);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setProfile(null);
+      setSession(null);
+      toast.info('Você foi desconectado');
+      navigate('/');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    }
   };
 
   return (
     <AuthContext.Provider value={{ 
       user, 
+      profile,
+      session,
       isLoading, 
       isAuthenticated: !!user,
       login,
       logout,
-      register
+      register,
+      updateProfile
     }}>
       {children}
     </AuthContext.Provider>

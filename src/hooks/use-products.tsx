@@ -11,7 +11,7 @@ export type Product = {
   image: string;
   category: string;
   stock: number;
-  quantity?: number;
+  quantity?: number;  // Tornando esta propriedade opcional para compatibilidade com use-cart
 };
 
 export const useProducts = (category?: string) => {
