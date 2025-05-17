@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "@/hooks/use-cart";
 import { AuthProvider } from "@/hooks/use-auth";
+import React from "react"; // Add React import
 
 // Pages
 import Index from "./pages/Index";
@@ -21,9 +22,11 @@ import CustomerDashboard from "./pages/customer/Dashboard";
 import AdminDashboard from "./pages/admin/Dashboard";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
-
+// Create a new QueryClient instance inside the component
 const AppWithProviders = () => {
+  // Create QueryClient inside the component to ensure React hooks work properly
+  const queryClient = new QueryClient();
+  
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>

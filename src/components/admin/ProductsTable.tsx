@@ -61,7 +61,14 @@ const ProductsTable = () => {
         .order('name');
       
       if (error) throw error;
-      setProducts(data || []);
+      
+      // Type cast the data to ensure it matches our Product type
+      const typedData = data?.map(item => ({
+        ...item,
+        discount_type: item.discount_type as 'percentage' | 'fixed' | null
+      })) || [];
+      
+      setProducts(typedData);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast.error('Erro ao carregar produtos');

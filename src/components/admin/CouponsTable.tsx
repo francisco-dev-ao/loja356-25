@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -70,7 +69,14 @@ const CouponsTable = () => {
         .order('code');
       
       if (error) throw error;
-      setCoupons(data || []);
+      
+      // Type cast the data to ensure it matches our Coupon type
+      const typedData = data?.map(item => ({
+        ...item,
+        discount_type: item.discount_type as 'percentage' | 'fixed'
+      })) || [];
+      
+      setCoupons(typedData);
     } catch (error) {
       console.error('Error fetching coupons:', error);
       toast.error('Erro ao carregar cupons');
