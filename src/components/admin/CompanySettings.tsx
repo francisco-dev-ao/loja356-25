@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Building, Mail } from 'lucide-react';
 
+// Define a type for the company settings that matches our database structure
 type CompanySettings = {
   id: string;
   name: string;
@@ -24,6 +25,7 @@ type CompanySettings = {
   smtp_from_name: string;
 };
 
+// Default settings to use if no settings are found in the database
 const defaultSettings: CompanySettings = {
   id: 'company-settings',
   name: 'LicençasPRO, Lda',
@@ -52,18 +54,20 @@ const CompanySettings = () => {
   const fetchSettings = async () => {
     setLoading(true);
     try {
+      // Use the custom type to properly type-check our Supabase query
       const { data, error } = await supabase
         .from('settings')
         .select('*')
         .eq('id', 'company-settings')
-        .single();
+        .maybeSingle();
       
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+      if (error) {
         throw error;
       }
       
       if (data) {
-        setSettings(data);
+        // Ensure the data conforms to our CompanySettings type
+        setSettings(data as CompanySettings);
       }
     } catch (error) {
       console.error('Error fetching company settings:', error);
@@ -89,9 +93,9 @@ const CompanySettings = () => {
         .from('settings')
         .select('id')
         .eq('id', 'company-settings')
-        .single();
+        .maybeSingle();
       
-      if (checkError && checkError.code === 'PGRST116') {
+      if (!data) {
         // No settings found, insert new record
         const { error: insertError } = await supabase
           .from('settings')
