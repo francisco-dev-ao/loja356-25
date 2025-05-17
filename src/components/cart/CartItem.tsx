@@ -3,6 +3,7 @@ import React from 'react';
 import { useCart } from '@/hooks/use-cart';
 import { Button } from '@/components/ui/button';
 import { Trash, Plus, Minus } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface CartItemProps {
   id: string;
@@ -16,12 +17,17 @@ const CartItem = ({ id, name, price, quantity, image }: CartItemProps) => {
   const { updateQuantity, removeItem } = useCart();
 
   const handleIncrement = () => {
+    // In a real application, you might want to check stock availability
+    // before incrementing the quantity
     updateQuantity(id, quantity + 1);
   };
 
   const handleDecrement = () => {
     if (quantity > 1) {
       updateQuantity(id, quantity - 1);
+    } else {
+      // Optional: Show a confirmation before removing the last item
+      removeItem(id);
     }
   };
 
