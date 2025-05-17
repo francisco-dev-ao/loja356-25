@@ -23,8 +23,12 @@ const ProductDetail = () => {
 
   const handleConfirmAddToCart = () => {
     if (product) {
-      const productWithQuantity = { ...product, quantity };
-      addItem(productWithQuantity);
+      // Create a copy of the product with the selected quantity
+      const productToAdd = { 
+        ...product, 
+        quantity 
+      };
+      addItem(productToAdd);
       setDialogOpen(false);
       navigate('/carrinho');
     }

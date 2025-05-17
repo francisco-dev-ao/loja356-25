@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
@@ -49,9 +50,11 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       if (existingItemIndex >= 0) {
         // Item already exists, update quantity
         const updatedItems = [...state.items];
+        // Explicitly add the incoming quantity to existing quantity
+        const newQuantity = updatedItems[existingItemIndex].quantity + action.payload.quantity;
         updatedItems[existingItemIndex] = {
           ...updatedItems[existingItemIndex],
-          quantity: updatedItems[existingItemIndex].quantity + 1,
+          quantity: newQuantity,
         };
 
         return {
@@ -60,12 +63,13 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
           total: updatedItems.reduce((acc, item) => acc + item.price * item.quantity, 0),
         };
       } else {
-        // Add new item
-        const newItem = { ...action.payload, quantity: 1 };
+        // Add new item with the specified quantity (or default to 1)
+        const quantity = action.payload.quantity || 1;
+        const newItem = { ...action.payload, quantity };
         return {
           ...state,
           items: [...state.items, newItem],
-          total: state.total + newItem.price,
+          total: state.total + newItem.price * quantity,
         };
       }
     }

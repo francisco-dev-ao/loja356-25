@@ -39,7 +39,14 @@ const Checkout = () => {
     }
   }, [items, navigate]);
 
-  const handlePlaceOrder = async () => {
+  // Criar pedido quando entrar na aba de pagamento e selecionar Multicaixa
+  useEffect(() => {
+    if (activeTab === 'payment' && paymentMethod === 'multicaixa' && !orderId && items.length > 0 && isAuthenticated) {
+      handleCreateOrder();
+    }
+  }, [activeTab, paymentMethod, orderId, items, isAuthenticated]);
+
+  const handleCreateOrder = async () => {
     if (!isAuthenticated || !user) {
       toast.error('Por favor, faça login para finalizar sua compra');
       setActiveTab('account');
@@ -88,17 +95,30 @@ const Checkout = () => {
       }
 
       setOrderId(orderData.id);
+      console.log("Pedido criado com sucesso:", orderData.id);
 
-      // Se o pagamento for por transferência bancária, redirecionar diretamente para o sucesso
-      if (paymentMethod === 'bank_transfer') {
-        navigate(`/checkout/success?orderId=${orderData.id}`);
-        clearCart();
-      }
-
-      toast.success('Pedido criado com sucesso!');
     } catch (error: any) {
       console.error('Erro ao criar pedido:', error);
       toast.error(error.message || 'Ocorreu um erro ao processar o pedido');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleBankTransferOrder = async () => {
+    // Se já temos um ID de pedido, não precisamos criar outro
+    if (orderId) {
+      navigate(`/checkout/success?orderId=${orderId}`);
+      clearCart();
+      return;
+    }
+    
+    setIsProcessing(true);
+    
+    try {
+      await handleCreateOrder();
+      navigate(`/checkout/success?orderId=${orderId}`);
+      clearCart();
     } finally {
       setIsProcessing(false);
     }
@@ -192,17 +212,24 @@ const Checkout = () => {
                       </TabsList>
                       
                       <TabsContent value="multicaixa">
-                        <MulticaixaExpressPayment 
-                          amount={total} 
-                          orderId={orderId || ''} 
-                        />
+                        {isProcessing && !orderId ? (
+                          <div className="flex flex-col items-center justify-center py-8">
+                            <div className="animate-spin h-8 w-8 border-4 border-microsoft-blue border-t-transparent rounded-full mb-4"></div>
+                            <p>Criando pedido...</p>
+                          </div>
+                        ) : (
+                          <MulticaixaExpressPayment 
+                            amount={total} 
+                            orderId={orderId || ''} 
+                          />
+                        )}
                       </TabsContent>
                       
                       <TabsContent value="bank_transfer">
                         <BankTransferPayment />
                         <div className="mt-6">
                           <Button 
-                            onClick={handlePlaceOrder}
+                            onClick={handleBankTransferOrder}
                             className="w-full bg-microsoft-blue hover:bg-microsoft-blue/90 py-6"
                             disabled={isProcessing}
                           >
