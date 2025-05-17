@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -12,6 +11,7 @@ interface Profile {
   phone: string | null;
   nif: string | null;
   address: string | null;
+  role: string | null; // Added role property
 }
 
 interface AuthContextType {
