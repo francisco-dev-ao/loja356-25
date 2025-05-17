@@ -29,6 +29,7 @@ const Register = () => {
     setNifError('');
     
     try {
+      // Call the API to check the NIF/BI
       const response = await fetch(`https://consulta.edgarsingui.ao/public/consultar-por-nif/${nif}`);
       const data = await response.json();
       
@@ -36,10 +37,12 @@ const Register = () => {
         // Auto-fill fields with data from API
         setCompanyName(data.data.nome || '');
         setAddress(data.data.endereco || '');
+        toast.success('Dados encontrados e preenchidos automaticamente!');
       } else {
         setNifError('NIF ou BI não encontrado. Verifique se está correto.');
       }
     } catch (error) {
+      console.error('Error fetching NIF data:', error);
       setNifError('Erro ao consultar o NIF ou BI. Por favor, tente novamente.');
     } finally {
       setIsCheckingNif(false);
@@ -73,13 +76,17 @@ const Register = () => {
     
     setIsLoading(true);
     
-    // Here you would normally send the data to your backend
-    // For now, we'll just simulate a successful registration
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Here you would normally send the data to your backend
+      await new Promise(resolve => setTimeout(resolve, 1500));
       toast.success('Conta criada com sucesso!');
       navigate('/cliente/login');
-    }, 1500);
+    } catch (error) {
+      console.error('Registration error:', error);
+      toast.error('Ocorreu um erro ao criar a conta. Por favor, tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const validateNifFormat = (value: string) => {
