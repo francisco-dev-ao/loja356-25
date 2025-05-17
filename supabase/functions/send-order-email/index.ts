@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.6";
@@ -186,6 +185,17 @@ function formatMoney(value: number): string {
   } catch (error) {
     return `AOA ${value.toFixed(2)}`;
   }
+}
+
+// Parse a string to number, supporting both dot and comma as decimal separators
+function parseFormattedNumber(value: string): number {
+  if (!value) return 0;
+  
+  // Replace commas with dots for proper parsing
+  const normalizedValue = value.replace(/,/g, '.');
+  const parsedValue = parseFloat(normalizedValue);
+  
+  return isNaN(parsedValue) ? 0 : parsedValue;
 }
 
 function translateOrderStatus(status: string): string {

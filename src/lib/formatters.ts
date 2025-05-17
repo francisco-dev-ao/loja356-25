@@ -39,6 +39,17 @@ export const saveCurrencySettings = (settings: CurrencySettings): void => {
   }
 };
 
+// Parse a string to number, supporting both dot and comma as decimal separators
+export const parseFormattedNumber = (value: string): number => {
+  if (!value) return 0;
+  
+  // Replace commas with dots for proper parsing
+  const normalizedValue = value.replace(/,/g, '.');
+  const parsedValue = parseFloat(normalizedValue);
+  
+  return isNaN(parsedValue) ? 0 : parsedValue;
+};
+
 // Format a number as currency according to the settings
 export const formatCurrency = (value: number): string => {
   const settings = getCurrencySettings();

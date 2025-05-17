@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -208,6 +207,21 @@ const CompanySettings = () => {
       ...prev,
       [name]: parseInt(value) || 0
     }));
+  };
+  
+  const handlePreviewAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value;
+    
+    // Convert to a proper number regardless of whether it uses . or , as decimal separator
+    const cleanedValue = rawValue.replace(/,/g, '.');
+    const numValue = parseFloat(cleanedValue);
+    
+    if (!isNaN(numValue)) {
+      setPreviewAmount(numValue);
+    } else if (rawValue === '' || rawValue === '.' || rawValue === ',') {
+      // Allow empty input or just a decimal separator
+      setPreviewAmount(0);
+    }
   };
   
   const handleSaveSettings = async () => {
@@ -634,10 +648,14 @@ const CompanySettings = () => {
                 <div className="flex items-center gap-4">
                   <div className="flex-grow">
                     <Input
-                      type="number"
-                      value={previewAmount}
-                      onChange={(e) => setPreviewAmount(parseFloat(e.target.value) || 0)}
+                      type="text"
+                      value={previewAmount.toString().replace('.', ',')}
+                      onChange={handlePreviewAmountChange}
+                      placeholder="Valor (ex: 1000,00)"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Insira o valor usando vírgula ou ponto como separador decimal
+                    </p>
                   </div>
                   <div className="text-2xl font-semibold">→</div>
                   <div className="bg-white px-4 py-2 border rounded-md text-lg font-semibold min-w-[200px] text-right">
