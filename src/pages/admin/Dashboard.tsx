@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
@@ -145,7 +144,7 @@ const getStatusBadge = (status: string) => {
 };
 
 const AdminDashboard = () => {
-  const { user, isLoading, isAuthenticated } = useAuth();
+  const { user, profile, isLoading, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState('orders');
   const [orderFilter, setOrderFilter] = useState('all');
   const [orderSearchTerm, setOrderSearchTerm] = useState('');
@@ -208,7 +207,7 @@ const AdminDashboard = () => {
           <div>
             <h1 className="text-3xl font-heading font-bold">Painel Administrativo</h1>
             <p className="text-muted-foreground">
-              Bem-vindo(a), {user?.name}. Gerencie pedidos e clientes.
+              Bem-vindo(a), {profile?.name || user?.email || 'Administrador'}. Gerencie pedidos e clientes.
             </p>
           </div>
         </div>

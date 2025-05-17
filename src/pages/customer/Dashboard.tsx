@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
@@ -102,7 +101,7 @@ const getStatusBadge = (status: string) => {
 };
 
 const Dashboard = () => {
-  const { user, isLoading, isAuthenticated } = useAuth();
+  const { user, profile, isLoading, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState('orders');
   const [orderFilter, setOrderFilter] = useState('all');
   const [invoiceFilter, setInvoiceFilter] = useState('all');
@@ -154,7 +153,7 @@ const Dashboard = () => {
           <div>
             <h1 className="text-3xl font-heading font-bold">Área do Cliente</h1>
             <p className="text-muted-foreground">
-              Bem-vindo(a), {user?.name}. Gerencie seus pedidos e faturas.
+              Bem-vindo(a), {profile?.name || user?.email || 'Cliente'}. Gerencie seus pedidos e faturas.
             </p>
           </div>
           <div className="mt-4 md:mt-0">
@@ -375,7 +374,7 @@ const Dashboard = () => {
                       <Input
                         id="name"
                         name="name"
-                        defaultValue={user?.name}
+                        defaultValue={profile?.name || ''}
                       />
                     </div>
                     <div>

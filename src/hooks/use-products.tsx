@@ -11,7 +11,7 @@ export type Product = {
   image: string;
   category: string;
   stock: number;
-  quantity?: number;  // Tornando esta propriedade opcional para compatibilidade com use-cart
+  quantity: number;  // Changed from optional to required to match use-cart.tsx
 };
 
 export const useProducts = (category?: string) => {
@@ -34,7 +34,11 @@ export const useProducts = (category?: string) => {
       throw new Error('Failed to fetch products');
     }
     
-    return data as unknown as Product[];
+    // Initialize quantity for all products
+    return (data || []).map(item => ({
+      ...item,
+      quantity: 1  // Default quantity to 1 for compatibility with cart
+    })) as unknown as Product[];
   };
 
   return useQuery({
@@ -57,7 +61,11 @@ export const useProduct = (id: string) => {
       throw new Error('Failed to fetch product');
     }
     
-    return data as unknown as Product;
+    // Initialize quantity
+    return {
+      ...data,
+      quantity: 1  // Default quantity to 1 for compatibility with cart
+    } as unknown as Product;
   };
 
   return useQuery({
