@@ -1,15 +1,20 @@
 
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
-import { Eye } from 'lucide-react';
+import { Eye, Download, Check, X, DollarSign, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from 'sonner';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const OrderStatus = ({ status }: { status: string }) => {
   let bgColor = '';
@@ -251,7 +256,9 @@ const OrderDetails = ({ orderId }: { orderId: string }) => {
 
 const OrdersTable = () => {
   const [currentPage, setCurrentPage] = React.useState(1);
+  const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const itemsPerPage = 10;
+  const queryClient = useQueryClient();
 
   const { data: orders, isLoading, error } = useQuery({
     queryKey: ['orders', currentPage],
@@ -280,6 +287,45 @@ const OrdersTable = () => {
     },
   });
 
+  const updateOrderMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string, data: any }) => {
+      const { error } = await supabase
+        .from('orders')
+        .update(data)
+        .eq('id', id);
+      
+      if (error) throw error;
+      return { id, ...data };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast.success('Pedido atualizado com sucesso');
+    },
+    onError: (error) => {
+      toast.error(`Erro ao atualizar pedido: ${error.message}`);
+    }
+  });
+
+  const deleteOrdersMutation = useMutation({
+    mutationFn: async (orderIds: string[]) => {
+      const { error } = await supabase
+        .from('orders')
+        .delete()
+        .in('id', orderIds);
+      
+      if (error) throw error;
+      return orderIds;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      setSelectedOrders([]);
+      toast.success('Pedidos excluídos com sucesso');
+    },
+    onError: (error) => {
+      toast.error(`Erro ao excluir pedidos: ${error.message}`);
+    }
+  });
+
   const totalPages = Math.ceil((totalOrders || 0) / itemsPerPage);
 
   const formatCurrency = (value: number) => {
@@ -287,6 +333,112 @@ const OrdersTable = () => {
       style: 'currency',
       currency: 'AOA',
     }).format(value);
+  };
+
+  const handleSelectOrder = (orderId: string) => {
+    setSelectedOrders(prev => 
+      prev.includes(orderId) 
+        ? prev.filter(id => id !== orderId)
+        : [...prev, orderId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (!orders) return;
+    
+    if (selectedOrders.length === orders.length) {
+      setSelectedOrders([]);
+    } else {
+      setSelectedOrders(orders.map(order => order.id));
+    }
+  };
+
+  const handleStatusChange = (orderId: string, newStatus: string) => {
+    updateOrderMutation.mutate({ id: orderId, data: { status: newStatus } });
+  };
+
+  const handlePaymentStatusChange = (orderId: string, newStatus: string) => {
+    updateOrderMutation.mutate({ id: orderId, data: { payment_status: newStatus } });
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedOrders.length > 0) {
+      deleteOrdersMutation.mutate(selectedOrders);
+    }
+  };
+
+  const generateInvoice = async (order: any) => {
+    try {
+      // Fetch customer data
+      const { data: customer } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', order.user_id)
+        .single();
+
+      // Fetch order items
+      const { data: orderItems } = await supabase
+        .from('order_items')
+        .select('*, product_id')
+        .eq('order_id', order.id);
+      
+      // Fetch product names
+      let products: any[] = [];
+      if (orderItems && orderItems.length > 0) {
+        const productIds = orderItems.map(item => item.product_id);
+        const { data } = await supabase
+          .from('products')
+          .select('id, name')
+          .in('id', productIds);
+          
+        products = data || [];
+      }
+
+      // Create PDF
+      const doc = new jsPDF();
+      
+      // Add header
+      doc.setFontSize(20);
+      doc.text('FATURA', 105, 20, { align: 'center' });
+      
+      // Add invoice details
+      doc.setFontSize(12);
+      doc.text(`Nº Pedido: ${order.id.substring(0, 8)}...`, 20, 40);
+      doc.text(`Data: ${format(new Date(order.created_at), 'dd/MM/yyyy', { locale: ptBR })}`, 20, 50);
+      doc.text(`Cliente: ${customer?.name || 'N/A'}`, 20, 60);
+      doc.text(`Email: ${customer?.email || 'N/A'}`, 20, 70);
+      doc.text(`Telefone: ${customer?.phone || 'N/A'}`, 20, 80);
+      doc.text(`NIF: ${customer?.nif || 'N/A'}`, 20, 90);
+      
+      // Add order items table
+      const tableData = orderItems?.map(item => {
+        const product = products.find(p => p.id === item.product_id);
+        return [
+          product?.name || item.product_id,
+          item.quantity.toString(),
+          formatCurrency(item.price),
+          formatCurrency(item.price * item.quantity)
+        ];
+      }) || [];
+      
+      autoTable(doc, {
+        startY: 100,
+        head: [['Produto', 'Quantidade', 'Preço', 'Subtotal']],
+        body: tableData,
+        foot: [['', '', 'Total', formatCurrency(order.total)]],
+      });
+      
+      // Add payment information
+      const finalY = (doc as any).lastAutoTable.finalY + 10;
+      doc.text(`Método de Pagamento: ${order.payment_method === 'bank_transfer' ? 'Transferência Bancária' : 'Multicaixa Express'}`, 20, finalY);
+      doc.text(`Status do Pagamento: ${order.payment_status === 'paid' ? 'Pago' : 'Pendente'}`, 20, finalY + 10);
+      
+      // Save PDF
+      doc.save(`fatura-${order.id.substring(0, 8)}.pdf`);
+      toast.success('Fatura gerada com sucesso');
+    } catch (error: any) {
+      toast.error(`Erro ao gerar fatura: ${error.message}`);
+    }
   };
 
   if (isLoading) {
@@ -299,12 +451,45 @@ const OrdersTable = () => {
 
   return (
     <div className="bg-white p-6 rounded-lg shadow">
-      <h2 className="text-2xl font-medium mb-4">Gerenciamento de Pedidos</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-medium">Gerenciamento de Pedidos</h2>
+        
+        {selectedOrders.length > 0 && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir Selecionados ({selectedOrders.length})
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir {selectedOrders.length} pedidos selecionados? Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteSelected}>
+                  Sim, excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </div>
       
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">
+                <Checkbox 
+                  checked={orders?.length > 0 && selectedOrders.length === orders.length}
+                  onCheckedChange={handleSelectAll}
+                />
+              </TableHead>
               <TableHead>ID do Pedido</TableHead>
               <TableHead>Data</TableHead>
               <TableHead>Status</TableHead>
@@ -318,6 +503,12 @@ const OrdersTable = () => {
             {orders && orders.length > 0 ? (
               orders.map((order) => (
                 <TableRow key={order.id}>
+                  <TableCell>
+                    <Checkbox 
+                      checked={selectedOrders.includes(order.id)}
+                      onCheckedChange={() => handleSelectOrder(order.id)}
+                    />
+                  </TableCell>
                   <TableCell className="font-mono text-xs">{order.id.substring(0, 8)}...</TableCell>
                   <TableCell>
                     {order.created_at ? format(new Date(order.created_at), 'dd/MM/yyyy', { locale: ptBR }) : '—'}
@@ -335,28 +526,61 @@ const OrdersTable = () => {
                     {formatCurrency(order.total)}
                   </TableCell>
                   <TableCell>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4 mr-1" /> Ver
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-3xl">
-                        <DialogHeader>
-                          <DialogTitle>Detalhes do Pedido</DialogTitle>
-                          <DialogDescription>
-                            Pedido realizado em {order.created_at ? format(new Date(order.created_at), 'dd/MM/yyyy', { locale: ptBR }) : '—'}
-                          </DialogDescription>
-                        </DialogHeader>
-                        <OrderDetails orderId={order.id} />
-                      </DialogContent>
-                    </Dialog>
+                    <div className="flex space-x-2">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl">
+                          <DialogHeader>
+                            <DialogTitle>Detalhes do Pedido</DialogTitle>
+                            <DialogDescription>
+                              Pedido realizado em {order.created_at ? format(new Date(order.created_at), 'dd/MM/yyyy', { locale: ptBR }) : '—'}
+                            </DialogDescription>
+                          </DialogHeader>
+                          <OrderDetails orderId={order.id} />
+                        </DialogContent>
+                      </Dialog>
+                      
+                      <Button variant="ghost" size="sm" onClick={() => generateInvoice(order)}>
+                        <Download className="h-4 w-4" />
+                      </Button>
+                      
+                      <Button 
+                        variant={order.status === 'completed' ? 'outline' : 'ghost'} 
+                        size="sm"
+                        disabled={order.status === 'completed' || order.status === 'cancelled'}
+                        onClick={() => handleStatusChange(order.id, 'completed')}
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                      
+                      <Button 
+                        variant={order.status === 'cancelled' ? 'outline' : 'ghost'} 
+                        size="sm"
+                        disabled={order.status === 'completed' || order.status === 'cancelled'}
+                        onClick={() => handleStatusChange(order.id, 'cancelled')}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                      
+                      <Button 
+                        variant={order.payment_status === 'paid' ? 'outline' : 'ghost'} 
+                        size="sm"
+                        disabled={order.payment_status === 'paid' || order.payment_status === 'refunded' || order.payment_status === 'cancelled'}
+                        onClick={() => handlePaymentStatusChange(order.id, 'paid')}
+                      >
+                        <DollarSign className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-4">Nenhum pedido encontrado.</TableCell>
+                <TableCell colSpan={8} className="text-center py-4">Nenhum pedido encontrado.</TableCell>
               </TableRow>
             )}
           </TableBody>
