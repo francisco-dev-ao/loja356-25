@@ -73,3 +73,57 @@ export const truncateText = (text: string, maxLength: number) => {
   return `${text.slice(0, maxLength)}...`;
 };
 
+/**
+ * Calcula o preço final com desconto
+ * @param basePrice - Preço base do produto
+ * @param discountType - Tipo de desconto ('percentage' ou 'fixed')
+ * @param discountValue - Valor do desconto
+ */
+export const calculateDiscountedPrice = (
+  basePrice: number,
+  discountType?: string | null,
+  discountValue?: number | null
+): number => {
+  if (!basePrice || !discountType || !discountValue) {
+    return basePrice;
+  }
+
+  if (discountType === 'percentage' && discountValue > 0) {
+    // Ensure percentage is between 0 and 100
+    const percentage = Math.min(Math.max(discountValue, 0), 100);
+    return basePrice * (1 - percentage / 100);
+  } 
+  
+  if (discountType === 'fixed' && discountValue > 0) {
+    // Ensure discount doesn't make price negative
+    return Math.max(basePrice - discountValue, 0);
+  }
+
+  return basePrice;
+};
+
+/**
+ * Aplica um cupom de desconto ao total
+ * @param total - Valor total
+ * @param discountType - Tipo de desconto ('percentage' ou 'fixed')
+ * @param discountValue - Valor do desconto
+ */
+export const applyCouponDiscount = (
+  total: number,
+  discountType: string,
+  discountValue: number
+): number => {
+  if (discountType === 'percentage') {
+    // Ensure percentage is between 0 and 100
+    const percentage = Math.min(Math.max(discountValue, 0), 100);
+    return total * (1 - percentage / 100);
+  } 
+  
+  if (discountType === 'fixed') {
+    // Ensure discount doesn't make total negative
+    return Math.max(total - discountValue, 0);
+  }
+
+  return total;
+};
+

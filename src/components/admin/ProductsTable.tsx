@@ -11,16 +11,20 @@ import {
 } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatCurrency } from '@/lib/formatters';
+import { formatCurrency, calculateDiscountedPrice } from '@/lib/utils';
 
 type Product = {
   id: string;
   name: string;
   description: string;
   price: number;
+  base_price: number | null;
+  discount_type: 'percentage' | 'fixed' | null;
+  discount_value: number | null;
   image: string;
   category: string;
   stock: number;
@@ -39,6 +43,9 @@ const ProductsTable = () => {
     name: '',
     description: '',
     price: 0,
+    base_price: null,
+    discount_type: null,
+    discount_value: null,
     image: '',
     category: '',
     stock: 0,
@@ -88,6 +95,9 @@ const ProductsTable = () => {
       name: '',
       description: '',
       price: 0,
+      base_price: null,
+      discount_type: null,
+      discount_value: null,
       image: '',
       category: '',
       stock: 0,
@@ -99,6 +109,20 @@ const ProductsTable = () => {
   // Save product
   const handleSaveProduct = async () => {
     try {
+      // Calculate final price based on base price and discount
+      const basePrice = currentProduct.base_price || currentProduct.price;
+      const finalPrice = calculateDiscountedPrice(
+        basePrice,
+        currentProduct.discount_type,
+        currentProduct.discount_value
+      );
+
+      const productData = {
+        ...currentProduct,
+        base_price: basePrice,
+        price: finalPrice,
+      };
+
       if (isNewProduct) {
         // Generate a unique ID for new products
         const uniqueId = crypto.randomUUID();
@@ -106,7 +130,7 @@ const ProductsTable = () => {
         const { error } = await supabase
           .from('products')
           .insert({
-            ...currentProduct,
+            ...productData,
             id: uniqueId,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -118,7 +142,7 @@ const ProductsTable = () => {
         const { error } = await supabase
           .from('products')
           .update({
-            ...currentProduct,
+            ...productData,
             updated_at: new Date().toISOString(),
           })
           .eq('id', currentProduct.id);
@@ -163,9 +187,35 @@ const ProductsTable = () => {
     
     setCurrentProduct(prev => ({
       ...prev,
-      [name]: name === 'price' || name === 'stock' ? parseFloat(value) : value
+      [name]: name === 'price' || name === 'base_price' || name === 'stock' || name === 'discount_value' 
+        ? parseFloat(value) || 0 
+        : value
     }));
   };
+
+  // Handle select change for discount type
+  const handleDiscountTypeChange = (value: string | null) => {
+    setCurrentProduct(prev => ({
+      ...prev,
+      discount_type: value as 'percentage' | 'fixed' | null
+    }));
+  };
+
+  // Update final price as user changes base price and discount
+  useEffect(() => {
+    if (currentProduct.base_price) {
+      const finalPrice = calculateDiscountedPrice(
+        currentProduct.base_price,
+        currentProduct.discount_type,
+        currentProduct.discount_value
+      );
+      
+      setCurrentProduct(prev => ({
+        ...prev,
+        price: finalPrice
+      }));
+    }
+  }, [currentProduct.base_price, currentProduct.discount_type, currentProduct.discount_value]);
   
   return (
     <div>
@@ -192,7 +242,9 @@ const ProductsTable = () => {
             <TableRow>
               <TableHead>Produto</TableHead>
               <TableHead>Categoria</TableHead>
-              <TableHead>Preço</TableHead>
+              <TableHead>Preço Base</TableHead>
+              <TableHead>Preço Final</TableHead>
+              <TableHead>Desconto</TableHead>
               <TableHead>Estoque</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -200,7 +252,7 @@ const ProductsTable = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-10">
+                <TableCell colSpan={7} className="text-center py-10">
                   <div className="flex justify-center">
                     <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
                   </div>
@@ -227,7 +279,21 @@ const ProductsTable = () => {
                     </div>
                   </TableCell>
                   <TableCell>{product.category}</TableCell>
+                  <TableCell>
+                    {product.base_price ? formatCurrency(product.base_price) : formatCurrency(product.price)} kz
+                  </TableCell>
                   <TableCell>{formatCurrency(product.price)} kz</TableCell>
+                  <TableCell>
+                    {product.discount_type && product.discount_value ? (
+                      <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                        {product.discount_type === 'percentage' 
+                          ? `${product.discount_value}%` 
+                          : `${formatCurrency(product.discount_value)} kz`}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">Sem desconto</span>
+                    )}
+                  </TableCell>
                   <TableCell>{product.stock}</TableCell>
                   <TableCell className="text-right">
                     <Button 
@@ -252,7 +318,7 @@ const ProductsTable = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-10">
+                <TableCell colSpan={7} className="text-center py-10">
                   Nenhum produto encontrado
                 </TableCell>
               </TableRow>
@@ -296,11 +362,11 @@ const ProductsTable = () => {
             
             <div className="grid grid-cols-2 gap-4">
               <label className="text-sm font-medium">
-                Preço (kz)
+                Preço Base (kz)
                 <Input
-                  name="price"
+                  name="base_price"
                   type="number"
-                  value={currentProduct.price}
+                  value={currentProduct.base_price || 0}
                   onChange={handleInputChange}
                   className="mt-1"
                   placeholder="0.00"
@@ -308,14 +374,46 @@ const ProductsTable = () => {
               </label>
               
               <label className="text-sm font-medium">
-                Estoque
+                Preço Final (kz)
                 <Input
-                  name="stock"
+                  name="price"
                   type="number"
-                  value={currentProduct.stock}
+                  value={currentProduct.price}
+                  readOnly
+                  className="mt-1 bg-gray-50"
+                />
+                <p className="text-xs text-gray-500 mt-1">Calculado automaticamente</p>
+              </label>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <label className="text-sm font-medium">
+                Tipo de Desconto
+                <Select 
+                  value={currentProduct.discount_type || ''} 
+                  onValueChange={handleDiscountTypeChange}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Selecione o tipo de desconto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Sem desconto</SelectItem>
+                    <SelectItem value="percentage">Percentual (%)</SelectItem>
+                    <SelectItem value="fixed">Valor Fixo (kz)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </label>
+              
+              <label className="text-sm font-medium">
+                Valor do Desconto
+                <Input
+                  name="discount_value"
+                  type="number"
+                  value={currentProduct.discount_value || 0}
                   onChange={handleInputChange}
+                  disabled={!currentProduct.discount_type}
                   className="mt-1"
-                  placeholder="0"
+                  placeholder={currentProduct.discount_type === 'percentage' ? "0-100" : "0.00"}
                 />
               </label>
             </div>
@@ -332,6 +430,20 @@ const ProductsTable = () => {
                 />
               </label>
               
+              <label className="text-sm font-medium">
+                Estoque
+                <Input
+                  name="stock"
+                  type="number"
+                  value={currentProduct.stock}
+                  onChange={handleInputChange}
+                  className="mt-1"
+                  placeholder="0"
+                />
+              </label>
+            </div>
+              
+            <div className="grid grid-cols-1 gap-4">
               <label className="text-sm font-medium">
                 URL da Imagem
                 <Input

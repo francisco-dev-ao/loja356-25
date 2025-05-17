@@ -8,6 +8,9 @@ export type Product = {
   name: string;
   description: string;
   price: number;
+  base_price: number | null;
+  discount_type: 'percentage' | 'fixed' | null;
+  discount_value: number | null;
   image: string;
   category: string;
   stock: number;
@@ -72,5 +75,49 @@ export const useProduct = (id: string) => {
     queryKey: ['product', id],
     queryFn: fetchProduct,
     staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+};
+
+// Hook to fetch and validate coupon code
+export const useCoupon = (code: string | null) => {
+  const fetchCoupon = async () => {
+    if (!code) return null;
+    
+    const { data, error } = await supabase
+      .from('coupons')
+      .select('*')
+      .eq('code', code)
+      .maybeSingle();
+      
+    if (error) {
+      console.error('Error fetching coupon:', error);
+      throw new Error('Failed to fetch coupon');
+    }
+    
+    if (!data) return null;
+    
+    // Validate coupon
+    const now = new Date();
+    const validFrom = new Date(data.valid_from);
+    const validUntil = data.valid_until ? new Date(data.valid_until) : null;
+    
+    // Check if coupon is within valid date range
+    if (validFrom > now || (validUntil && validUntil < now)) {
+      return { error: 'Cupom expirado ou ainda não válido' };
+    }
+    
+    // Check if max uses not exceeded
+    if (data.max_uses && data.current_uses >= data.max_uses) {
+      return { error: 'Limite de uso do cupom excedido' };
+    }
+    
+    return data;
+  };
+  
+  return useQuery({
+    queryKey: ['coupon', code],
+    queryFn: fetchCoupon,
+    enabled: !!code,
+    staleTime: 1000 * 60, // 1 minute
   });
 };

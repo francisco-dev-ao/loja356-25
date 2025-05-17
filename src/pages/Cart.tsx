@@ -1,18 +1,39 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import CartItem from '@/components/cart/CartItem';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
-import { ArrowLeft, ArrowRight, ShoppingCart, LogIn } from 'lucide-react';
+import { useCoupon } from '@/hooks/use-products';
+import { ArrowLeft, ArrowRight, ShoppingCart, LogIn, Tag, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatCurrency } from '@/lib/formatters';
+import { formatCurrency, applyCouponDiscount } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 const Cart = () => {
   const { items, total, clearCart } = useCart();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const { data: couponData, isLoading: isLoadingCoupon } = useCoupon(appliedCoupon);
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+
+  const discountedTotal = React.useMemo(() => {
+    if (couponData && !('error' in couponData)) {
+      return applyCouponDiscount(
+        total,
+        couponData.discount_type,
+        couponData.discount_value
+      );
+    }
+    return total;
+  }, [total, couponData]);
+
+  const discount = total - discountedTotal;
 
   if (items.length === 0) {
     return (
@@ -42,6 +63,82 @@ const Cart = () => {
     } else {
       toast.info('Por favor, faça login para continuar com a compra');
       navigate('/cliente/login', { state: { redirectAfterLogin: '/checkout' } });
+    }
+  };
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      toast.error('Digite um código de cupom válido');
+      return;
+    }
+
+    setIsApplyingCoupon(true);
+
+    try {
+      // Check if coupon exists
+      const { data, error } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('code', couponCode.trim())
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!data) {
+        toast.error('Cupom não encontrado');
+        return;
+      }
+
+      // Validate coupon
+      const now = new Date();
+      const validFrom = new Date(data.valid_from);
+      const validUntil = data.valid_until ? new Date(data.valid_until) : null;
+
+      // Check if coupon is within valid date range
+      if (validFrom > now) {
+        toast.error('Este cupom ainda não está válido');
+        return;
+      }
+
+      if (validUntil && validUntil < now) {
+        toast.error('Este cupom já expirou');
+        return;
+      }
+
+      // Check if max uses not exceeded
+      if (data.max_uses && data.current_uses >= data.max_uses) {
+        toast.error('Este cupom atingiu o limite de usos');
+        return;
+      }
+
+      // Apply the coupon
+      setAppliedCoupon(couponCode.trim());
+      toast.success('Cupom aplicado com sucesso!');
+      setCouponCode('');
+
+    } catch (error) {
+      console.error('Error applying coupon:', error);
+      toast.error('Erro ao aplicar cupom');
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    toast.info('Cupom removido');
+  };
+
+  const incrementCouponUses = async () => {
+    if (!appliedCoupon || !couponData || 'error' in couponData) return;
+    
+    try {
+      await supabase
+        .from('coupons')
+        .update({ current_uses: (couponData.current_uses || 0) + 1 })
+        .eq('id', couponData.id);
+    } catch (error) {
+      console.error('Error incrementing coupon uses:', error);
     }
   };
 
@@ -81,6 +178,7 @@ const Cart = () => {
                   onClick={() => {
                     if (confirm('Tem certeza que deseja esvaziar o carrinho?')) {
                       clearCart();
+                      setAppliedCoupon(null);
                     }
                   }}
                 >
@@ -96,19 +194,79 @@ const Cart = () => {
               <div className="p-6">
                 <h2 className="text-xl font-heading font-semibold mb-6">Resumo do Pedido</h2>
                 
+                {/* Coupon input */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium mb-2">Cupom de Desconto</label>
+                  {appliedCoupon ? (
+                    <div className="flex items-center bg-green-50 border border-green-200 rounded p-3">
+                      <div className="flex-1">
+                        <div className="flex items-center">
+                          <Tag size={16} className="text-green-600 mr-2" />
+                          <span className="font-medium text-green-800">{appliedCoupon}</span>
+                        </div>
+                        {couponData && !('error' in couponData) && (
+                          <span className="text-xs text-green-700 block mt-1">
+                            {couponData.discount_type === 'percentage'
+                              ? `${couponData.discount_value}% de desconto`
+                              : `${formatCurrency(couponData.discount_value)} kz de desconto`}
+                          </span>
+                        )}
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={handleRemoveCoupon}
+                        className="h-8 w-8 p-0"
+                      >
+                        <X size={16} className="text-red-500" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex space-x-2">
+                      <div className="flex-1">
+                        <Input
+                          placeholder="Digite o código do cupom"
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value)}
+                        />
+                      </div>
+                      <Button 
+                        onClick={handleApplyCoupon}
+                        disabled={isApplyingCoupon || !couponCode.trim()}
+                      >
+                        {isApplyingCoupon ? (
+                          <span className="flex items-center">
+                            <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                            Aplicando...
+                          </span>
+                        ) : 'Aplicar'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                
                 <div className="space-y-4">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>
                     <span>{formatCurrency(total)} kz</span>
                   </div>
+                  
+                  {discount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Desconto</span>
+                      <span>- {formatCurrency(discount)} kz</span>
+                    </div>
+                  )}
+                  
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Taxa de processamento</span>
                     <span>Grátis</span>
                   </div>
+                  
                   <div className="border-t border-gray-200 pt-4 flex justify-between font-medium">
                     <span>Total</span>
                     <span className="text-xl text-microsoft-blue">
-                      {formatCurrency(total)} kz
+                      {formatCurrency(discountedTotal)} kz
                     </span>
                   </div>
                 </div>
@@ -117,7 +275,13 @@ const Cart = () => {
               <div className="p-6 border-t border-gray-200">
                 <Button 
                   className="w-full bg-microsoft-blue hover:bg-microsoft-blue/90 text-lg py-6"
-                  onClick={handleProceedToCheckout}
+                  onClick={() => {
+                    // Register coupon use when proceeding to checkout
+                    if (appliedCoupon && couponData && !('error' in couponData)) {
+                      incrementCouponUses();
+                    }
+                    handleProceedToCheckout();
+                  }}
                 >
                   {isAuthenticated ? (
                     <span className="flex items-center">
