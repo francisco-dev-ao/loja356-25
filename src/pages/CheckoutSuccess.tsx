@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+import { formatCurrency } from '@/lib/formatters';
 
 interface OrderItem {
   id: string;
@@ -48,6 +49,7 @@ const CheckoutSuccess = () => {
   const [order, setOrder] = useState<Order | null>(null);
   const [isGenerating, setIsGenerating] = useState(true);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
   
   // Informações da empresa
   const companyInfo: CompanyInfo = {
@@ -98,10 +100,17 @@ const CheckoutSuccess = () => {
         });
 
         // Atualizar o estado com todos os dados do pedido
-        setOrder({
+        const orderWithItems = {
           ...orderData,
           items: itemsWithProductNames
-        });
+        };
+        
+        setOrder(orderWithItems);
+
+        // Enviar email de confirmação
+        if (!emailSent) {
+          sendOrderConfirmationEmail(orderData.id);
+        }
 
         // Simular tempo para gerar fatura
         const timer = setInterval(() => {
@@ -123,7 +132,22 @@ const CheckoutSuccess = () => {
     if (orderId && orderId !== 'N/A') {
       fetchOrderDetails();
     }
-  }, [orderId]);
+  }, [orderId, emailSent]);
+
+  const sendOrderConfirmationEmail = async (orderId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-order-confirmation', {
+        body: { orderId }
+      });
+      
+      if (error) throw error;
+      
+      console.log('Email confirmation response:', data);
+      setEmailSent(true);
+    } catch (error) {
+      console.error('Error sending order confirmation email:', error);
+    }
+  };
 
   const generateInvoicePDF = async () => {
     if (!order || !profile) {
@@ -205,8 +229,8 @@ const CheckoutSuccess = () => {
         const tableRows = order.items.map(item => [
           item.productName || 'Produto',
           item.quantity,
-          `${item.price.toLocaleString('pt-AO')} kz`,
-          `${(item.price * item.quantity).toLocaleString('pt-AO')} kz`
+          `${formatCurrency(item.price)} kz`,
+          `${formatCurrency(item.price * item.quantity)} kz`
         ]);
         
         // @ts-ignore
@@ -240,7 +264,7 @@ const CheckoutSuccess = () => {
       doc.setFont('helvetica', 'bold');
       doc.text('Total:', 150, finalY + 10);
       doc.setFontSize(12);
-      doc.text(`${order.total.toLocaleString('pt-AO')} kz`, 190, finalY + 10, { align: 'right' });
+      doc.text(`${formatCurrency(order.total)} kz`, 190, finalY + 10, { align: 'right' });
       
       // Informações de pagamento
       doc.setFontSize(10);
@@ -357,6 +381,11 @@ const CheckoutSuccess = () => {
                             </span>
                           )}
                         </Button>
+                        {emailSent && (
+                          <p className="mt-4 text-xs text-green-600">
+                            Uma confirmação foi enviada para seu email.
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>

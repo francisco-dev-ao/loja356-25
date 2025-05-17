@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 import Layout from '@/components/layout/Layout';
@@ -6,142 +7,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, FileText, Check, X, User } from 'lucide-react';
-
-// Mock orders
-const mockOrders = [
-  {
-    id: 'ORD-123456',
-    customer: {
-      id: '1',
-      name: 'João Silva',
-      email: 'joao.silva@example.com'
-    },
-    date: '2023-05-15',
-    status: 'completed',
-    total: 899.90,
-    items: [
-      { id: '1', name: 'Windows 10 Pro', quantity: 1, price: 899.90 }
-    ]
-  },
-  {
-    id: 'ORD-123457',
-    customer: {
-      id: '2',
-      name: 'Maria Oliveira',
-      email: 'maria.oliveira@example.com'
-    },
-    date: '2023-06-02',
-    status: 'pending',
-    total: 1299.90,
-    items: [
-      { id: '2', name: 'Exchange Server 2019 - Standard', quantity: 1, price: 1299.90 }
-    ]
-  },
-  {
-    id: 'ORD-123458',
-    customer: {
-      id: '3',
-      name: 'Paulo Santos',
-      email: 'paulo.santos@example.com'
-    },
-    date: '2023-06-10',
-    status: 'completed',
-    total: 399.80,
-    items: [
-      { id: '3', name: 'Microsoft 365 - Pacote Business', quantity: 1, price: 249.90 },
-      { id: '4', name: 'Microsoft 365 - Pacote Básico', quantity: 1, price: 149.90 }
-    ]
-  },
-  {
-    id: 'ORD-123459',
-    customer: {
-      id: '4',
-      name: 'Ana Pereira',
-      email: 'ana.pereira@example.com'
-    },
-    date: '2023-06-15',
-    status: 'pending',
-    total: 1099.90,
-    items: [
-      { id: '5', name: 'Windows 11 Pro', quantity: 1, price: 1099.90 }
-    ]
-  }
-];
-
-// Mock customers
-const mockCustomers = [
-  {
-    id: '1',
-    name: 'João Silva',
-    email: 'joao.silva@example.com',
-    phone: '(11) 98765-4321',
-    company: 'Tech Solutions',
-    orders: 1
-  },
-  {
-    id: '2',
-    name: 'Maria Oliveira',
-    email: 'maria.oliveira@example.com',
-    phone: '(21) 97654-3210',
-    company: 'Design Studio',
-    orders: 1
-  },
-  {
-    id: '3',
-    name: 'Paulo Santos',
-    email: 'paulo.santos@example.com',
-    phone: '(31) 96543-2109',
-    company: 'Marketing Agency',
-    orders: 1
-  },
-  {
-    id: '4',
-    name: 'Ana Pereira',
-    email: 'ana.pereira@example.com',
-    phone: '(41) 95432-1098',
-    company: 'Retail Store',
-    orders: 1
-  },
-  {
-    id: '5',
-    name: 'Carlos Ferreira',
-    email: 'carlos.ferreira@example.com',
-    phone: '(51) 94321-0987',
-    company: 'Consulting Group',
-    orders: 0
-  }
-];
-
-// Status badges
-const getStatusBadge = (status: string) => {
-  switch (status) {
-    case 'completed':
-      return (
-        <span className="bg-green-100 text-green-800 text-xs py-1 px-2 rounded-full font-medium">
-          Concluído
-        </span>
-      );
-    case 'pending':
-      return (
-        <span className="bg-yellow-100 text-yellow-800 text-xs py-1 px-2 rounded-full font-medium">
-          Pendente
-        </span>
-      );
-    case 'cancelled':
-      return (
-        <span className="bg-red-100 text-red-800 text-xs py-1 px-2 rounded-full font-medium">
-          Cancelado
-        </span>
-      );
-    default:
-      return (
-        <span className="bg-gray-100 text-gray-800 text-xs py-1 px-2 rounded-full font-medium">
-          {status}
-        </span>
-      );
-  }
-};
+import { Search, FileText, Check, X, User, Download } from 'lucide-react';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { formatCurrency } from '@/lib/formatters';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 
 const AdminDashboard = () => {
   const { user, profile, isLoading, isAuthenticated } = useAuth();
@@ -149,18 +20,131 @@ const AdminDashboard = () => {
   const [orderFilter, setOrderFilter] = useState('all');
   const [orderSearchTerm, setOrderSearchTerm] = useState('');
   const [customerSearchTerm, setCustomerSearchTerm] = useState('');
-  const [orders, setOrders] = useState(mockOrders);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [fetchingOrders, setFetchingOrders] = useState(false);
+  const [fetchingCustomers, setFetchingCustomers] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  
+  // Informações da empresa
+  const companyInfo = {
+    name: "LicençasPRO, Lda",
+    address: "Rua Comandante Gika, n.º 100, Luanda, Angola",
+    nif: "5417124080",
+    phone: "+244 923 456 789",
+    email: "financeiro@licencaspro.ao",
+    website: "www.licencaspro.ao"
+  };
+
+  // Fetch data on component mount
+  useEffect(() => {
+    if (isAuthenticated && profile?.role === 'admin') {
+      fetchOrders();
+      fetchCustomers();
+    }
+  }, [isAuthenticated, profile]);
+
+  const fetchOrders = async () => {
+    setFetchingOrders(true);
+    try {
+      // Fetch all orders with order items
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select(`
+          id, 
+          created_at, 
+          updated_at,
+          status, 
+          payment_status, 
+          payment_method, 
+          total,
+          user_id,
+          profiles:user_id (
+            name, 
+            email
+          ),
+          order_items (
+            id,
+            product_id,
+            quantity,
+            price
+          )
+        `)
+        .order('created_at', { ascending: false });
+        
+      if (ordersError) throw ordersError;
+      
+      // Fetch product details for order items
+      if (ordersData) {
+        const ordersWithProducts = await Promise.all(ordersData.map(async (order) => {
+          const { data: orderItems } = await supabase
+            .from('order_items')
+            .select('*, product:product_id(name)')
+            .eq('order_id', order.id);
+            
+          return {
+            ...order,
+            items: orderItems || []
+          };
+        }));
+        
+        setOrders(ordersWithProducts);
+      }
+      
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      toast.error('Erro ao carregar pedidos');
+    } finally {
+      setFetchingOrders(false);
+    }
+  };
+
+  const fetchCustomers = async () => {
+    setFetchingCustomers(true);
+    try {
+      // Fetch all customers (profiles with role 'customer')
+      const { data: customersData, error: customersError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'customer');
+      
+      if (customersError) throw customersError;
+
+      if (customersData) {
+        // Count orders for each customer
+        const customersWithOrderCount = await Promise.all(customersData.map(async (customer) => {
+          const { count, error } = await supabase
+            .from('orders')
+            .select('id', { count: 'exact' })
+            .eq('user_id', customer.id);
+            
+          return {
+            ...customer,
+            orders: count || 0
+          };
+        }));
+        
+        setCustomers(customersWithOrderCount);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      toast.error('Erro ao carregar clientes');
+    } finally {
+      setFetchingCustomers(false);
+    }
+  };
   
   // If not logged in or not an admin, redirect to login
-  if (!isLoading && (!isAuthenticated || (user && user.role !== 'admin'))) {
+  if (!isLoading && (!isAuthenticated || (profile && profile.role !== 'admin'))) {
+    toast.error('Área restrita. Faça login como administrador.');
     return <Navigate to="/cliente/login" />;
   }
 
   // Filter orders
   const filteredOrders = orders.filter(order => {
     const matchesSearch = order.id.toLowerCase().includes(orderSearchTerm.toLowerCase()) ||
-                          order.customer.name.toLowerCase().includes(orderSearchTerm.toLowerCase()) ||
-                          order.customer.email.toLowerCase().includes(orderSearchTerm.toLowerCase());
+                          (order.profiles.name && order.profiles.name.toLowerCase().includes(orderSearchTerm.toLowerCase())) ||
+                          (order.profiles.email && order.profiles.email.toLowerCase().includes(orderSearchTerm.toLowerCase()));
     
     const matchesFilter = orderFilter === 'all' || order.status === orderFilter;
     
@@ -168,22 +152,311 @@ const AdminDashboard = () => {
   });
 
   // Filter customers
-  const filteredCustomers = mockCustomers.filter(customer => {
-    return customer.name.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
-           customer.email.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
-           customer.company.toLowerCase().includes(customerSearchTerm.toLowerCase());
+  const filteredCustomers = customers.filter(customer => {
+    return customer.name?.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
+           customer.email?.toLowerCase().includes(customerSearchTerm.toLowerCase());
   });
 
-  const handleApproveOrder = (orderId: string) => {
-    setOrders(orders.map(order => 
-      order.id === orderId ? { ...order, status: 'completed' } : order
-    ));
+  // Handle order status update
+  const handleUpdateOrderStatus = async (orderId: string, status: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status })
+        .eq('id', orderId);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setOrders(orders.map(order => 
+        order.id === orderId ? { ...order, status } : order
+      ));
+      
+      toast.success(`Status do pedido atualizado para: ${status}`);
+      
+      // If marking as completed and payment is pending, also update payment status
+      if (status === 'completed') {
+        const order = orders.find(o => o.id === orderId);
+        if (order && order.payment_status === 'pending') {
+          await handleUpdatePaymentStatus(orderId, 'paid');
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      toast.error('Erro ao atualizar status do pedido');
+    }
   };
 
-  const handleRejectOrder = (orderId: string) => {
-    setOrders(orders.map(order => 
-      order.id === orderId ? { ...order, status: 'cancelled' } : order
-    ));
+  // Handle payment status update
+  const handleUpdatePaymentStatus = async (orderId: string, status: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ payment_status: status })
+        .eq('id', orderId);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setOrders(orders.map(order => 
+        order.id === orderId ? { ...order, payment_status: status } : order
+      ));
+      
+      toast.success(`Status de pagamento atualizado para: ${status}`);
+      
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+      toast.error('Erro ao atualizar status de pagamento');
+    }
+  };
+
+  // Delete customer
+  const handleDeleteCustomer = async (customerId: string) => {
+    if (!confirm('Tem certeza que deseja excluir este cliente? Esta ação é irreversível.')) {
+      return;
+    }
+    
+    try {
+      // Delete the user from auth (this will cascade delete the profile due to foreign key constraint)
+      const { error } = await supabase.auth.admin.deleteUser(customerId);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setCustomers(customers.filter(customer => customer.id !== customerId));
+      
+      toast.success('Cliente excluído com sucesso');
+      
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      toast.error('Erro ao excluir cliente. Verifique se você tem permissões de administrador.');
+    }
+  };
+
+  // Delete order
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!confirm('Tem certeza que deseja excluir este pedido? Esta ação é irreversível.')) {
+      return;
+    }
+    
+    try {
+      // First delete order items
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .delete()
+        .eq('order_id', orderId);
+      
+      if (itemsError) throw itemsError;
+      
+      // Then delete the order
+      const { error: orderError } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', orderId);
+      
+      if (orderError) throw orderError;
+      
+      // Update local state
+      setOrders(orders.filter(order => order.id !== orderId));
+      
+      toast.success('Pedido excluído com sucesso');
+      
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      toast.error('Erro ao excluir pedido');
+    }
+  };
+
+  // Generate Invoice PDF
+  const generateInvoicePDF = async (order: any) => {
+    if (!order) {
+      toast.error('Dados insuficientes para gerar a fatura');
+      return;
+    }
+
+    setIsGeneratingPdf(true);
+
+    try {
+      // Get customer profile
+      const { data: customerProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', order.user_id)
+        .single();
+
+      // Criar um novo documento PDF
+      const doc = new jsPDF();
+      
+      // Adicionar cabeçalho com o logo (pode adicionar um logo real posteriormente)
+      doc.setFillColor(0, 114, 206);
+      doc.rect(0, 0, doc.internal.pageSize.width, 40, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.setFont('helvetica', 'bold');
+      doc.text('LicençasPRO', 15, 25);
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Licenças Microsoft Originais', 105, 25, { align: 'center' });
+      
+      // Adicionar informações da fatura
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('FATURA', 105, 50, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Número da Fatura:', 15, 60);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`FATURA-${order.id.substring(0, 8).toUpperCase()}`, 55, 60);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Data:', 15, 65);
+      doc.setFont('helvetica', 'normal');
+      doc.text(new Date(order.created_at).toLocaleDateString('pt-BR'), 55, 65);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Status de Pagamento:', 15, 70);
+      doc.setFont('helvetica', 'normal');
+      doc.text(order.payment_status === 'paid' ? 'Pago' : 'Pendente', 55, 70);
+      
+      // Informações da empresa
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Emitido por:', 15, 85);
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(companyInfo.name, 15, 92);
+      doc.text(companyInfo.address, 15, 97);
+      doc.text(`NIF: ${companyInfo.nif}`, 15, 102);
+      doc.text(`Tel: ${companyInfo.phone}`, 15, 107);
+      doc.text(`Email: ${companyInfo.email}`, 15, 112);
+      doc.text(`Website: ${companyInfo.website}`, 15, 117);
+      
+      // Informações do cliente
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Faturado a:', 140, 85);
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(customerProfile?.name || 'Cliente', 140, 92);
+      doc.text(customerProfile?.address || 'Endereço não informado', 140, 97);
+      doc.text(`NIF: ${customerProfile?.nif || 'Não informado'}`, 140, 102);
+      doc.text(`Tel: ${customerProfile?.phone || 'Não informado'}`, 140, 107);
+      doc.text(`Email: ${customerProfile?.email || 'Não informado'}`, 140, 112);
+      
+      // Tabela de itens
+      if (order.items && order.items.length > 0) {
+        const tableColumn = ["Produto", "Qtd", "Preço Unit.", "Total"];
+        const tableRows = order.items.map((item: any) => [
+          item.product?.name || 'Produto',
+          item.quantity,
+          `${formatCurrency(item.price)} kz`,
+          `${formatCurrency(item.price * item.quantity)} kz`
+        ]);
+        
+        // @ts-ignore
+        doc.autoTable({
+          head: [tableColumn],
+          body: tableRows,
+          startY: 130,
+          theme: 'grid',
+          headStyles: {
+            fillColor: [0, 114, 206],
+            textColor: [255, 255, 255],
+            fontStyle: 'bold'
+          },
+          styles: {
+            lineColor: [222, 226, 230]
+          },
+          columnStyles: {
+            0: { cellWidth: 90 },
+            1: { cellWidth: 20, halign: 'center' },
+            2: { cellWidth: 40, halign: 'right' },
+            3: { cellWidth: 40, halign: 'right' }
+          }
+        });
+      }
+      
+      // Adicionar total
+      // @ts-ignore
+      const finalY = doc.lastAutoTable.finalY || 150;
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Total:', 150, finalY + 10);
+      doc.setFontSize(12);
+      doc.text(`${formatCurrency(order.total)} kz`, 190, finalY + 10, { align: 'right' });
+      
+      // Informações de pagamento
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Método de Pagamento:', 15, finalY + 25);
+      doc.setFont('helvetica', 'normal');
+      const paymentMethod = order.payment_method === 'multicaixa' ? 'Multicaixa Express' : 'Transferência Bancária';
+      doc.text(paymentMethod, 60, finalY + 25);
+      
+      // Notas e termos
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Notas:', 15, finalY + 40);
+      doc.setFont('helvetica', 'normal');
+      doc.text('1. As licenças são enviadas por email após a confirmação do pagamento.', 15, finalY + 45);
+      doc.text('2. Suporte técnico gratuito por 30 dias após a compra.', 15, finalY + 50);
+      doc.text('3. Para qualquer dúvida, entre em contato com nossa equipe de suporte.', 15, finalY + 55);
+      
+      // Rodapé
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.text('Obrigado por escolher a LicençasPRO!', 105, 280, { align: 'center' });
+      doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, 105, 285, { align: 'center' });
+      
+      // Salvar o PDF
+      doc.save(`FATURA-${order.id.substring(0, 8)}.pdf`);
+      toast.success('Fatura baixada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      toast.error('Erro ao gerar PDF da fatura');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  // Status badges
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'completed':
+      case 'paid':
+        return (
+          <span className="bg-green-100 text-green-800 text-xs py-1 px-2 rounded-full font-medium">
+            {status === 'completed' ? 'Concluído' : 'Pago'}
+          </span>
+        );
+      case 'processing':
+      case 'pending':
+        return (
+          <span className="bg-yellow-100 text-yellow-800 text-xs py-1 px-2 rounded-full font-medium">
+            {status === 'processing' ? 'Processando' : 'Pendente'}
+          </span>
+        );
+      case 'cancelled':
+        return (
+          <span className="bg-red-100 text-red-800 text-xs py-1 px-2 rounded-full font-medium">
+            Cancelado
+          </span>
+        );
+      default:
+        return (
+          <span className="bg-gray-100 text-gray-800 text-xs py-1 px-2 rounded-full font-medium">
+            {status}
+          </span>
+        );
+    }
   };
 
   if (isLoading) {
@@ -251,6 +524,7 @@ const AdminDashboard = () => {
                   <SelectContent>
                     <SelectItem value="all">Todos os status</SelectItem>
                     <SelectItem value="pending">Pendentes</SelectItem>
+                    <SelectItem value="processing">Processando</SelectItem>
                     <SelectItem value="completed">Concluídos</SelectItem>
                     <SelectItem value="cancelled">Cancelados</SelectItem>
                   </SelectContent>
@@ -275,6 +549,9 @@ const AdminDashboard = () => {
                         Status
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Pagamento
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Total
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -283,38 +560,55 @@ const AdminDashboard = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {filteredOrders.length > 0 ? (
+                    {fetchingOrders ? (
+                      <tr>
+                        <td colSpan={7} className="px-6 py-12 text-center">
+                          <div className="flex justify-center">
+                            <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : filteredOrders.length > 0 ? (
                       filteredOrders.map((order) => (
                         <tr key={order.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            {order.id}
+                            {order.id.substring(0, 8)}...
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            <div>{order.customer.name}</div>
-                            <div className="text-xs text-gray-500">{order.customer.email}</div>
+                            <div>{order.profiles?.name || 'Cliente'}</div>
+                            <div className="text-xs text-gray-500">{order.profiles?.email || 'Sem email'}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {new Date(order.date).toLocaleDateString('pt-BR')}
+                            {new Date(order.created_at).toLocaleDateString('pt-BR')}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             {getStatusBadge(order.status)}
                           </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {getStatusBadge(order.payment_status)}
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            {order.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            {formatCurrency(order.total)} kz
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                             <div className="flex justify-end space-x-2">
-                              <Button variant="outline" size="sm" className="text-blue-600">
-                                <FileText size={14} className="mr-1" />
-                                Detalhes
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => generateInvoicePDF(order)} 
+                                className="text-blue-600"
+                              >
+                                <Download size={14} className="mr-1" />
+                                Fatura
                               </Button>
+                              
                               {order.status === 'pending' && (
                                 <>
                                   <Button 
                                     variant="outline" 
                                     size="sm" 
                                     className="text-green-600"
-                                    onClick={() => handleApproveOrder(order.id)}
+                                    onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
                                   >
                                     <Check size={14} className="mr-1" />
                                     Aprovar
@@ -323,20 +617,42 @@ const AdminDashboard = () => {
                                     variant="outline" 
                                     size="sm" 
                                     className="text-red-600"
-                                    onClick={() => handleRejectOrder(order.id)}
+                                    onClick={() => handleUpdateOrderStatus(order.id, 'cancelled')}
                                   >
                                     <X size={14} className="mr-1" />
                                     Rejeitar
                                   </Button>
                                 </>
                               )}
+                              
+                              {order.payment_status === 'pending' && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="text-green-600"
+                                  onClick={() => handleUpdatePaymentStatus(order.id, 'paid')}
+                                >
+                                  <Check size={14} className="mr-1" />
+                                  Pagar
+                                </Button>
+                              )}
+                              
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="text-red-600"
+                                onClick={() => handleDeleteOrder(order.id)}
+                              >
+                                <X size={14} className="mr-1" />
+                                Excluir
+                              </Button>
                             </div>
                           </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={6} className="px-6 py-12 text-center text-sm text-gray-500">
+                        <td colSpan={7} className="px-6 py-12 text-center text-sm text-gray-500">
                           Nenhum pedido encontrado.
                         </td>
                       </tr>
@@ -376,7 +692,7 @@ const AdminDashboard = () => {
                         Telefone
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Empresa
+                        NIF
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Pedidos
@@ -387,7 +703,15 @@ const AdminDashboard = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {filteredCustomers.length > 0 ? (
+                    {fetchingCustomers ? (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-12 text-center">
+                          <div className="flex justify-center">
+                            <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : filteredCustomers.length > 0 ? (
                       filteredCustomers.map((customer) => (
                         <tr key={customer.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -395,27 +719,32 @@ const AdminDashboard = () => {
                               <div className="w-8 h-8 bg-microsoft-light rounded-full flex items-center justify-center mr-3">
                                 <User size={16} className="text-microsoft-blue" />
                               </div>
-                              {customer.name}
+                              {customer.name || 'Sem nome'}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            {customer.email}
+                            {customer.email || 'Sem email'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            {customer.phone}
+                            {customer.phone || 'Não informado'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            {customer.company}
+                            {customer.nif || 'Não informado'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            {customer.orders}
+                            {customer.orders || 0}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                             <div className="flex justify-end space-x-2">
                               <Button variant="outline" size="sm">
                                 Ver Detalhes
                               </Button>
-                              <Button variant="outline" size="sm" className="text-red-600">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="text-red-600"
+                                onClick={() => handleDeleteCustomer(customer.id)}
+                              >
                                 Excluir
                               </Button>
                             </div>
