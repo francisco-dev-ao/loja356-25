@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
@@ -13,6 +12,9 @@ export interface Product {
   image: string;
   category: string;
   quantity: number;
+  base_price?: number | null;
+  discount_type?: 'percentage' | 'fixed' | null;
+  discount_value?: number | null;
 }
 
 interface CartItem extends Product {

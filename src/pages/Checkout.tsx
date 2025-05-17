@@ -16,6 +16,7 @@ import LoginForm from '@/components/auth/LoginForm';
 import RegisterForm from '@/components/auth/RegisterForm';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/formatters';
+import { Badge } from '@/components/ui/badge';
 
 const Checkout = () => {
   const { items, total, clearCart } = useCart();
@@ -111,7 +112,8 @@ const Checkout = () => {
   const handleSelectPaymentMethod = (method: string) => {
     setPaymentMethod(method);
     // Criar pedido automaticamente quando o usuário selecionar o método de pagamento
-    if (method === 'bank_transfer') {
+    // Modificado para criar o pedido em apenas uma vez, sem necessidade de cliques adicionais
+    if (method === 'bank_transfer' || method === 'multicaixa') {
       handleCreateOrder();
     }
   };
@@ -214,7 +216,7 @@ const Checkout = () => {
                     <h3 className="text-lg font-medium mb-4">Método de Pagamento</h3>
                     
                     {/* Seção de escolha de método de pagamento */}
-                    {!paymentMethod || (paymentMethod === 'multicaixa' && !orderId) ? (
+                    {!paymentMethod ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                         <Card 
                           className="border cursor-pointer hover:border-microsoft-blue transition-colors"
@@ -255,30 +257,27 @@ const Checkout = () => {
                         </Card>
                       </div>
                     ) : (
-                      <Tabs value={paymentMethod} onValueChange={handleSelectPaymentMethod} className="w-full">
-                        <TabsList className="grid w-full grid-cols-2 mb-6">
-                          <TabsTrigger value="multicaixa">Multicaixa Express</TabsTrigger>
-                          <TabsTrigger value="bank_transfer">Transferência Bancária</TabsTrigger>
-                        </TabsList>
-                        
-                        <TabsContent value="multicaixa">
-                          {isProcessing && !orderId ? (
-                            <div className="flex flex-col items-center justify-center py-8">
-                              <div className="animate-spin h-8 w-8 border-4 border-microsoft-blue border-t-transparent rounded-full mb-4"></div>
-                              <p>Criando pedido...</p>
-                            </div>
-                          ) : (
-                            <MulticaixaExpressPayment 
-                              amount={total} 
-                              orderId={orderId || ''} 
-                            />
-                          )}
-                        </TabsContent>
-                        
-                        <TabsContent value="bank_transfer">
-                          <BankTransferPayment />
-                        </TabsContent>
-                      </Tabs>
+                      <div className="w-full">
+                        {isProcessing && !orderId ? (
+                          <div className="flex flex-col items-center justify-center py-8">
+                            <div className="animate-spin h-8 w-8 border-4 border-microsoft-blue border-t-transparent rounded-full mb-4"></div>
+                            <p>Criando pedido...</p>
+                          </div>
+                        ) : (
+                          <>
+                            {paymentMethod === 'multicaixa' && (
+                              <MulticaixaExpressPayment 
+                                amount={total} 
+                                orderId={orderId || ''} 
+                              />
+                            )}
+                            
+                            {paymentMethod === 'bank_transfer' && (
+                              <BankTransferPayment />
+                            )}
+                          </>
+                        )}
+                      </div>
                     )}
                   </CardContent>
                 </TabsContent>
@@ -292,9 +291,9 @@ const Checkout = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium">Resumo do Pedido</h3>
-                  <span className="bg-gray-100 text-xs font-medium px-2 py-1 rounded">
+                  <Badge variant="outline" className="text-xs px-2 py-1 rounded">
                     {items.length} {items.length === 1 ? 'item' : 'itens'}
-                  </span>
+                  </Badge>
                 </div>
                 
                 <div className="max-h-64 overflow-y-auto mb-4">
@@ -317,6 +316,13 @@ const Checkout = () => {
                             {formatCurrency(item.price * item.quantity)}
                           </span>
                         </div>
+                        {item.base_price && item.base_price > item.price && (
+                          <div className="mt-1">
+                            <Badge variant="destructive" className="text-xs">
+                              -{Math.round(((item.base_price - item.price) / item.base_price) * 100)}%
+                            </Badge>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}

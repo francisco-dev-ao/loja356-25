@@ -2,6 +2,7 @@
 import React from 'react';
 import { useCart } from '@/hooks/use-cart';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Trash, Plus, Minus } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatters';
 
@@ -11,14 +12,24 @@ interface CartItemProps {
   price: number;
   quantity: number;
   image: string;
+  base_price?: number | null;
+  discount_type?: 'percentage' | 'fixed' | null;
+  discount_value?: number | null;
 }
 
-const CartItem = ({ id, name, price, quantity, image }: CartItemProps) => {
+const CartItem = ({ 
+  id, 
+  name, 
+  price, 
+  quantity, 
+  image,
+  base_price,
+  discount_type,
+  discount_value
+}: CartItemProps) => {
   const { updateQuantity, removeItem } = useCart();
 
   const handleIncrement = () => {
-    // Em uma aplicação real, você pode querer verificar disponibilidade em estoque
-    // antes de incrementar a quantidade
     updateQuantity(id, quantity + 1);
   };
 
@@ -26,12 +37,17 @@ const CartItem = ({ id, name, price, quantity, image }: CartItemProps) => {
     if (quantity > 1) {
       updateQuantity(id, quantity - 1);
     } else {
-      // Opcional: mostrar confirmação antes de remover o último item
       if (confirm('Deseja remover este item do carrinho?')) {
         removeItem(id);
       }
     }
   };
+
+  // Calculate discount percentage if available
+  const hasDiscount = base_price && base_price > price;
+  const discountPercentage = hasDiscount 
+    ? Math.round(((base_price - price) / base_price) * 100) 
+    : null;
 
   return (
     <div className="flex items-center gap-4 py-4 border-b border-gray-200">
@@ -45,9 +61,22 @@ const CartItem = ({ id, name, price, quantity, image }: CartItemProps) => {
       
       <div className="flex-1">
         <h3 className="text-sm font-medium">{name}</h3>
-        <p className="mt-1 text-sm font-medium text-microsoft-blue">
-          {formatCurrency(price)}
-        </p>
+        <div className="mt-1 flex items-center gap-2">
+          <p className="text-sm font-medium text-microsoft-blue">
+            {formatCurrency(price)}
+          </p>
+          
+          {hasDiscount && (
+            <>
+              <p className="text-xs line-through text-gray-500">
+                {formatCurrency(base_price)}
+              </p>
+              <Badge variant="destructive" className="text-xs">
+                -{discountPercentage}%
+              </Badge>
+            </>
+          )}
+        </div>
       </div>
       
       <div className="flex items-center gap-2">

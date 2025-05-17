@@ -1,9 +1,9 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import CartItem from '@/components/cart/CartItem';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
@@ -161,6 +161,9 @@ const Cart = () => {
                     price={item.price}
                     quantity={item.quantity}
                     image={item.image}
+                    base_price={item.base_price}
+                    discount_type={item.discount_type}
+                    discount_value={item.discount_value}
                   />
                 ))}
               </div>
@@ -256,9 +259,9 @@ const Cart = () => {
                     <div className="flex justify-between text-green-600">
                       <span className="flex items-center">
                         Desconto 
-                        <span className="ml-1 bg-green-100 text-green-800 text-xs px-1.5 py-0.5 rounded">
+                        <Badge variant="destructive" className="ml-2 bg-green-100 text-green-800 hover:bg-green-200">
                           {discountPercentage}%
-                        </span>
+                        </Badge>
                       </span>
                       <span>- {formatCurrency(discount)}</span>
                     </div>
