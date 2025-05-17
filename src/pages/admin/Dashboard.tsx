@@ -6,8 +6,9 @@ import ProductsTable from '@/components/admin/ProductsTable';
 import CompanySettings from '@/components/admin/CompanySettings';
 import CustomersTable from '@/components/admin/CustomersTable';
 import OrdersTable from '@/components/admin/OrdersTable';
+import CouponsTable from '@/components/admin/CouponsTable';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Package, Users, ShoppingCart, Settings } from 'lucide-react';
+import { Package, Users, ShoppingCart, Settings, Tag } from 'lucide-react';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('products');
@@ -20,7 +21,7 @@ const Dashboard = () => {
         
         <div className="dashboard-section">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className={`mb-6 ${isMobile ? 'w-full grid grid-cols-4' : ''}`}>
+            <TabsList className={`mb-6 ${isMobile ? 'w-full grid grid-cols-5' : ''}`}>
               <TabsTrigger value="products" className="flex items-center gap-2">
                 <Package className="h-4 w-4" />
                 <span>Gerenciar Produtos</span>
@@ -32,6 +33,10 @@ const Dashboard = () => {
               <TabsTrigger value="orders" className="flex items-center gap-2">
                 <ShoppingCart className="h-4 w-4" />
                 <span>Gerenciar Pedidos</span>
+              </TabsTrigger>
+              <TabsTrigger value="coupons" className="flex items-center gap-2">
+                <Tag className="h-4 w-4" />
+                <span>Gerenciar Cupons</span>
               </TabsTrigger>
               <TabsTrigger value="settings" className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />
@@ -49,6 +54,10 @@ const Dashboard = () => {
             
             <TabsContent value="orders">
               <OrdersTable />
+            </TabsContent>
+            
+            <TabsContent value="coupons">
+              <CouponsTable />
             </TabsContent>
             
             <TabsContent value="settings">
