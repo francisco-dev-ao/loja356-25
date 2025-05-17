@@ -45,7 +45,7 @@ const Cart = () => {
             </div>
             <h2 className="text-xl font-medium mb-3">Seu carrinho está vazio</h2>
             <p className="mb-6 text-muted-foreground">
-              Looks like you haven't added anything to your cart yet
+              Parece que você ainda não adicionou nenhum produto ao carrinho
             </p>
             <Button onClick={() => navigate('/produtos')}>
               Ver Produtos
@@ -110,7 +110,7 @@ const Cart = () => {
                 <div className="space-y-4">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span>{total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                    <span>{total.toLocaleString('pt-AO')} kz</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Taxa de processamento</span>
@@ -119,7 +119,7 @@ const Cart = () => {
                   <div className="border-t border-gray-200 pt-4 flex justify-between font-medium">
                     <span>Total</span>
                     <span className="text-xl text-microsoft-blue">
-                      {total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      {total.toLocaleString('pt-AO')} kz
                     </span>
                   </div>
                 </div>

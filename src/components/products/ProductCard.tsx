@@ -4,15 +4,14 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShoppingCart } from 'lucide-react';
-import { useCart, Product } from '@/hooks/use-cart';
+import { Product } from '@/hooks/use-cart';
 
 interface ProductCardProps {
   product: Product;
+  onAddToCart: () => void;
 }
 
-const ProductCard = ({ product }: ProductCardProps) => {
-  const { addItem } = useCart();
-
+const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
   return (
     <Card className="card-hover overflow-hidden">
       <CardHeader className="p-0">
@@ -27,7 +26,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
       <CardContent className="pt-6">
         <CardTitle className="mb-2 text-lg">{product.name}</CardTitle>
         <div className="flex justify-between items-center mb-2">
-          <span className="text-xl font-bold">{product.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+          <span className="text-xl font-bold">{Number(product.price).toLocaleString('pt-AO')} kz</span>
           <span className="text-sm bg-microsoft-light px-2 py-1 rounded">{product.category}</span>
         </div>
         <p className="text-sm text-muted-foreground line-clamp-3">{product.description}</p>
@@ -37,7 +36,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
           Ver detalhes
         </Link>
         <Button 
-          onClick={() => addItem(product)} 
+          onClick={onAddToCart} 
           variant="default" 
           size="sm" 
           className="bg-microsoft-blue hover:bg-microsoft-blue/90"

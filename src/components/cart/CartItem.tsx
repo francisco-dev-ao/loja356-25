@@ -38,7 +38,7 @@ const CartItem = ({ id, name, price, quantity, image }: CartItemProps) => {
       <div className="flex-1">
         <h3 className="text-sm font-medium">{name}</h3>
         <p className="mt-1 text-sm font-medium text-microsoft-blue">
-          {price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+          {Number(price).toLocaleString('pt-AO')} kz
         </p>
       </div>
       

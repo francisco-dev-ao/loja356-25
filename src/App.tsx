@@ -14,6 +14,7 @@ import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
 import Contact from "./pages/Contact";
+import Register from "./pages/Register";
 import Login from "./pages/customer/Login";
 import CustomerDashboard from "./pages/customer/Dashboard";
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -37,6 +38,7 @@ const AppWithProviders = () => {
                 <Route path="/carrinho" element={<Cart />} />
                 <Route path="/checkout/success" element={<CheckoutSuccess />} />
                 <Route path="/contato" element={<Contact />} />
+                <Route path="/cadastro" element={<Register />} />
                 
                 {/* Customer Routes */}
                 <Route path="/cliente/login" element={<Login />} />
