@@ -13,8 +13,16 @@ export default {
 	theme: {
 		container: {
 			center: true,
-			padding: '2rem',
+			padding: {
+				DEFAULT: '1rem',
+				sm: '1.5rem',
+				md: '2rem'
+			},
 			screens: {
+				sm: '640px',
+				md: '768px',
+				lg: '1024px',
+				xl: '1280px',
 				'2xl': '1400px'
 			}
 		},
@@ -100,17 +108,49 @@ export default {
 					'50%': {
 						transform: 'scale(1.05)'
 					}
+				},
+				'slide-in-from-right': {
+					'0%': {
+						transform: 'translateX(100%)'
+					},
+					'100%': {
+						transform: 'translateX(0)'
+					}
+				},
+				'slide-in-from-left': {
+					'0%': {
+						transform: 'translateX(-100%)'
+					},
+					'100%': {
+						transform: 'translateX(0)'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'fade-in': 'fade-in 0.5s ease-out',
-				'pulse-soft': 'pulse-soft 3s infinite ease-in-out'
+				'pulse-soft': 'pulse-soft 3s infinite ease-in-out',
+				'slide-in-right': 'slide-in-from-right 0.3s ease-out',
+				'slide-in-left': 'slide-in-from-left 0.3s ease-out'
 			},
 			fontFamily: {
 				sans: ['Inter', 'sans-serif'],
 				heading: ['Poppins', 'sans-serif']
+			},
+			spacing: {
+				'screen-90': '90vh',
+				'screen-80': '80vh',
+			},
+			minHeight: {
+				'dashboard-content': 'calc(100vh - 150px)',
+			},
+			maxHeight: {
+				'90vh': '90vh',
+				'80vh': '80vh',
+			},
+			screens: {
+				'xs': '480px',
 			}
 		}
 	},

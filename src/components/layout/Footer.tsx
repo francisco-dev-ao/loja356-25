@@ -5,14 +5,14 @@ import { Link } from 'react-router-dom';
 const Footer = () => {
   return (
     <footer className="bg-microsoft-dark text-white">
-      <div className="container-page py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div>
-            <h3 className="text-xl font-heading font-semibold mb-4">LicençasPRO</h3>
-            <p className="text-gray-300 mb-4">
+      <div className="container-page py-8 md:py-12">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+          <div className="col-span-2 sm:col-span-2 md:col-span-1">
+            <h3 className="text-xl font-heading font-semibold mb-3 md:mb-4">LicençasPRO</h3>
+            <p className="text-gray-300 mb-4 text-sm md:text-base">
               Seu parceiro confiável para licenças Microsoft originais com preços acessíveis.
             </p>
-            <div className="flex items-center space-x-4 mt-4">
+            <div className="flex items-center space-x-4 mt-3 md:mt-4">
               <a href="#" className="text-white hover:text-energy transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                   <path d="M16 8.049c0-4.446-3.582-8.05-8-8.05C3.58 0-.002 3.603-.002 8.05c0 4.017 2.926 7.347 6.75 7.951v-5.625h-2.03V8.05H6.75V6.275c0-2.017 1.195-3.131 3.022-3.131.876 0 1.791.157 1.791.157v1.98h-1.009c-.993 0-1.303.621-1.303 1.258v1.51h2.218l-.354 2.326H9.25V16c3.824-.604 6.75-3.934 6.75-7.951z"/>
@@ -32,8 +32,8 @@ const Footer = () => {
           </div>
           
           <div>
-            <h4 className="text-lg font-heading font-semibold mb-4">Produtos</h4>
-            <ul className="space-y-2">
+            <h4 className="text-lg font-heading font-semibold mb-3">Produtos</h4>
+            <ul className="space-y-2 text-sm md:text-base">
               <li><Link to="/produtos/microsoft-365" className="text-gray-300 hover:text-white transition-colors">Microsoft 365</Link></li>
               <li><Link to="/produtos/exchange-server" className="text-gray-300 hover:text-white transition-colors">Exchange Server 2019</Link></li>
               <li><Link to="/produtos/windows" className="text-gray-300 hover:text-white transition-colors">Windows 10/11/2025</Link></li>
@@ -41,8 +41,8 @@ const Footer = () => {
           </div>
           
           <div>
-            <h4 className="text-lg font-heading font-semibold mb-4">Suporte</h4>
-            <ul className="space-y-2">
+            <h4 className="text-lg font-heading font-semibold mb-3">Suporte</h4>
+            <ul className="space-y-2 text-sm md:text-base">
               <li><Link to="/contato" className="text-gray-300 hover:text-white transition-colors">Fale Conosco</Link></li>
               <li><Link to="/perguntas-frequentes" className="text-gray-300 hover:text-white transition-colors">Perguntas Frequentes</Link></li>
               <li><Link to="/cliente/login" className="text-gray-300 hover:text-white transition-colors">Área do Cliente</Link></li>
@@ -50,8 +50,8 @@ const Footer = () => {
           </div>
           
           <div>
-            <h4 className="text-lg font-heading font-semibold mb-4">Legal</h4>
-            <ul className="space-y-2">
+            <h4 className="text-lg font-heading font-semibold mb-3">Legal</h4>
+            <ul className="space-y-2 text-sm md:text-base">
               <li><Link to="/termos-de-uso" className="text-gray-300 hover:text-white transition-colors">Termos de Uso</Link></li>
               <li><Link to="/politica-de-privacidade" className="text-gray-300 hover:text-white transition-colors">Política de Privacidade</Link></li>
               <li><Link to="/politica-de-reembolso" className="text-gray-300 hover:text-white transition-colors">Política de Reembolso</Link></li>
@@ -59,10 +59,10 @@ const Footer = () => {
           </div>
         </div>
         
-        <div className="border-t border-gray-700 mt-8 pt-8 text-sm text-gray-400">
+        <div className="border-t border-gray-700 mt-6 md:mt-8 pt-6 md:pt-8 text-xs md:text-sm text-gray-400">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p>© {new Date().getFullYear()} LicençasPRO. Todos os direitos reservados.</p>
-            <div className="mt-4 md:mt-0">
+            <div className="mt-3 md:mt-0">
               <p>Microsoft e Windows são marcas registradas da Microsoft Corporation.</p>
             </div>
           </div>

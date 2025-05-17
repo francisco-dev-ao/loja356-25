@@ -55,22 +55,24 @@ const CurrencyPreview = () => {
   };
   
   return (
-    <div className="mt-6 bg-slate-50 p-4 rounded-md border">
+    <div className="mt-4 sm:mt-6 bg-slate-50 p-3 sm:p-4 rounded-md border">
       <h3 className="text-sm font-medium mb-2">Visualização da Formatação</h3>
-      <div className="flex items-center gap-4">
-        <div className="flex-grow">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+        <div className="w-full sm:flex-grow">
           <Input
             type="text"
             value={inputValue}
             onChange={handlePreviewAmountChange}
             placeholder="Valor (ex: 1.000,00)"
+            className="w-full"
           />
           <p className="text-xs text-muted-foreground mt-1">
             Insira o valor usando vírgula ou ponto como separador (ex: 1.000,00 ou 1000,00)
           </p>
         </div>
-        <div className="text-2xl font-semibold">→</div>
-        <div className="bg-white px-4 py-2 border rounded-md text-lg font-semibold min-w-[200px] text-right">
+        <div className="hidden sm:block text-2xl font-semibold">→</div>
+        <div className="block sm:hidden text-lg font-semibold mt-2 mb-1">↓</div>
+        <div className="bg-white px-3 py-2 sm:px-4 sm:py-2 border rounded-md text-base sm:text-lg font-semibold min-w-0 sm:min-w-[200px] text-right w-full sm:w-auto">
           {formattedPreview}
         </div>
       </div>
