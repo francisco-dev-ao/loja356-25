@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -8,6 +7,7 @@ import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
 import { ArrowLeft, ArrowRight, ShoppingCart, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/lib/formatters';
 
 const Cart = () => {
   const { items, total, clearCart } = useCart();
@@ -99,7 +99,7 @@ const Cart = () => {
                 <div className="space-y-4">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span>{total.toLocaleString('pt-AO')} kz</span>
+                    <span>{formatCurrency(total)} kz</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Taxa de processamento</span>
@@ -108,7 +108,7 @@ const Cart = () => {
                   <div className="border-t border-gray-200 pt-4 flex justify-between font-medium">
                     <span>Total</span>
                     <span className="text-xl text-microsoft-blue">
-                      {total.toLocaleString('pt-AO')} kz
+                      {formatCurrency(total)} kz
                     </span>
                   </div>
                 </div>

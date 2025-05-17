@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/hooks/use-cart';
+import { formatCurrency } from '@/lib/formatters';
 
 interface MulticaixaExpressPaymentProps {
   amount: number;
@@ -62,6 +63,13 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, [orderId, navigate, clearCart]);
+
+  useEffect(() => {
+    // Auto-initiate payment when component mounts if orderId exists
+    if (orderId && !showIframe) {
+      handlePayment();
+    }
+  }, [orderId]);
 
   const handleIframeLoad = () => {
     setIframeLoaded(true);
@@ -121,7 +129,7 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
   // In production, this would come from your backend after registering the payment with EMIS
   const generatePaymentUrl = (amount: number, orderId: string) => {
     // In production, replace with the actual EMIS payment URL
-    const baseUrl = "https://test.multicaixaexpress.co.ao/payment";
+    const baseUrl = "https://multicaixaexpress.co.ao/payment";
     
     // Add relevant parameters
     const url = new URL(baseUrl);
@@ -133,12 +141,20 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
     return url.toString();
   };
 
+  if (!orderId) {
+    return (
+      <div className="p-4 bg-blue-50 rounded-md border border-blue-100">
+        <p className="text-sm text-blue-600">Processando seu pedido...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="p-4 bg-blue-50 rounded-md border border-blue-100">
         <h3 className="text-sm font-medium text-blue-800">Informação de Pagamento</h3>
         <p className="text-sm text-blue-600 mt-1">
-          Será redirecionado para a plataforma Multicaixa Express para completar o seu pagamento de forma segura.
+          Total a pagar: <strong>{formatCurrency(amount)} kz</strong>
         </p>
       </div>
       

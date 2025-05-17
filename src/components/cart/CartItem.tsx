@@ -3,6 +3,7 @@ import React from 'react';
 import { useCart } from '@/hooks/use-cart';
 import { Button } from '@/components/ui/button';
 import { Trash, Plus, Minus } from 'lucide-react';
+import { formatCurrency } from '@/lib/formatters';
 
 interface CartItemProps {
   id: string;
@@ -45,7 +46,7 @@ const CartItem = ({ id, name, price, quantity, image }: CartItemProps) => {
       <div className="flex-1">
         <h3 className="text-sm font-medium">{name}</h3>
         <p className="mt-1 text-sm font-medium text-microsoft-blue">
-          {Number(price).toLocaleString('pt-AO')} kz
+          {formatCurrency(price)} kz
         </p>
       </div>
       

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShoppingCart } from 'lucide-react';
 import { Product } from '@/hooks/use-cart';
+import { formatCurrency } from '@/lib/formatters';
 
 interface ProductCardProps {
   product: Product;
@@ -26,7 +27,7 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
       <CardContent className="pt-6">
         <CardTitle className="mb-2 text-lg">{product.name}</CardTitle>
         <div className="flex justify-between items-center mb-2">
-          <span className="text-xl font-bold">{Number(product.price).toLocaleString('pt-AO')} kz</span>
+          <span className="text-xl font-bold">{formatCurrency(product.price)} kz</span>
           <span className="text-sm bg-microsoft-light px-2 py-1 rounded">{product.category}</span>
         </div>
         <p className="text-sm text-muted-foreground line-clamp-3">{product.description}</p>

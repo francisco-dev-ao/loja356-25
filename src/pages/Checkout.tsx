@@ -15,6 +15,7 @@ import BankTransferPayment from '@/components/checkout/BankTransferPayment';
 import LoginForm from '@/components/auth/LoginForm';
 import RegisterForm from '@/components/auth/RegisterForm';
 import { supabase } from '@/integrations/supabase/client';
+import { formatCurrency } from '@/lib/formatters';
 
 const Checkout = () => {
   const { items, total, clearCart } = useCart();
@@ -25,26 +26,24 @@ const Checkout = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
 
-  // Gerenciar o fluxo das abas
-  useEffect(() => {
-    if (isAuthenticated) {
-      setActiveTab('payment');
-    }
-  }, [isAuthenticated]);
-
-  // Verificar se o carrinho está vazio
+  // Redirecionar para o carrinho se estiver vazio
   useEffect(() => {
     if (items.length === 0) {
       navigate('/carrinho');
     }
   }, [items, navigate]);
 
-  // Criar pedido quando entrar na aba de pagamento e selecionar Multicaixa
+  // Definir a aba ativa com base no estado de autenticação
   useEffect(() => {
-    if (activeTab === 'payment' && paymentMethod === 'multicaixa' && !orderId && items.length > 0 && isAuthenticated) {
-      handleCreateOrder();
+    if (isAuthenticated) {
+      setActiveTab('payment');
+      
+      // Criar pedido automaticamente quando o usuário estiver autenticado
+      if (!orderId && items.length > 0) {
+        handleCreateOrder();
+      }
     }
-  }, [activeTab, paymentMethod, orderId, items, isAuthenticated]);
+  }, [isAuthenticated, orderId, items]);
 
   const handleCreateOrder = async () => {
     if (!isAuthenticated || !user) {
@@ -123,6 +122,21 @@ const Checkout = () => {
       setIsProcessing(false);
     }
   };
+  
+  // Redirecionar para a página principal se não houver itens no carrinho
+  if (items.length === 0) {
+    return (
+      <Layout>
+        <div className="container-page py-12 text-center">
+          <h1 className="text-3xl font-heading font-bold mb-4">Checkout</h1>
+          <p className="mb-8">Seu carrinho está vazio. Adicione produtos antes de prosseguir.</p>
+          <Button onClick={() => navigate('/produtos')}>
+            Ver Produtos
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -282,7 +296,7 @@ const Checkout = () => {
                             Qtd: {item.quantity}
                           </span>
                           <span className="text-sm">
-                            {(item.price * item.quantity).toLocaleString('pt-AO')} kz
+                            {formatCurrency(item.price * item.quantity)} kz
                           </span>
                         </div>
                       </div>
@@ -293,7 +307,7 @@ const Checkout = () => {
                 <div className="border-t border-gray-200 pt-4 space-y-2">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span>{total.toLocaleString('pt-AO')} kz</span>
+                    <span>{formatCurrency(total)} kz</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Taxa de processamento</span>
@@ -303,7 +317,7 @@ const Checkout = () => {
                     <div className="flex justify-between font-medium">
                       <span>Total</span>
                       <span className="text-xl text-microsoft-blue">
-                        {total.toLocaleString('pt-AO')} kz
+                        {formatCurrency(total)} kz
                       </span>
                     </div>
                   </div>
