@@ -3,8 +3,9 @@ import React, { useState } from 'react';
 import Layout from '@/components/layout/Layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ProductsTable from '@/components/admin/ProductsTable';
-import CouponsTable from '@/components/admin/CouponsTable';
 import CompanySettings from '@/components/admin/CompanySettings';
+import CustomersTable from '@/components/admin/CustomersTable';
+import OrdersTable from '@/components/admin/OrdersTable';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Package, Users, ShoppingCart, Settings } from 'lucide-react';
 
@@ -43,17 +44,11 @@ const Dashboard = () => {
             </TabsContent>
             
             <TabsContent value="customers">
-              <div className="bg-white p-6 rounded-lg shadow">
-                <h2 className="text-2xl font-medium mb-4">Gerenciamento de Clientes</h2>
-                <p className="text-gray-500">Lista de clientes registrados será implementada aqui.</p>
-              </div>
+              <CustomersTable />
             </TabsContent>
             
             <TabsContent value="orders">
-              <div className="bg-white p-6 rounded-lg shadow">
-                <h2 className="text-2xl font-medium mb-4">Gerenciamento de Pedidos</h2>
-                <p className="text-gray-500">Lista de pedidos será implementada aqui.</p>
-              </div>
+              <OrdersTable />
             </TabsContent>
             
             <TabsContent value="settings">
