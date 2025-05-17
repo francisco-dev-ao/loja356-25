@@ -95,7 +95,7 @@ serve(async (req: Request) => {
         error: error.toString(),
       }),
       {
-        status: 200, // Mudando de 400 para 200 para que não seja tratado como erro HTTP
+        status: 200, // Using 200 instead of 400 so it's not treated as an HTTP error
         headers: {
           "Content-Type": "application/json",
           ...corsHeaders,

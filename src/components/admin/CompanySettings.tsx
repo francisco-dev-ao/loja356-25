@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -168,6 +169,7 @@ const CompanySettings = () => {
       
       if (data) {
         // Fix: Merge the returned data with default settings to ensure all required fields exist
+        // This ensures we handle missing fields in the database while preserving existing values
         const mergedSettings: CompanySettings = {
           ...defaultSettings,
           ...data as any
@@ -211,6 +213,30 @@ const CompanySettings = () => {
   const handleSaveSettings = async () => {
     setSaving(true);
     try {
+      // Create a clean version of settings to send to Supabase
+      const settingsToSave = {
+        id: settings.id,
+        name: settings.name,
+        address: settings.address,
+        nif: settings.nif,
+        phone: settings.phone,
+        email: settings.email,
+        website: settings.website,
+        smtp_host: settings.smtp_host,
+        smtp_port: settings.smtp_port,
+        smtp_user: settings.smtp_user,
+        smtp_password: settings.smtp_password,
+        smtp_from_email: settings.smtp_from_email,
+        smtp_from_name: settings.smtp_from_name,
+        currency_locale: settings.currency_locale,
+        currency_code: settings.currency_code,
+        currency_min_digits: settings.currency_min_digits,
+        currency_max_digits: settings.currency_max_digits,
+        email_template_order: settings.email_template_order,
+      };
+      
+      console.log('Saving settings:', settingsToSave);
+      
       // Check if settings exist
       const { data, error: checkError } = await supabase
         .from('settings')
@@ -222,14 +248,14 @@ const CompanySettings = () => {
         // No settings found, insert new record
         const { error: insertError } = await supabase
           .from('settings')
-          .insert(settings);
+          .insert(settingsToSave);
         
         if (insertError) throw insertError;
       } else {
         // Update existing record
         const { error: updateError } = await supabase
           .from('settings')
-          .update(settings)
+          .update(settingsToSave)
           .eq('id', 'company-settings');
         
         if (updateError) throw updateError;
