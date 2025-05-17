@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
@@ -7,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, FileText, Check, X, User, Download } from 'lucide-react';
+import { Search, FileText, Check, X, User, Download, CheckCheck, Trash2, SquareCheck, SquareX } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/formatters';
@@ -21,6 +20,7 @@ import {
   TableHeader,
   TableRow 
 } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const AdminDashboard = () => {
   const { user, profile, isLoading, isAuthenticated } = useAuth();
@@ -33,6 +33,8 @@ const AdminDashboard = () => {
   const [fetchingOrders, setFetchingOrders] = useState(false);
   const [fetchingCustomers, setFetchingCustomers] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
+  const [selectAllOrders, setSelectAllOrders] = useState(false);
   
   // Informações da empresa
   const companyInfo = {
@@ -51,6 +53,17 @@ const AdminDashboard = () => {
       fetchCustomers();
     }
   }, [isAuthenticated, profile]);
+
+  // Effect to handle "select all" functionality
+  useEffect(() => {
+    if (selectAllOrders) {
+      // Select all visible orders after filtering
+      setSelectedOrders(filteredOrders.map(order => order.id));
+    } else if (selectedOrders.length === filteredOrders.length && filteredOrders.length > 0) {
+      // If manually selecting all items, auto-check the "select all" box
+      setSelectAllOrders(true);
+    }
+  }, [selectAllOrders, orderFilter, orderSearchTerm]);
 
   const fetchOrders = async () => {
     setFetchingOrders(true);
@@ -436,6 +449,142 @@ const AdminDashboard = () => {
     }
   };
 
+  // Toggle selection of a single order
+  const toggleOrderSelection = (orderId: string) => {
+    setSelectedOrders(prev => {
+      if (prev.includes(orderId)) {
+        const newSelected = prev.filter(id => id !== orderId);
+        // If we're unselecting an item, uncheck the "select all" box
+        if (selectAllOrders) {
+          setSelectAllOrders(false);
+        }
+        return newSelected;
+      } else {
+        const newSelected = [...prev, orderId];
+        // If all visible orders are now selected, check the "select all" box
+        if (newSelected.length === filteredOrders.length) {
+          setSelectAllOrders(true);
+        }
+        return newSelected;
+      }
+    });
+  };
+
+  // Toggle selection of all orders
+  const toggleSelectAllOrders = () => {
+    const newSelectAllState = !selectAllOrders;
+    setSelectAllOrders(newSelectAllState);
+    
+    if (newSelectAllState) {
+      // Select all visible orders
+      setSelectedOrders(filteredOrders.map(order => order.id));
+    } else {
+      // Deselect all orders
+      setSelectedOrders([]);
+    }
+  };
+
+  // Handle batch approval of selected orders
+  const handleBatchApproveOrders = async () => {
+    if (selectedOrders.length === 0) {
+      toast.error('Nenhum pedido selecionado');
+      return;
+    }
+
+    if (!confirm(`Tem certeza que deseja aprovar ${selectedOrders.length} pedidos?`)) {
+      return;
+    }
+
+    try {
+      // Update status to 'completed' for all selected orders
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'completed' })
+        .in('id', selectedOrders);
+      
+      if (error) throw error;
+      
+      // Update payment status to 'paid' for all selected orders that were pending
+      const pendingOrders = orders
+        .filter(order => selectedOrders.includes(order.id) && order.payment_status === 'pending')
+        .map(order => order.id);
+        
+      if (pendingOrders.length > 0) {
+        const { error: paymentError } = await supabase
+          .from('orders')
+          .update({ payment_status: 'paid' })
+          .in('id', pendingOrders);
+          
+        if (paymentError) throw paymentError;
+      }
+      
+      // Update local state
+      setOrders(orders.map(order => {
+        if (selectedOrders.includes(order.id)) {
+          return { 
+            ...order, 
+            status: 'completed',
+            payment_status: order.payment_status === 'pending' ? 'paid' : order.payment_status
+          };
+        }
+        return order;
+      }));
+      
+      toast.success(`${selectedOrders.length} pedidos aprovados com sucesso`);
+      
+      // Clear selection
+      setSelectedOrders([]);
+      setSelectAllOrders(false);
+      
+    } catch (error) {
+      console.error('Error batch approving orders:', error);
+      toast.error('Erro ao aprovar pedidos em lote');
+    }
+  };
+
+  // Handle batch deletion of selected orders
+  const handleBatchDeleteOrders = async () => {
+    if (selectedOrders.length === 0) {
+      toast.error('Nenhum pedido selecionado');
+      return;
+    }
+
+    if (!confirm(`Tem certeza que deseja excluir ${selectedOrders.length} pedidos? Esta ação é irreversível.`)) {
+      return;
+    }
+
+    try {
+      // First delete order items for all selected orders
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .delete()
+        .in('order_id', selectedOrders);
+      
+      if (itemsError) throw itemsError;
+      
+      // Then delete the orders
+      const { error: ordersError } = await supabase
+        .from('orders')
+        .delete()
+        .in('id', selectedOrders);
+      
+      if (ordersError) throw ordersError;
+      
+      // Update local state
+      setOrders(orders.filter(order => !selectedOrders.includes(order.id)));
+      
+      toast.success(`${selectedOrders.length} pedidos excluídos com sucesso`);
+      
+      // Clear selection
+      setSelectedOrders([]);
+      setSelectAllOrders(false);
+      
+    } catch (error) {
+      console.error('Error batch deleting orders:', error);
+      toast.error('Erro ao excluir pedidos em lote');
+    }
+  };
+
   // Status badges
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -515,7 +664,7 @@ const AdminDashboard = () => {
             
             <TabsContent value="orders" className="p-6">
               {/* Filter Controls */}
-              <div className="flex flex-col md:flex-row gap-4 mb-6">
+              <div className="flex flex-col lg:flex-row gap-4 mb-6">
                 <div className="relative flex-grow">
                   <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <Input
@@ -527,7 +676,7 @@ const AdminDashboard = () => {
                   />
                 </div>
                 <Select value={orderFilter} onValueChange={setOrderFilter}>
-                  <SelectTrigger className="w-full md:w-[180px]">
+                  <SelectTrigger className="w-full lg:w-[180px]">
                     <SelectValue placeholder="Filtrar por status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -539,12 +688,48 @@ const AdminDashboard = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Batch Actions */}
+              {selectedOrders.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-4 p-3 bg-blue-50 rounded-md">
+                  <span className="text-blue-800 font-medium flex items-center">
+                    {selectedOrders.length} {selectedOrders.length === 1 ? 'pedido selecionado' : 'pedidos selecionados'}
+                  </span>
+                  <div className="flex-grow"></div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-green-600 border-green-600 hover:bg-green-50"
+                    onClick={handleBatchApproveOrders}
+                  >
+                    <CheckCheck size={16} className="mr-1" />
+                    Aprovar Selecionados
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-red-600 border-red-600 hover:bg-red-50"
+                    onClick={handleBatchDeleteOrders}
+                  >
+                    <Trash2 size={16} className="mr-1" />
+                    Excluir Selecionados
+                  </Button>
+                </div>
+              )}
               
               {/* Orders Table */}
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-[50px]">
+                        <Checkbox 
+                          id="selectAll"
+                          checked={selectAllOrders && filteredOrders.length > 0} 
+                          onCheckedChange={toggleSelectAllOrders}
+                          aria-label="Selecionar todos os pedidos"
+                        />
+                      </TableHead>
                       <TableHead>Pedido</TableHead>
                       <TableHead>Cliente</TableHead>
                       <TableHead>Data</TableHead>
@@ -557,7 +742,7 @@ const AdminDashboard = () => {
                   <TableBody>
                     {fetchingOrders ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-12">
+                        <TableCell colSpan={8} className="text-center py-12">
                           <div className="flex justify-center">
                             <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
                           </div>
@@ -565,7 +750,14 @@ const AdminDashboard = () => {
                       </TableRow>
                     ) : filteredOrders.length > 0 ? (
                       filteredOrders.map((order) => (
-                        <TableRow key={order.id} className="hover:bg-gray-50">
+                        <TableRow key={order.id} className={selectedOrders.includes(order.id) ? "bg-blue-50 hover:bg-blue-100" : "hover:bg-gray-50"}>
+                          <TableCell>
+                            <Checkbox 
+                              checked={selectedOrders.includes(order.id)}
+                              onCheckedChange={() => toggleOrderSelection(order.id)}
+                              aria-label={`Selecionar pedido ${order.id}`}
+                            />
+                          </TableCell>
                           <TableCell className="font-medium">
                             {order.id.substring(0, 8)}...
                           </TableCell>
@@ -647,7 +839,7 @@ const AdminDashboard = () => {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-12 text-gray-500">
+                        <TableCell colSpan={8} className="text-center py-12 text-gray-500">
                           Nenhum pedido encontrado.
                         </TableCell>
                       </TableRow>
