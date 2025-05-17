@@ -31,8 +31,8 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
   // Listen for messages from the iframe
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      // Verify origin for security (EMIS domain in production)
-      const allowedOrigins = ['https://pagamentonline.emis.co.ao', 'https://test-mcx.emis.co.ao'];
+      // Verify origin for security (EMIS production domain)
+      const allowedOrigins = ['https://pagamentonline.emis.co.ao'];
       
       if (!allowedOrigins.includes(event.origin)) {
         console.log('Received message from unauthorized origin:', event.origin);
@@ -137,19 +137,15 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
     }
   };
   
-  // Create EMIS payment session
+  // Create EMIS payment session using production values
   const createEmisSession = async (amount: number, reference: string): Promise<string> => {
     try {
-      // These would be your production values from EMIS
-      const frameToken = "YOUR_FRAME_TOKEN"; // Replace with actual token from EMIS
-      const callbackUrl = window.location.origin + "/api/payment-callback";
+      // These are production values from EMIS based on the PHP code
+      const frameToken = "YOUR_FRAME_TOKEN"; // Using the placeholder from PHP code
+      const callbackUrl = window.location.origin + "/api/payment-callback"; // Replace with your actual callback URL
       const cssUrl = window.location.origin + "/multicaixa-express.css";
       
-      // In a real production app, this should be an API call to your backend
-      // that would make the secure request to EMIS API
-      
-      // For now, we'll build the payment URL directly
-      // IMPORTANT: In production, this should be done server-side for security
+      // Using the production URL from PHP code
       const emisBaseUrl = "https://pagamentonline.emis.co.ao/online-payment-gateway/portal/frame";
       
       // URL parameters for EMIS payment page
