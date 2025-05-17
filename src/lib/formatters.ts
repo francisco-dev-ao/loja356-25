@@ -50,21 +50,22 @@ export const parseFormattedNumber = (value: string): number => {
   return isNaN(parsedValue) ? 0 : parsedValue;
 };
 
-// Format a number as currency according to the settings
+// Format a number as currency according to the settings but remove the symbol and add kz at the end
 export const formatCurrency = (value: number): string => {
   const settings = getCurrencySettings();
   
   try {
-    return new Intl.NumberFormat(settings.locale, {
-      style: 'currency',
-      currency: settings.currency,
+    const formatted = new Intl.NumberFormat(settings.locale, {
+      style: 'decimal', // Changed from 'currency' to 'decimal' to remove the currency symbol
       minimumFractionDigits: settings.minDigits,
       maximumFractionDigits: settings.maxDigits
     }).format(value);
+    
+    return `${formatted} kz`; // Add kz at the end
   } catch (error) {
     console.error('Error formatting currency:', error);
     
     // Fallback to a simple format if the Intl formatter fails
-    return `${settings.currency} ${value.toFixed(settings.minDigits)}`;
+    return `${value.toFixed(settings.minDigits)} kz`;
   }
 };

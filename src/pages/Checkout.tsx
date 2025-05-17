@@ -22,7 +22,7 @@ const Checkout = () => {
   const { isAuthenticated, user, profile } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('account');
-  const [paymentMethod, setPaymentMethod] = useState('');  // Changed to empty string initially
+  const [paymentMethod, setPaymentMethod] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
 
@@ -37,8 +37,6 @@ const Checkout = () => {
   useEffect(() => {
     if (isAuthenticated) {
       setActiveTab('payment');
-      
-      // Não criar pedido automaticamente - apenas quando o usuário selecionar método de pagamento
     }
   }, [isAuthenticated]);
 
@@ -69,7 +67,7 @@ const Checkout = () => {
           user_id: user.id,
           total: total,
           payment_method: paymentMethod,
-          payment_status: 'pending',
+          payment_status: paymentMethod === 'bank_transfer' ? 'pending' : 'pending',
           status: 'pending'
         })
         .select()
@@ -98,30 +96,22 @@ const Checkout = () => {
       setOrderId(orderData.id);
       console.log("Pedido criado com sucesso:", orderData.id);
 
+      // Se o método de pagamento for transferência bancária, redirecionar imediatamente para a página de sucesso
+      if (paymentMethod === 'bank_transfer') {
+        navigate(`/checkout/success?orderId=${orderData.id}`);
+        clearCart();
+      }
     } catch (error: any) {
       console.error('Erro ao criar pedido:', error);
       toast.error(error.message || 'Ocorreu um erro ao processar o pedido');
-    } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleBankTransferOrder = async () => {
-    // Se não temos um ID de pedido, criar um novo pedido
-    if (!orderId) {
-      await handleCreateOrder();
-      if (!orderId) return; // Se falhou ao criar pedido, retornar
-    }
-    
-    navigate(`/checkout/success?orderId=${orderId}`);
-    clearCart();
-  };
-
   const handleSelectPaymentMethod = (method: string) => {
     setPaymentMethod(method);
-    
-    // Criar pedido apenas quando o usuário selecionar um método de pagamento
-    if (!orderId && method) {
+    // Criar pedido automaticamente quando o usuário selecionar o método de pagamento
+    if (method === 'bank_transfer') {
       handleCreateOrder();
     }
   };
@@ -224,7 +214,7 @@ const Checkout = () => {
                     <h3 className="text-lg font-medium mb-4">Método de Pagamento</h3>
                     
                     {/* Seção de escolha de método de pagamento */}
-                    {!paymentMethod ? (
+                    {!paymentMethod || (paymentMethod === 'multicaixa' && !orderId) ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                         <Card 
                           className="border cursor-pointer hover:border-microsoft-blue transition-colors"
@@ -287,25 +277,6 @@ const Checkout = () => {
                         
                         <TabsContent value="bank_transfer">
                           <BankTransferPayment />
-                          <div className="mt-6">
-                            <Button 
-                              onClick={handleBankTransferOrder}
-                              className="w-full bg-microsoft-blue hover:bg-microsoft-blue/90 py-6"
-                              disabled={isProcessing}
-                            >
-                              {isProcessing ? (
-                                <span className="flex items-center">
-                                  <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                                  Processando...
-                                </span>
-                              ) : (
-                                <span className="flex items-center">
-                                  Finalizar Pedido
-                                  <Send size={16} className="ml-2" />
-                                </span>
-                              )}
-                            </Button>
-                          </div>
                         </TabsContent>
                       </Tabs>
                     )}
@@ -343,7 +314,7 @@ const Checkout = () => {
                             Qtd: {item.quantity}
                           </span>
                           <span className="text-sm">
-                            {formatCurrency(item.price * item.quantity)} kz
+                            {formatCurrency(item.price * item.quantity)}
                           </span>
                         </div>
                       </div>
@@ -354,7 +325,7 @@ const Checkout = () => {
                 <div className="border-t border-gray-200 pt-4 space-y-2">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span>{formatCurrency(total)} kz</span>
+                    <span>{formatCurrency(total)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Taxa de processamento</span>
@@ -364,7 +335,7 @@ const Checkout = () => {
                     <div className="flex justify-between font-medium">
                       <span>Total</span>
                       <span className="text-xl text-microsoft-blue">
-                        {formatCurrency(total)} kz
+                        {formatCurrency(total)}
                       </span>
                     </div>
                   </div>

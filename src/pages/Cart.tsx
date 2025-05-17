@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useCoupon } from '@/hooks/use-products';
 import { ArrowLeft, ArrowRight, ShoppingCart, LogIn, Tag, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatCurrency, applyCouponDiscount } from '@/lib/utils';
+import { formatCurrency } from '@/lib/formatters';
 import { supabase } from '@/integrations/supabase/client';
 
 const Cart = () => {
@@ -34,6 +34,7 @@ const Cart = () => {
   }, [total, couponData]);
 
   const discount = total - discountedTotal;
+  const discountPercentage = discount > 0 ? Math.round((discount / total) * 100) : 0;
 
   if (items.length === 0) {
     return (
@@ -208,7 +209,7 @@ const Cart = () => {
                           <span className="text-xs text-green-700 block mt-1">
                             {couponData.discount_type === 'percentage'
                               ? `${couponData.discount_value}% de desconto`
-                              : `${formatCurrency(couponData.discount_value)} kz de desconto`}
+                              : `${formatCurrency(couponData.discount_value)} de desconto`}
                           </span>
                         )}
                       </div>
@@ -248,13 +249,18 @@ const Cart = () => {
                 <div className="space-y-4">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span>{formatCurrency(total)} kz</span>
+                    <span>{formatCurrency(total)}</span>
                   </div>
                   
                   {discount > 0 && (
                     <div className="flex justify-between text-green-600">
-                      <span>Desconto</span>
-                      <span>- {formatCurrency(discount)} kz</span>
+                      <span className="flex items-center">
+                        Desconto 
+                        <span className="ml-1 bg-green-100 text-green-800 text-xs px-1.5 py-0.5 rounded">
+                          {discountPercentage}%
+                        </span>
+                      </span>
+                      <span>- {formatCurrency(discount)}</span>
                     </div>
                   )}
                   
@@ -266,7 +272,7 @@ const Cart = () => {
                   <div className="border-t border-gray-200 pt-4 flex justify-between font-medium">
                     <span>Total</span>
                     <span className="text-xl text-microsoft-blue">
-                      {formatCurrency(discountedTotal)} kz
+                      {formatCurrency(discountedTotal)}
                     </span>
                   </div>
                 </div>
@@ -306,6 +312,26 @@ const Cart = () => {
       </div>
     </Layout>
   );
+};
+
+// Function to apply coupon discount to total
+const applyCouponDiscount = (
+  total: number,
+  discountType: string,
+  discountValue: number
+): number => {
+  if (discountType === 'percentage') {
+    // Ensure percentage is between 0 and 100
+    const percentage = Math.min(Math.max(discountValue, 0), 100);
+    return total * (1 - percentage / 100);
+  } 
+  
+  if (discountType === 'fixed') {
+    // Ensure discount doesn't make total negative
+    return Math.max(total - discountValue, 0);
+  }
+
+  return total;
 };
 
 export default Cart;
