@@ -111,11 +111,6 @@ const Checkout = () => {
 
   const handleSelectPaymentMethod = (method: string) => {
     setPaymentMethod(method);
-    // Criar pedido automaticamente quando o usuário selecionar o método de pagamento
-    // Modificado para criar o pedido em apenas uma vez, sem necessidade de cliques adicionais
-    if (method === 'bank_transfer' || method === 'multicaixa') {
-      handleCreateOrder();
-    }
   };
   
   // Redirecionar para a página principal se não houver itens no carrinho
@@ -216,68 +211,76 @@ const Checkout = () => {
                     <h3 className="text-lg font-medium mb-4">Método de Pagamento</h3>
                     
                     {/* Seção de escolha de método de pagamento */}
-                    {!paymentMethod ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <Card 
-                          className="border cursor-pointer hover:border-microsoft-blue transition-colors"
-                          onClick={() => handleSelectPaymentMethod('multicaixa')}
-                        >
-                          <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center">
-                                <div className="w-10 h-10 bg-microsoft-light rounded-full flex items-center justify-center mr-3">
-                                  <CreditCard size={20} className="text-microsoft-blue" />
-                                </div>
-                                <div>
-                                  <h4 className="font-medium">Multicaixa Express</h4>
-                                  <p className="text-sm text-muted-foreground">Pagamento instantâneo</p>
-                                </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                      <Card 
+                        className={`border cursor-pointer hover:border-microsoft-blue transition-colors ${paymentMethod === 'multicaixa' ? 'border-microsoft-blue bg-microsoft-light/20' : ''}`}
+                        onClick={() => handleSelectPaymentMethod('multicaixa')}
+                      >
+                        <CardContent className="p-6">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <div className="w-10 h-10 bg-microsoft-light rounded-full flex items-center justify-center mr-3">
+                                <CreditCard size={20} className="text-microsoft-blue" />
+                              </div>
+                              <div>
+                                <h4 className="font-medium">Multicaixa Express</h4>
+                                <p className="text-sm text-muted-foreground">Pagamento instantâneo</p>
                               </div>
                             </div>
-                          </CardContent>
-                        </Card>
-                        
-                        <Card 
-                          className="border cursor-pointer hover:border-microsoft-blue transition-colors"
-                          onClick={() => handleSelectPaymentMethod('bank_transfer')}
-                        >
-                          <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center">
-                                <div className="w-10 h-10 bg-microsoft-light rounded-full flex items-center justify-center mr-3">
-                                  <Send size={20} className="text-microsoft-blue" />
-                                </div>
-                                <div>
-                                  <h4 className="font-medium">Transferência Bancária</h4>
-                                  <p className="text-sm text-muted-foreground">Processamento em até 24h</p>
-                                </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card 
+                        className={`border cursor-pointer hover:border-microsoft-blue transition-colors ${paymentMethod === 'bank_transfer' ? 'border-microsoft-blue bg-microsoft-light/20' : ''}`}
+                        onClick={() => handleSelectPaymentMethod('bank_transfer')}
+                      >
+                        <CardContent className="p-6">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <div className="w-10 h-10 bg-microsoft-light rounded-full flex items-center justify-center mr-3">
+                                <Send size={20} className="text-microsoft-blue" />
+                              </div>
+                              <div>
+                                <h4 className="font-medium">Transferência Bancária</h4>
+                                <p className="text-sm text-muted-foreground">Processamento em até 24h</p>
                               </div>
                             </div>
-                          </CardContent>
-                        </Card>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Botão Finalizar Pedido */}
+                    {paymentMethod && !isProcessing && !orderId && (
+                      <Button 
+                        onClick={handleCreateOrder}
+                        className="w-full"
+                        disabled={!paymentMethod || isProcessing}
+                      >
+                        Finalizar Pedido
+                      </Button>
+                    )}
+
+                    {/* Exibir o componente de pagamento apropriado após a criação do pedido */}
+                    {isProcessing && !orderId ? (
+                      <div className="flex flex-col items-center justify-center py-8">
+                        <div className="animate-spin h-8 w-8 border-4 border-microsoft-blue border-t-transparent rounded-full mb-4"></div>
+                        <p>Criando pedido...</p>
                       </div>
                     ) : (
-                      <div className="w-full">
-                        {isProcessing && !orderId ? (
-                          <div className="flex flex-col items-center justify-center py-8">
-                            <div className="animate-spin h-8 w-8 border-4 border-microsoft-blue border-t-transparent rounded-full mb-4"></div>
-                            <p>Criando pedido...</p>
-                          </div>
-                        ) : (
-                          <>
-                            {paymentMethod === 'multicaixa' && (
-                              <MulticaixaExpressPayment 
-                                amount={total} 
-                                orderId={orderId || ''} 
-                              />
-                            )}
-                            
-                            {paymentMethod === 'bank_transfer' && (
-                              <BankTransferPayment />
-                            )}
-                          </>
+                      <>
+                        {paymentMethod === 'multicaixa' && orderId && (
+                          <MulticaixaExpressPayment 
+                            amount={total} 
+                            orderId={orderId} 
+                          />
                         )}
-                      </div>
+                        
+                        {paymentMethod === 'bank_transfer' && orderId && (
+                          <BankTransferPayment />
+                        )}
+                      </>
                     )}
                   </CardContent>
                 </TabsContent>
