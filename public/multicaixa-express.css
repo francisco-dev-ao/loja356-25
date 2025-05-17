@@ -46,3 +46,35 @@ body {
 .submit-button:hover {
   background-color: #0056a3;
 }
+
+/* Additional styles for the payment iframe */
+.multicaixa-iframe-container {
+  width: 100%;
+  border: none;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.multicaixa-iframe {
+  width: 100%;
+  height: 600px;
+  border: none;
+  overflow: hidden;
+}
+
+/* Progress indicator styles */
+.payment-progress {
+  height: 4px;
+  background-color: #e5e7eb;
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+
+.payment-progress-bar {
+  height: 100%;
+  background-color: #0078d4;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
