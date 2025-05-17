@@ -1,43 +1,59 @@
 
-/**
- * Formats a number as currency based on the configured format settings
- */
-export function formatCurrency(amount: number): string {
-  // Get settings from localStorage if available
-  const currencySettings = localStorage.getItem('currencySettings');
-  let settings = {
-    locale: 'pt-AO',
-    currency: 'AOA',
-    minDigits: 2,
-    maxDigits: 2
-  };
+// Format currency according to the settings
 
-  if (currencySettings) {
-    try {
-      settings = JSON.parse(currencySettings);
-    } catch (error) {
-      console.error('Error parsing currency settings', error);
-    }
-  }
-
-  // Use locale settings for formatting
-  return new Intl.NumberFormat(settings.locale, {
-    style: 'currency',
-    currency: settings.currency,
-    minimumFractionDigits: settings.minDigits,
-    maximumFractionDigits: settings.maxDigits
-  }).format(amount);
-}
-
-/**
- * Saves currency format settings to localStorage and Supabase
- */
-export async function saveCurrencySettings(settings: {
+// Type definition for currency settings
+type CurrencySettings = {
   locale: string;
   currency: string;
   minDigits: number;
   maxDigits: number;
-}) {
-  // Save to localStorage for immediate use
-  localStorage.setItem('currencySettings', JSON.stringify(settings));
-}
+};
+
+// Default currency settings
+const defaultCurrencySettings: CurrencySettings = {
+  locale: 'pt-AO',
+  currency: 'AOA',
+  minDigits: 2,
+  maxDigits: 2
+};
+
+// Get currency settings from localStorage or use defaults
+export const getCurrencySettings = (): CurrencySettings => {
+  try {
+    const savedSettings = localStorage.getItem('currencySettings');
+    if (savedSettings) {
+      return JSON.parse(savedSettings);
+    }
+  } catch (error) {
+    console.error('Error reading currency settings from localStorage:', error);
+  }
+  return defaultCurrencySettings;
+};
+
+// Save currency settings to localStorage
+export const saveCurrencySettings = (settings: CurrencySettings): void => {
+  try {
+    localStorage.setItem('currencySettings', JSON.stringify(settings));
+  } catch (error) {
+    console.error('Error saving currency settings to localStorage:', error);
+  }
+};
+
+// Format a number as currency according to the settings
+export const formatCurrency = (value: number): string => {
+  const settings = getCurrencySettings();
+  
+  try {
+    return new Intl.NumberFormat(settings.locale, {
+      style: 'currency',
+      currency: settings.currency,
+      minimumFractionDigits: settings.minDigits,
+      maximumFractionDigits: settings.maxDigits
+    }).format(value);
+  } catch (error) {
+    console.error('Error formatting currency:', error);
+    
+    // Fallback to a simple format if the Intl formatter fails
+    return `${settings.currency} ${value.toFixed(settings.minDigits)}`;
+  }
+};

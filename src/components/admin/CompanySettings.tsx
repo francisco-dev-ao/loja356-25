@@ -269,6 +269,7 @@ const CompanySettings = () => {
         maxDigits: settings.currency_max_digits
       };
       localStorage.setItem('currencySettings', JSON.stringify(currencySettings));
+      saveCurrencySettings(currencySettings);
       
       toast.success('Configurações salvas com sucesso!');
     } catch (error) {
@@ -294,12 +295,18 @@ const CompanySettings = () => {
         }
       });
       
-      if (response.error) throw new Error(response.error.message);
+      console.log("SMTP test response:", response);
+      
+      if (response.error) {
+        console.error("SMTP test error:", response.error);
+        throw new Error(response.error.message || "Erro ao conectar com o servidor SMTP");
+      }
       
       const data = response.data;
       
       if (!data.success) {
-        throw new Error(data.message || 'Falha no teste de conexão');
+        console.error("SMTP test failed:", data);
+        throw new Error(data.message || 'Falha no teste de conexão SMTP');
       }
       
       toast.success('Teste de email enviado com sucesso!');

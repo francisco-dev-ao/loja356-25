@@ -160,7 +160,12 @@ export type Database = {
         Row: {
           address: string | null
           created_at: string | null
+          currency_code: string | null
+          currency_locale: string | null
+          currency_max_digits: number | null
+          currency_min_digits: number | null
           email: string | null
+          email_template_order: string | null
           id: string
           name: string | null
           nif: string | null
@@ -177,7 +182,12 @@ export type Database = {
         Insert: {
           address?: string | null
           created_at?: string | null
+          currency_code?: string | null
+          currency_locale?: string | null
+          currency_max_digits?: number | null
+          currency_min_digits?: number | null
           email?: string | null
+          email_template_order?: string | null
           id: string
           name?: string | null
           nif?: string | null
@@ -194,7 +204,12 @@ export type Database = {
         Update: {
           address?: string | null
           created_at?: string | null
+          currency_code?: string | null
+          currency_locale?: string | null
+          currency_max_digits?: number | null
+          currency_min_digits?: number | null
           email?: string | null
+          email_template_order?: string | null
           id?: string
           name?: string | null
           nif?: string | null
