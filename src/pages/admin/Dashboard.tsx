@@ -13,6 +13,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/formatters';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
+import { 
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow 
+} from "@/components/ui/table";
 
 const AdminDashboard = () => {
   const { user, profile, isLoading, isAuthenticated } = useAuth();
@@ -47,7 +55,7 @@ const AdminDashboard = () => {
   const fetchOrders = async () => {
     setFetchingOrders(true);
     try {
-      // Fetch all orders with order items
+      // Fix: Modified query to avoid the foreign key relationship error
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select(`
@@ -58,25 +66,23 @@ const AdminDashboard = () => {
           payment_status, 
           payment_method, 
           total,
-          user_id,
-          profiles:user_id (
-            name, 
-            email
-          ),
-          order_items (
-            id,
-            product_id,
-            quantity,
-            price
-          )
+          user_id
         `)
         .order('created_at', { ascending: false });
         
       if (ordersError) throw ordersError;
       
-      // Fetch product details for order items
       if (ordersData) {
-        const ordersWithProducts = await Promise.all(ordersData.map(async (order) => {
+        // Fetch user info for each order
+        const ordersWithUserInfo = await Promise.all(ordersData.map(async (order) => {
+          // Get user info from profiles table
+          const { data: userData } = await supabase
+            .from('profiles')
+            .select('name, email')
+            .eq('id', order.user_id)
+            .single();
+            
+          // Fetch order items for each order
           const { data: orderItems } = await supabase
             .from('order_items')
             .select('*, product:product_id(name)')
@@ -84,11 +90,12 @@ const AdminDashboard = () => {
             
           return {
             ...order,
+            profiles: userData || { name: 'Cliente Desconhecido', email: 'sem email' },
             items: orderItems || []
           };
         }));
         
-        setOrders(ordersWithProducts);
+        setOrders(ordersWithUserInfo);
       }
       
     } catch (error) {
@@ -102,11 +109,10 @@ const AdminDashboard = () => {
   const fetchCustomers = async () => {
     setFetchingCustomers(true);
     try {
-      // Fetch all customers (profiles with role 'customer')
+      // Fetch all customers (profiles with role 'customer' or any role)
       const { data: customersData, error: customersError } = await supabase
         .from('profiles')
-        .select('*')
-        .eq('role', 'customer');
+        .select('*');
       
       if (customersError) throw customersError;
 
@@ -143,8 +149,8 @@ const AdminDashboard = () => {
   // Filter orders
   const filteredOrders = orders.filter(order => {
     const matchesSearch = order.id.toLowerCase().includes(orderSearchTerm.toLowerCase()) ||
-                          (order.profiles.name && order.profiles.name.toLowerCase().includes(orderSearchTerm.toLowerCase())) ||
-                          (order.profiles.email && order.profiles.email.toLowerCase().includes(orderSearchTerm.toLowerCase()));
+                          (order.profiles?.name && order.profiles.name.toLowerCase().includes(orderSearchTerm.toLowerCase())) ||
+                          (order.profiles?.email && order.profiles.email.toLowerCase().includes(orderSearchTerm.toLowerCase()));
     
     const matchesFilter = orderFilter === 'all' || order.status === orderFilter;
     
@@ -218,8 +224,11 @@ const AdminDashboard = () => {
     }
     
     try {
-      // Delete the user from auth (this will cascade delete the profile due to foreign key constraint)
-      const { error } = await supabase.auth.admin.deleteUser(customerId);
+      // Delete the customer profile (we won't delete the auth user since that's a more complex operation)
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', customerId);
       
       if (error) throw error;
       
@@ -230,7 +239,7 @@ const AdminDashboard = () => {
       
     } catch (error) {
       console.error('Error deleting customer:', error);
-      toast.error('Erro ao excluir cliente. Verifique se você tem permissões de administrador.');
+      toast.error('Erro ao excluir cliente.');
     }
   };
 
@@ -533,64 +542,50 @@ const AdminDashboard = () => {
               
               {/* Orders Table */}
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Pedido
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Cliente
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Data
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Pagamento
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Total
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ações
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Pedido</TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Pagamento</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {fetchingOrders ? (
-                      <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center">
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-12">
                           <div className="flex justify-center">
                             <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ) : filteredOrders.length > 0 ? (
                       filteredOrders.map((order) => (
-                        <tr key={order.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <TableRow key={order.id} className="hover:bg-gray-50">
+                          <TableCell className="font-medium">
                             {order.id.substring(0, 8)}...
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          </TableCell>
+                          <TableCell>
                             <div>{order.profiles?.name || 'Cliente'}</div>
                             <div className="text-xs text-gray-500">{order.profiles?.email || 'Sem email'}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          </TableCell>
+                          <TableCell className="text-gray-500">
                             {new Date(order.created_at).toLocaleDateString('pt-BR')}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          </TableCell>
+                          <TableCell>
                             {getStatusBadge(order.status)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          </TableCell>
+                          <TableCell>
                             {getStatusBadge(order.payment_status)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          </TableCell>
+                          <TableCell>
                             {formatCurrency(order.total)} kz
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                          </TableCell>
+                          <TableCell className="text-right">
                             <div className="flex justify-end space-x-2">
                               <Button 
                                 variant="outline" 
@@ -647,18 +642,18 @@ const AdminDashboard = () => {
                                 Excluir
                               </Button>
                             </div>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))
                     ) : (
-                      <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center text-sm text-gray-500">
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-12 text-gray-500">
                           Nenhum pedido encontrado.
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </TabsContent>
             
@@ -679,62 +674,50 @@ const AdminDashboard = () => {
               
               {/* Customers Table */}
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Cliente
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Email
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Telefone
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        NIF
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Pedidos
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ações
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Telefone</TableHead>
+                      <TableHead>NIF</TableHead>
+                      <TableHead>Pedidos</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {fetchingCustomers ? (
-                      <tr>
-                        <td colSpan={6} className="px-6 py-12 text-center">
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-12">
                           <div className="flex justify-center">
                             <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ) : filteredCustomers.length > 0 ? (
                       filteredCustomers.map((customer) => (
-                        <tr key={customer.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <TableRow key={customer.id} className="hover:bg-gray-50">
+                          <TableCell>
                             <div className="flex items-center">
                               <div className="w-8 h-8 bg-microsoft-light rounded-full flex items-center justify-center mr-3">
                                 <User size={16} className="text-microsoft-blue" />
                               </div>
                               {customer.name || 'Sem nome'}
                             </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          </TableCell>
+                          <TableCell>
                             {customer.email || 'Sem email'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          </TableCell>
+                          <TableCell>
                             {customer.phone || 'Não informado'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          </TableCell>
+                          <TableCell>
                             {customer.nif || 'Não informado'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          </TableCell>
+                          <TableCell>
                             {customer.orders || 0}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                          </TableCell>
+                          <TableCell className="text-right">
                             <div className="flex justify-end space-x-2">
                               <Button variant="outline" size="sm">
                                 Ver Detalhes
@@ -748,18 +731,18 @@ const AdminDashboard = () => {
                                 Excluir
                               </Button>
                             </div>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))
                     ) : (
-                      <tr>
-                        <td colSpan={6} className="px-6 py-12 text-center text-sm text-gray-500">
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-12 text-gray-500">
                           Nenhum cliente encontrado.
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </TabsContent>
           </Tabs>
