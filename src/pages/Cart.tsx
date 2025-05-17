@@ -1,15 +1,17 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import CartItem from '@/components/cart/CartItem';
 import { useCart } from '@/hooks/use-cart';
-import { ArrowLeft, ArrowRight, ShoppingCart } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
+import { ArrowLeft, ArrowRight, ShoppingCart, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Cart = () => {
   const { items, total, clearCart } = useCart();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   if (items.length === 0) {
@@ -33,6 +35,15 @@ const Cart = () => {
       </Layout>
     );
   }
+
+  const handleProceedToCheckout = () => {
+    if (isAuthenticated) {
+      navigate('/checkout');
+    } else {
+      toast.info('Por favor, faça login para continuar com a compra');
+      navigate('/cliente/login', { state: { redirectAfterLogin: '/checkout' } });
+    }
+  };
 
   return (
     <Layout>
@@ -106,12 +117,19 @@ const Cart = () => {
               <div className="p-6 border-t border-gray-200">
                 <Button 
                   className="w-full bg-microsoft-blue hover:bg-microsoft-blue/90 text-lg py-6"
-                  onClick={() => navigate('/checkout')}
+                  onClick={handleProceedToCheckout}
                 >
-                  <span className="flex items-center">
-                    Prosseguir para Checkout
-                    <ArrowRight size={18} className="ml-2" />
-                  </span>
+                  {isAuthenticated ? (
+                    <span className="flex items-center">
+                      Prosseguir para Checkout
+                      <ArrowRight size={18} className="ml-2" />
+                    </span>
+                  ) : (
+                    <span className="flex items-center">
+                      Entrar para Comprar
+                      <LogIn size={18} className="ml-2" />
+                    </span>
+                  )}
                 </Button>
                 
                 <div className="mt-4 text-center text-sm text-muted-foreground">

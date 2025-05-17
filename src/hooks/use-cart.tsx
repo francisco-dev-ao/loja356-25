@@ -1,6 +1,8 @@
 
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/use-auth';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface Product {
   id: string;
@@ -25,7 +27,8 @@ type CartAction =
   | { type: 'ADD_ITEM'; payload: Product }
   | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number } }
   | { type: 'REMOVE_ITEM'; payload: { id: string } }
-  | { type: 'CLEAR_CART' };
+  | { type: 'CLEAR_CART' }
+  | { type: 'LOAD_CART'; payload: CartState };
 
 const CartContext = createContext<{
   items: CartItem[];
@@ -99,6 +102,9 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         items: [],
         total: 0,
       };
+    
+    case 'LOAD_CART':
+      return action.payload;
 
     default:
       return state;
@@ -106,16 +112,69 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
 };
 
 export const CartProvider = ({ children }: { children: React.ReactNode }) => {
+  const { user, isAuthenticated } = useAuth();
   const [state, dispatch] = useReducer(cartReducer, { items: [], total: 0 }, () => {
     // Load cart from localStorage on initialization
     const savedCart = localStorage.getItem('cart');
     return savedCart ? JSON.parse(savedCart) : { items: [], total: 0 };
   });
 
+  // Efeito para carregar o carrinho do usuário quando ele faz login
   useEffect(() => {
-    // Save cart to localStorage whenever it changes
+    const loadUserCart = async () => {
+      if (isAuthenticated && user) {
+        // Verificar se existe um carrinho salvo para este usuário no banco de dados
+        const { data: cartData, error } = await supabase
+          .from('user_carts')
+          .select('cart_data')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (!error && cartData?.cart_data) {
+          // Se encontrar um carrinho salvo, carregá-lo
+          dispatch({ type: 'LOAD_CART', payload: cartData.cart_data as CartState });
+          console.log("Carrinho carregado do banco de dados para o usuário:", user.id);
+        } else {
+          // Não fazer nada se não houver carrinho salvo, manter o localStorage atual
+          console.log("Nenhum carrinho encontrado no banco de dados para o usuário:", user.id);
+        }
+      }
+    };
+
+    loadUserCart();
+  }, [isAuthenticated, user]);
+
+  // Salvar carrinho quando mudar
+  useEffect(() => {
+    // Sempre salvar no localStorage
     localStorage.setItem('cart', JSON.stringify(state));
-  }, [state]);
+    
+    // Se o usuário estiver autenticado, salvar também no banco de dados
+    const saveUserCart = async () => {
+      if (isAuthenticated && user) {
+        const { error } = await supabase
+          .from('user_carts')
+          .upsert(
+            { 
+              user_id: user.id, 
+              cart_data: state,
+              updated_at: new Date().toISOString()
+            },
+            { onConflict: 'user_id' }
+          );
+          
+        if (error) {
+          console.error("Erro ao salvar carrinho no BD:", error);
+        } else {
+          console.log("Carrinho salvo no banco de dados para o usuário:", user.id);
+        }
+      }
+    };
+
+    if (isAuthenticated && user) {
+      saveUserCart();
+    }
+  }, [state, isAuthenticated, user]);
 
   const addItem = (product: Product) => {
     dispatch({ type: 'ADD_ITEM', payload: product });

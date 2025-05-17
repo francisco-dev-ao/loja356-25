@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,10 +14,14 @@ interface LoginFormProps {
 
 const LoginForm = ({ redirectAfter = true }: LoginFormProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  
+  // Verificar se existe um redirecionamento na navegação
+  const redirectPath = location.state?.redirectAfterLogin || '/cliente/dashboard';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +34,10 @@ const LoginForm = ({ redirectAfter = true }: LoginFormProps) => {
     
     try {
       await login(email, password);
+      
+      if (redirectAfter) {
+        navigate(redirectPath);
+      }
     } catch (err: any) {
       setError(err.message || 'Erro ao fazer login');
     }

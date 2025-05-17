@@ -17,8 +17,8 @@ const CartItem = ({ id, name, price, quantity, image }: CartItemProps) => {
   const { updateQuantity, removeItem } = useCart();
 
   const handleIncrement = () => {
-    // In a real application, you might want to check stock availability
-    // before incrementing the quantity
+    // Em uma aplicação real, você pode querer verificar disponibilidade em estoque
+    // antes de incrementar a quantidade
     updateQuantity(id, quantity + 1);
   };
 
@@ -26,8 +26,10 @@ const CartItem = ({ id, name, price, quantity, image }: CartItemProps) => {
     if (quantity > 1) {
       updateQuantity(id, quantity - 1);
     } else {
-      // Optional: Show a confirmation before removing the last item
-      removeItem(id);
+      // Opcional: mostrar confirmação antes de remover o último item
+      if (confirm('Deseja remover este item do carrinho?')) {
+        removeItem(id);
+      }
     }
   };
 
@@ -56,7 +58,6 @@ const CartItem = ({ id, name, price, quantity, image }: CartItemProps) => {
             size="icon" 
             className="h-8 w-8 rounded-none" 
             onClick={handleDecrement}
-            disabled={quantity <= 1}
           >
             <Minus size={14} />
           </Button>
