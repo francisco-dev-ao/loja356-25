@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -7,28 +6,30 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Building, Mail, Currency, MailCheck } from 'lucide-react';
-import { formatCurrency } from '@/lib/formatters';
+import { formatCurrency, saveCurrencySettings } from '@/lib/formatters';
 
 // Define a type for the company settings that matches our database structure
 type CompanySettings = {
   id: string;
-  name: string;
-  address: string;
-  nif: string;
-  phone: string;
-  email: string;
-  website: string;
-  smtp_host: string;
-  smtp_port: string;
-  smtp_user: string;
-  smtp_password: string;
-  smtp_from_email: string;
-  smtp_from_name: string;
+  name: string | null;
+  address: string | null;
+  nif: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  smtp_host: string | null;
+  smtp_port: string | null;
+  smtp_user: string | null;
+  smtp_password: string | null;
+  smtp_from_email: string | null;
+  smtp_from_name: string | null;
   currency_locale: string;
   currency_code: string;
   currency_min_digits: number;
   currency_max_digits: number;
   email_template_order: string;
+  created_at?: string | null;
+  updated_at?: string | null;
 };
 
 // Default settings to use if no settings are found in the database
@@ -166,16 +167,20 @@ const CompanySettings = () => {
       }
       
       if (data) {
-        // Ensure the data conforms to our CompanySettings type
-        const settingsData = data as CompanySettings;
-        setSettings(settingsData);
+        // Fix: Merge the returned data with default settings to ensure all required fields exist
+        const mergedSettings: CompanySettings = {
+          ...defaultSettings,
+          ...data as any
+        };
+        
+        setSettings(mergedSettings);
         
         // Save currency settings to localStorage
         const currencySettings = {
-          locale: settingsData.currency_locale || 'pt-AO',
-          currency: settingsData.currency_code || 'AOA',
-          minDigits: settingsData.currency_min_digits || 2,
-          maxDigits: settingsData.currency_max_digits || 2
+          locale: mergedSettings.currency_locale || 'pt-AO',
+          currency: mergedSettings.currency_code || 'AOA',
+          minDigits: mergedSettings.currency_min_digits || 2,
+          maxDigits: mergedSettings.currency_max_digits || 2
         };
         localStorage.setItem('currencySettings', JSON.stringify(currencySettings));
       }
@@ -266,7 +271,7 @@ const CompanySettings = () => {
       if (error) throw new Error(error.message);
       
       toast.success('Teste de email enviado com sucesso!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error testing SMTP:', error);
       toast.error(`Erro ao testar SMTP: ${error.message || 'Verifique as configurações'}`);
     } finally {
@@ -321,7 +326,7 @@ const CompanySettings = () => {
                     Nome da Empresa
                     <Input
                       name="name"
-                      value={settings.name}
+                      value={settings.name || ''}
                       onChange={handleInputChange}
                       className="mt-1"
                     />
@@ -333,7 +338,7 @@ const CompanySettings = () => {
                     NIF
                     <Input
                       name="nif"
-                      value={settings.nif}
+                      value={settings.nif || ''}
                       onChange={handleInputChange}
                       className="mt-1"
                     />
@@ -345,7 +350,7 @@ const CompanySettings = () => {
                     Endereço
                     <Input
                       name="address"
-                      value={settings.address}
+                      value={settings.address || ''}
                       onChange={handleInputChange}
                       className="mt-1"
                     />
@@ -357,7 +362,7 @@ const CompanySettings = () => {
                     Telefone
                     <Input
                       name="phone"
-                      value={settings.phone}
+                      value={settings.phone || ''}
                       onChange={handleInputChange}
                       className="mt-1"
                     />
@@ -370,7 +375,7 @@ const CompanySettings = () => {
                     <Input
                       name="email"
                       type="email"
-                      value={settings.email}
+                      value={settings.email || ''}
                       onChange={handleInputChange}
                       className="mt-1"
                     />
@@ -382,7 +387,7 @@ const CompanySettings = () => {
                     Website
                     <Input
                       name="website"
-                      value={settings.website}
+                      value={settings.website || ''}
                       onChange={handleInputChange}
                       className="mt-1"
                     />
@@ -416,7 +421,7 @@ const CompanySettings = () => {
                     Servidor SMTP (Host)
                     <Input
                       name="smtp_host"
-                      value={settings.smtp_host}
+                      value={settings.smtp_host || ''}
                       onChange={handleInputChange}
                       className="mt-1"
                       placeholder="smtp.example.com"
@@ -429,7 +434,7 @@ const CompanySettings = () => {
                     Porta SMTP
                     <Input
                       name="smtp_port"
-                      value={settings.smtp_port}
+                      value={settings.smtp_port || ''}
                       onChange={handleInputChange}
                       className="mt-1"
                       placeholder="587"
@@ -442,7 +447,7 @@ const CompanySettings = () => {
                     Usuário SMTP
                     <Input
                       name="smtp_user"
-                      value={settings.smtp_user}
+                      value={settings.smtp_user || ''}
                       onChange={handleInputChange}
                       className="mt-1"
                       placeholder="user@example.com"
@@ -456,7 +461,7 @@ const CompanySettings = () => {
                     <Input
                       name="smtp_password"
                       type="password"
-                      value={settings.smtp_password}
+                      value={settings.smtp_password || ''}
                       onChange={handleInputChange}
                       className="mt-1"
                       placeholder="••••••••"
@@ -470,7 +475,7 @@ const CompanySettings = () => {
                     <Input
                       name="smtp_from_email"
                       type="email"
-                      value={settings.smtp_from_email}
+                      value={settings.smtp_from_email || ''}
                       onChange={handleInputChange}
                       className="mt-1"
                       placeholder="noreply@example.com"
@@ -483,7 +488,7 @@ const CompanySettings = () => {
                     Nome de Envio (From)
                     <Input
                       name="smtp_from_name"
-                      value={settings.smtp_from_name}
+                      value={settings.smtp_from_name || ''}
                       onChange={handleInputChange}
                       className="mt-1"
                       placeholder="Minha Empresa"
