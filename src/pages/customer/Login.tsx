@@ -1,14 +1,15 @@
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth } from '@/hooks/use-auth';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const Login = () => {
-  const { login, register } = useAuth();
+  const navigate = useNavigate();
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [registerData, setRegisterData] = useState({ 
     name: '', 
@@ -44,9 +45,20 @@ const Login = () => {
     setIsSubmitting(true);
     
     try {
-      await login(loginData.email, loginData.password);
-    } catch (error) {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginData.email,
+        password: loginData.password,
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast.success('Login realizado com sucesso!');
+      navigate('/cliente/dashboard');
+    } catch (error: any) {
       console.error(error);
+      toast.error(error.message || 'Erro ao fazer login. Verifique suas credenciais.');
     } finally {
       setIsSubmitting(false);
     }
@@ -63,9 +75,25 @@ const Login = () => {
     setIsSubmitting(true);
     
     try {
-      await register(registerData.name, registerData.email, registerData.password);
-    } catch (error) {
+      const { data, error } = await supabase.auth.signUp({
+        email: registerData.email,
+        password: registerData.password,
+        options: {
+          data: {
+            name: registerData.name,
+          },
+        },
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast.success('Conta criada com sucesso! Por favor, verifique seu email para confirmar o registro.');
+      setRegisterData({ name: '', email: '', password: '', confirmPassword: '' });
+    } catch (error: any) {
       console.error(error);
+      toast.error(error.message || 'Erro ao criar conta. Tente novamente.');
     } finally {
       setIsSubmitting(false);
     }

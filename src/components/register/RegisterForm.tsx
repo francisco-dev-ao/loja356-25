@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { NifInput } from './NifInput';
 import { PhoneInput } from './PhoneInput';
 import { PasswordInput } from './PasswordInput';
+import { supabase } from '@/integrations/supabase/client';
 
 export const RegisterForm = () => {
   const navigate = useNavigate();
@@ -40,9 +41,30 @@ export const RegisterForm = () => {
     setIsLoading(true);
     
     try {
-      // Here you would normally send the data to your backend
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      toast.success('Conta criada com sucesso!');
+      // Register with Supabase
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      
+      if (error) throw error;
+      
+      if (data.user) {
+        // Update profile with additional information
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            name: companyName,
+            nif: nif,
+            phone: phone,
+            address: address
+          })
+          .eq('id', data.user.id);
+        
+        if (profileError) throw profileError;
+      }
+      
+      toast.success('Conta criada com sucesso! Por favor, verifique seu email para confirmar o registro.');
       navigate('/cliente/login');
     } catch (error) {
       console.error('Registration error:', error);

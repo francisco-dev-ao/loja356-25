@@ -2,27 +2,28 @@
 import React, { useState } from 'react';
 import Layout from '@/components/layout/Layout';
 import ProductGrid from '@/components/products/ProductGrid';
-import products from '@/data/products';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search } from 'lucide-react';
+import { useProducts } from '@/hooks/use-products';
 
 const Products = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const { data: products, isLoading, error } = useProducts();
 
   // Get unique categories
-  const categories = ['all', ...new Set(products.map((product) => product.category))];
+  const categories = products ? ['all', ...new Set(products.map((product) => product.category))] : ['all'];
 
   // Filter products based on search term and category
-  const filteredProducts = products.filter((product) => {
+  const filteredProducts = products ? products.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           product.description.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
     
     return matchesSearch && matchesCategory;
-  });
+  }) : [];
 
   return (
     <Layout>
@@ -70,7 +71,16 @@ const Products = () => {
       {/* Product Grid */}
       <section className="py-12">
         <div className="container-page">
-          {filteredProducts.length > 0 ? (
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin h-8 w-8 border-4 border-microsoft-blue border-t-transparent rounded-full mb-4"></div>
+              <p>Carregando produtos...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12 text-red-500">
+              <p>Erro ao carregar produtos. Por favor, tente novamente mais tarde.</p>
+            </div>
+          ) : filteredProducts.length > 0 ? (
             <ProductGrid products={filteredProducts} />
           ) : (
             <div className="text-center py-12">
