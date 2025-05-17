@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
@@ -6,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, FileText, Check, X, User, Download, CheckCheck, Trash2, SquareCheck, SquareX } from 'lucide-react';
+import { Search, FileText, Check, X, User, Download, CheckCheck, Trash2, SquareCheck, SquareX, Settings, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/formatters';
@@ -21,6 +22,10 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
+
+// Import new components
+import ProductsTable from '@/components/admin/ProductsTable';
+import CompanySettings from '@/components/admin/CompanySettings';
 
 const AdminDashboard = () => {
   const { user, profile, isLoading, isAuthenticated } = useAuth();
@@ -68,7 +73,7 @@ const AdminDashboard = () => {
   const fetchOrders = async () => {
     setFetchingOrders(true);
     try {
-      // Fix: Modified query to avoid the foreign key relationship error
+      // Fetch orders
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select(`
@@ -98,7 +103,7 @@ const AdminDashboard = () => {
           // Fetch order items for each order
           const { data: orderItems } = await supabase
             .from('order_items')
-            .select('*, product:product_id(name)')
+            .select('*, product_id(name)')
             .eq('order_id', order.id);
             
           return {
@@ -376,10 +381,10 @@ const AdminDashboard = () => {
       if (order.items && order.items.length > 0) {
         const tableColumn = ["Produto", "Qtd", "Preço Unit.", "Total"];
         const tableRows = order.items.map((item: any) => [
-          item.product?.name || 'Produto',
+          item.product_id.name || 'Produto',
           item.quantity,
-          `${formatCurrency(item.price)} kz`,
-          `${formatCurrency(item.price * item.quantity)} kz`
+          `${formatCurrency(item.price)}`,
+          `${formatCurrency(item.price * item.quantity)}`
         ]);
         
         // @ts-ignore
@@ -413,7 +418,7 @@ const AdminDashboard = () => {
       doc.setFont('helvetica', 'bold');
       doc.text('Total:', 150, finalY + 10);
       doc.setFontSize(12);
-      doc.text(`${formatCurrency(order.total)} kz`, 190, finalY + 10, { align: 'right' });
+      doc.text(`${formatCurrency(order.total)}`, 190, finalY + 10, { align: 'right' });
       
       // Informações de pagamento
       doc.setFontSize(10);
@@ -651,13 +656,29 @@ const AdminDashboard = () => {
                   value="orders" 
                   className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-microsoft-blue data-[state=active]:shadow-none rounded-none h-12 px-6"
                 >
+                  <FileText size={16} className="mr-2" />
                   Gerenciar Pedidos
                 </TabsTrigger>
                 <TabsTrigger 
                   value="customers" 
                   className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-microsoft-blue data-[state=active]:shadow-none rounded-none h-12 px-6"
                 >
+                  <User size={16} className="mr-2" />
                   Gerenciar Clientes
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="products" 
+                  className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-microsoft-blue data-[state=active]:shadow-none rounded-none h-12 px-6"
+                >
+                  <Package size={16} className="mr-2" />
+                  Gerenciar Produtos
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="settings" 
+                  className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-microsoft-blue data-[state=active]:shadow-none rounded-none h-12 px-6"
+                >
+                  <Settings size={16} className="mr-2" />
+                  Configurações
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -775,7 +796,7 @@ const AdminDashboard = () => {
                             {getStatusBadge(order.payment_status)}
                           </TableCell>
                           <TableCell>
-                            {formatCurrency(order.total)} kz
+                            {formatCurrency(order.total)}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end space-x-2">
@@ -936,6 +957,14 @@ const AdminDashboard = () => {
                   </TableBody>
                 </Table>
               </div>
+            </TabsContent>
+
+            <TabsContent value="products" className="p-6">
+              <ProductsTable />
+            </TabsContent>
+
+            <TabsContent value="settings" className="p-6">
+              <CompanySettings />
             </TabsContent>
           </Tabs>
         </div>

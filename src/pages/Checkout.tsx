@@ -22,7 +22,7 @@ const Checkout = () => {
   const { isAuthenticated, user, profile } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('account');
-  const [paymentMethod, setPaymentMethod] = useState('multicaixa');
+  const [paymentMethod, setPaymentMethod] = useState('');  // Changed to empty string initially
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
 
@@ -38,12 +38,9 @@ const Checkout = () => {
     if (isAuthenticated) {
       setActiveTab('payment');
       
-      // Criar pedido automaticamente quando o usuário estiver autenticado
-      if (!orderId && items.length > 0) {
-        handleCreateOrder();
-      }
+      // Não criar pedido automaticamente - apenas quando o usuário selecionar método de pagamento
     }
-  }, [isAuthenticated, orderId, items]);
+  }, [isAuthenticated]);
 
   const handleCreateOrder = async () => {
     if (!isAuthenticated || !user) {
@@ -54,6 +51,11 @@ const Checkout = () => {
 
     if (items.length === 0) {
       toast.error('Seu carrinho está vazio');
+      return;
+    }
+
+    if (!paymentMethod) {
+      toast.error('Por favor, selecione um método de pagamento');
       return;
     }
 
@@ -105,21 +107,22 @@ const Checkout = () => {
   };
 
   const handleBankTransferOrder = async () => {
-    // Se já temos um ID de pedido, não precisamos criar outro
-    if (orderId) {
-      navigate(`/checkout/success?orderId=${orderId}`);
-      clearCart();
-      return;
+    // Se não temos um ID de pedido, criar um novo pedido
+    if (!orderId) {
+      await handleCreateOrder();
+      if (!orderId) return; // Se falhou ao criar pedido, retornar
     }
     
-    setIsProcessing(true);
+    navigate(`/checkout/success?orderId=${orderId}`);
+    clearCart();
+  };
+
+  const handleSelectPaymentMethod = (method: string) => {
+    setPaymentMethod(method);
     
-    try {
-      await handleCreateOrder();
-      navigate(`/checkout/success?orderId=${orderId}`);
-      clearCart();
-    } finally {
-      setIsProcessing(false);
+    // Criar pedido apenas quando o usuário selecionar um método de pagamento
+    if (!orderId && method) {
+      handleCreateOrder();
     }
   };
   
@@ -219,49 +222,93 @@ const Checkout = () => {
                 <TabsContent value="payment">
                   <CardContent className="p-6">
                     <h3 className="text-lg font-medium mb-4">Método de Pagamento</h3>
-                    <Tabs defaultValue={paymentMethod} onValueChange={setPaymentMethod} className="w-full">
-                      <TabsList className="grid w-full grid-cols-2 mb-6">
-                        <TabsTrigger value="multicaixa">Multicaixa Express</TabsTrigger>
-                        <TabsTrigger value="bank_transfer">Transferência Bancária</TabsTrigger>
-                      </TabsList>
-                      
-                      <TabsContent value="multicaixa">
-                        {isProcessing && !orderId ? (
-                          <div className="flex flex-col items-center justify-center py-8">
-                            <div className="animate-spin h-8 w-8 border-4 border-microsoft-blue border-t-transparent rounded-full mb-4"></div>
-                            <p>Criando pedido...</p>
+                    
+                    {/* Seção de escolha de método de pagamento */}
+                    {!paymentMethod ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <Card 
+                          className="border cursor-pointer hover:border-microsoft-blue transition-colors"
+                          onClick={() => handleSelectPaymentMethod('multicaixa')}
+                        >
+                          <CardContent className="p-6">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center">
+                                <div className="w-10 h-10 bg-microsoft-light rounded-full flex items-center justify-center mr-3">
+                                  <CreditCard size={20} className="text-microsoft-blue" />
+                                </div>
+                                <div>
+                                  <h4 className="font-medium">Multicaixa Express</h4>
+                                  <p className="text-sm text-muted-foreground">Pagamento instantâneo</p>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                        
+                        <Card 
+                          className="border cursor-pointer hover:border-microsoft-blue transition-colors"
+                          onClick={() => handleSelectPaymentMethod('bank_transfer')}
+                        >
+                          <CardContent className="p-6">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center">
+                                <div className="w-10 h-10 bg-microsoft-light rounded-full flex items-center justify-center mr-3">
+                                  <Send size={20} className="text-microsoft-blue" />
+                                </div>
+                                <div>
+                                  <h4 className="font-medium">Transferência Bancária</h4>
+                                  <p className="text-sm text-muted-foreground">Processamento em até 24h</p>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    ) : (
+                      <Tabs value={paymentMethod} onValueChange={handleSelectPaymentMethod} className="w-full">
+                        <TabsList className="grid w-full grid-cols-2 mb-6">
+                          <TabsTrigger value="multicaixa">Multicaixa Express</TabsTrigger>
+                          <TabsTrigger value="bank_transfer">Transferência Bancária</TabsTrigger>
+                        </TabsList>
+                        
+                        <TabsContent value="multicaixa">
+                          {isProcessing && !orderId ? (
+                            <div className="flex flex-col items-center justify-center py-8">
+                              <div className="animate-spin h-8 w-8 border-4 border-microsoft-blue border-t-transparent rounded-full mb-4"></div>
+                              <p>Criando pedido...</p>
+                            </div>
+                          ) : (
+                            <MulticaixaExpressPayment 
+                              amount={total} 
+                              orderId={orderId || ''} 
+                            />
+                          )}
+                        </TabsContent>
+                        
+                        <TabsContent value="bank_transfer">
+                          <BankTransferPayment />
+                          <div className="mt-6">
+                            <Button 
+                              onClick={handleBankTransferOrder}
+                              className="w-full bg-microsoft-blue hover:bg-microsoft-blue/90 py-6"
+                              disabled={isProcessing}
+                            >
+                              {isProcessing ? (
+                                <span className="flex items-center">
+                                  <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                                  Processando...
+                                </span>
+                              ) : (
+                                <span className="flex items-center">
+                                  Finalizar Pedido
+                                  <Send size={16} className="ml-2" />
+                                </span>
+                              )}
+                            </Button>
                           </div>
-                        ) : (
-                          <MulticaixaExpressPayment 
-                            amount={total} 
-                            orderId={orderId || ''} 
-                          />
-                        )}
-                      </TabsContent>
-                      
-                      <TabsContent value="bank_transfer">
-                        <BankTransferPayment />
-                        <div className="mt-6">
-                          <Button 
-                            onClick={handleBankTransferOrder}
-                            className="w-full bg-microsoft-blue hover:bg-microsoft-blue/90 py-6"
-                            disabled={isProcessing}
-                          >
-                            {isProcessing ? (
-                              <span className="flex items-center">
-                                <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                                Processando...
-                              </span>
-                            ) : (
-                              <span className="flex items-center">
-                                Finalizar Pedido
-                                <Send size={16} className="ml-2" />
-                              </span>
-                            )}
-                          </Button>
-                        </div>
-                      </TabsContent>
-                    </Tabs>
+                        </TabsContent>
+                      </Tabs>
+                    )}
                   </CardContent>
                 </TabsContent>
               </Tabs>
