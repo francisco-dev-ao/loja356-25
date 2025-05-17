@@ -123,20 +123,31 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const loadUserCart = async () => {
       if (isAuthenticated && user) {
-        // Verificar se existe um carrinho salvo para este usuário no banco de dados
-        const { data: cartData, error } = await supabase
-          .from('user_carts')
-          .select('cart_data')
-          .eq('user_id', user.id)
-          .single();
-        
-        if (!error && cartData?.cart_data) {
-          // Se encontrar um carrinho salvo, carregá-lo
-          dispatch({ type: 'LOAD_CART', payload: cartData.cart_data as CartState });
-          console.log("Carrinho carregado do banco de dados para o usuário:", user.id);
-        } else {
-          // Não fazer nada se não houver carrinho salvo, manter o localStorage atual
-          console.log("Nenhum carrinho encontrado no banco de dados para o usuário:", user.id);
+        try {
+          // Verificar se existe um carrinho salvo para este usuário no banco de dados
+          const { data, error } = await supabase
+            .from('user_carts')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+          
+          if (!error && data && data.cart_data) {
+            // Se encontrar um carrinho salvo, carregá-lo
+            dispatch({ type: 'LOAD_CART', payload: data.cart_data as CartState });
+            console.log("Carrinho carregado do banco de dados para o usuário:", user.id);
+          } else {
+            // Verificar se existe carrinho no localStorage e salvá-lo no banco de dados
+            const localCart = localStorage.getItem('cart');
+            if (localCart) {
+              const parsedCart = JSON.parse(localCart);
+              if (parsedCart.items && parsedCart.items.length > 0) {
+                saveCartToDatabase(user.id, parsedCart);
+              }
+            }
+            console.log("Nenhum carrinho encontrado no banco de dados para o usuário:", user.id);
+          }
+        } catch (e) {
+          console.error("Erro ao carregar carrinho:", e);
         }
       }
     };
@@ -144,35 +155,37 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     loadUserCart();
   }, [isAuthenticated, user]);
 
+  // Função para salvar o carrinho no banco de dados
+  const saveCartToDatabase = async (userId: string, cartData: CartState) => {
+    try {
+      const { error } = await supabase
+        .from('user_carts')
+        .upsert({
+          user_id: userId,
+          cart_data: cartData,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        });
+      
+      if (error) {
+        console.error("Erro ao salvar carrinho no BD:", error);
+      } else {
+        console.log("Carrinho salvo no banco de dados para o usuário:", userId);
+      }
+    } catch (e) {
+      console.error("Erro ao salvar carrinho:", e);
+    }
+  };
+
   // Salvar carrinho quando mudar
   useEffect(() => {
     // Sempre salvar no localStorage
     localStorage.setItem('cart', JSON.stringify(state));
     
     // Se o usuário estiver autenticado, salvar também no banco de dados
-    const saveUserCart = async () => {
-      if (isAuthenticated && user) {
-        const { error } = await supabase
-          .from('user_carts')
-          .upsert(
-            { 
-              user_id: user.id, 
-              cart_data: state,
-              updated_at: new Date().toISOString()
-            },
-            { onConflict: 'user_id' }
-          );
-          
-        if (error) {
-          console.error("Erro ao salvar carrinho no BD:", error);
-        } else {
-          console.log("Carrinho salvo no banco de dados para o usuário:", user.id);
-        }
-      }
-    };
-
     if (isAuthenticated && user) {
-      saveUserCart();
+      saveCartToDatabase(user.id, state);
     }
   }, [state, isAuthenticated, user]);
 

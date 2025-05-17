@@ -3,7 +3,6 @@ import React from 'react';
 import { useCart } from '@/hooks/use-cart';
 import { Button } from '@/components/ui/button';
 import { Trash, Plus, Minus } from 'lucide-react';
-import { toast } from 'sonner';
 
 interface CartItemProps {
   id: string;
