@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Building, Mail, Currency, MailCheck } from 'lucide-react';
-import { formatCurrency, saveCurrencySettings } from '@/lib/formatters';
+import { formatCurrency, saveCurrencySettings, parseFormattedNumber } from '@/lib/formatters';
 
 // Define a type for the company settings that matches our database structure
 type CompanySettings = {
@@ -212,8 +212,9 @@ const CompanySettings = () => {
   const handlePreviewAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value;
     
-    // Convert to a proper number regardless of whether it uses . or , as decimal separator
-    const cleanedValue = rawValue.replace(/,/g, '.');
+    // Permitir tanto vírgulas quanto pontos como separadores
+    // Primeiro removemos todos os pontos e substituímos vírgulas por pontos para o parseFloat
+    const cleanedValue = rawValue.replace(/\./g, '').replace(',', '.');
     const numValue = parseFloat(cleanedValue);
     
     if (!isNaN(numValue)) {
@@ -339,6 +340,25 @@ const CompanySettings = () => {
       </div>
     );
   }
+  
+  // Função para formatar o valor com separadores de milhares para exibição
+  const formatInputValue = (value: number): string => {
+    // Converte para string com , como separador decimal
+    const valueStr = value.toString().replace('.', ',');
+    
+    // Se não houver parte decimal, adiciona ,00
+    if (!valueStr.includes(',')) {
+      return valueStr + ',00';
+    }
+    
+    // Se a parte decimal tiver apenas um dígito, adiciona outro zero
+    const parts = valueStr.split(',');
+    if (parts[1] && parts[1].length === 1) {
+      return parts[0] + ',' + parts[1] + '0';
+    }
+    
+    return valueStr;
+  };
   
   return (
     <div>
@@ -649,12 +669,12 @@ const CompanySettings = () => {
                   <div className="flex-grow">
                     <Input
                       type="text"
-                      value={previewAmount.toString().replace('.', ',')}
+                      value={formatInputValue(previewAmount)}
                       onChange={handlePreviewAmountChange}
-                      placeholder="Valor (ex: 1000,00)"
+                      placeholder="Valor (ex: 1.000,00)"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Insira o valor usando vírgula ou ponto como separador decimal
+                      Insira o valor usando vírgula ou ponto como separador (ex: 1.000,00 ou 1000,00)
                     </p>
                   </div>
                   <div className="text-2xl font-semibold">→</div>

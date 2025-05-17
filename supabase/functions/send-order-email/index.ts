@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.6";
@@ -191,8 +192,8 @@ function formatMoney(value: number): string {
 function parseFormattedNumber(value: string): number {
   if (!value) return 0;
   
-  // Replace commas with dots for proper parsing
-  const normalizedValue = value.replace(/,/g, '.');
+  // Remove pontos de separação de milhares e substitui vírgulas por pontos para a conversão
+  const normalizedValue = value.replace(/\./g, '').replace(',', '.');
   const parsedValue = parseFloat(normalizedValue);
   
   return isNaN(parsedValue) ? 0 : parsedValue;
