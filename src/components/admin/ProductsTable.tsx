@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -14,7 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatCurrency, calculateDiscountedPrice } from '@/lib/utils';
+import { formatPrice, parseFormattedNumber } from '@/lib/formatters';
+import { calculateDiscountedPrice } from '@/lib/utils';
 
 type Product = {
   id: string;
@@ -187,31 +189,39 @@ const ProductsTable = () => {
     }
   };
   
-  // Update current product state
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  // Handle price inputs - modified to properly handle decimal separators
+  const handlePriceInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    
+    // Allow empty input
+    if (value === '') {
+      setCurrentProduct(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+      return;
+    }
+    
+    // Only allow digits, commas, and periods
+    if (!/^[0-9.,]+$/.test(value) && value !== '') {
+      return;
+    }
     
     setCurrentProduct(prev => ({
       ...prev,
-      [name]: name === 'price' || name === 'base_price' || name === 'stock' || name === 'discount_value' 
-        ? parseFloat(value) || 0 
-        : value
+      [name]: value
     }));
   };
-
-  // Handle select change for discount type
-  const handleDiscountTypeChange = (value: string | null) => {
-    setCurrentProduct(prev => ({
-      ...prev,
-      discount_type: value as 'percentage' | 'fixed' | null
-    }));
-  };
-
-  // Update final price as user changes base price and discount
+  
+  // Update final price when base price or discount changes
   useEffect(() => {
     if (currentProduct.base_price) {
+      const basePrice = typeof currentProduct.base_price === 'string' 
+        ? parseFormattedNumber(currentProduct.base_price as unknown as string)
+        : currentProduct.base_price;
+        
       const finalPrice = calculateDiscountedPrice(
-        currentProduct.base_price,
+        basePrice,
         currentProduct.discount_type,
         currentProduct.discount_value
       );
@@ -222,6 +232,32 @@ const ProductsTable = () => {
       }));
     }
   }, [currentProduct.base_price, currentProduct.discount_type, currentProduct.discount_value]);
+
+  // Handle other input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    
+    // Special handling for numeric fields that aren't prices
+    if (name === 'stock' || name === 'discount_value') {
+      setCurrentProduct(prev => ({
+        ...prev,
+        [name]: value === '' ? '' : parseFloat(value) || 0
+      }));
+    } else {
+      setCurrentProduct(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+
+  // Handle select change for discount type
+  const handleDiscountTypeChange = (value: string | null) => {
+    setCurrentProduct(prev => ({
+      ...prev,
+      discount_type: value as 'percentage' | 'fixed' | null
+    }));
+  };
   
   return (
     <div>
@@ -286,15 +322,15 @@ const ProductsTable = () => {
                   </TableCell>
                   <TableCell>{product.category}</TableCell>
                   <TableCell>
-                    {product.base_price ? formatCurrency(product.base_price) : formatCurrency(product.price)} kz
+                    {product.base_price ? formatPrice(product.base_price) : formatPrice(product.price)}
                   </TableCell>
-                  <TableCell>{formatCurrency(product.price)} kz</TableCell>
+                  <TableCell>{formatPrice(product.price)}</TableCell>
                   <TableCell>
                     {product.discount_type && product.discount_value ? (
                       <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
                         {product.discount_type === 'percentage' 
                           ? `${product.discount_value}%` 
-                          : `${formatCurrency(product.discount_value)} kz`}
+                          : formatPrice(product.discount_value)}
                       </span>
                     ) : (
                       <span className="text-gray-400">Sem desconto</span>
@@ -371,20 +407,19 @@ const ProductsTable = () => {
                 Preço Base (kz)
                 <Input
                   name="base_price"
-                  type="number"
-                  value={currentProduct.base_price || 0}
-                  onChange={handleInputChange}
+                  value={currentProduct.base_price as string | number}
+                  onChange={handlePriceInputChange}
                   className="mt-1"
-                  placeholder="0.00"
+                  placeholder="0,00"
                 />
+                <p className="text-xs text-gray-500 mt-1">Formato: 1.000,00</p>
               </label>
               
               <label className="text-sm font-medium">
                 Preço Final (kz)
                 <Input
                   name="price"
-                  type="number"
-                  value={currentProduct.price}
+                  value={typeof currentProduct.price === 'number' ? formatPrice(currentProduct.price).replace(' kz', '') : currentProduct.price}
                   readOnly
                   className="mt-1 bg-gray-50"
                 />
@@ -415,11 +450,11 @@ const ProductsTable = () => {
                 <Input
                   name="discount_value"
                   type="number"
-                  value={currentProduct.discount_value || 0}
+                  value={currentProduct.discount_value || ''}
                   onChange={handleInputChange}
                   disabled={!currentProduct.discount_type}
                   className="mt-1"
-                  placeholder={currentProduct.discount_type === 'percentage' ? "0-100" : "0.00"}
+                  placeholder={currentProduct.discount_type === 'percentage' ? "0-100" : "0,00"}
                 />
               </label>
             </div>

@@ -61,16 +61,13 @@ export const formatPrice = (value: number): string => {
   try {
     // Format using Intl with proper Angolan format
     const formatted = new Intl.NumberFormat('pt-AO', {
-      style: 'currency',
-      currency: 'AOA',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
       useGrouping: true,
     }).format(value);
     
-    return formatted
-      .replace('AOA', '')
-      .trim() + " kz";
+    // Return with kz suffix (without duplicating the currency code)
+    return formatted + " kz";
   } catch (error) {
     // Fallback manual formatting
     const formatted = value.toFixed(2).replace('.', ',');
