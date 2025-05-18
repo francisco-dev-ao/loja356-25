@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
@@ -32,30 +31,40 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     return loadCartFromLocalStorage() || initialState;
   });
 
-  // Effect to load user cart when they log in
+  // Effect to handle cart synchronization between local and database storage
   useEffect(() => {
-    const loadUserCart = async () => {
+    const synchronizeCart = async () => {
       if (isAuthenticated && user) {
         try {
           // Check if a cart exists for this user in the database
           const dbCart = await loadCartFromDatabase(user.id);
           
-          if (dbCart) {
-            dispatch({ type: 'LOAD_CART', payload: dbCart });
-          } else {
-            // Check if there's a cart in localStorage and save it to the database
-            const localCart = loadCartFromLocalStorage();
-            if (localCart && localCart.items && localCart.items.length > 0) {
+          // Get current local cart
+          const localCart = loadCartFromLocalStorage();
+          
+          if (dbCart && dbCart.items && dbCart.items.length > 0) {
+            // If database has items and local cart is empty or has different items, load from database
+            if (!localCart || !localCart.items || localCart.items.length === 0) {
+              dispatch({ type: 'LOAD_CART', payload: dbCart });
+              console.log("Loaded cart from database - local cart was empty");
+            } else {
+              // Local cart has items - keep the local cart
+              // This prevents the cart from resetting during authentication
               saveCartToDatabase(user.id, localCart);
+              console.log("Preserved local cart and saved to database");
             }
+          } else if (localCart && localCart.items && localCart.items.length > 0) {
+            // Database cart is empty but local cart has items - save local cart to database
+            saveCartToDatabase(user.id, localCart);
+            console.log("Saved local cart to empty database cart");
           }
         } catch (e) {
-          console.error("Erro ao carregar carrinho:", e);
+          console.error("Erro ao sincronizar carrinho:", e);
         }
       }
     };
 
-    loadUserCart();
+    synchronizeCart();
   }, [isAuthenticated, user]);
 
   // Save cart when it changes
