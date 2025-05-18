@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
@@ -184,8 +185,8 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
       const callbackUrl = window.location.origin + "/api/payment-callback"; // Replace with your actual callback URL
       const cssUrl = window.location.origin + "/multicaixa-express.css";
       
-      // Using the production URL from PHP code
-      const emisBaseUrl = "https://pagamentonline.emis.co.ao/online-payment-gateway/portal/frame";
+      // Using the corrected production URL for EMIS frame token
+      const emisBaseUrl = "https://pagamentonline.emis.co.ao/online-payment-gateway/portal/frameToken";
       
       // URL parameters for EMIS payment page
       const params = new URLSearchParams({
