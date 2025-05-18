@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.6";
@@ -178,15 +179,22 @@ serve(async (req: Request) => {
 // Helper functions
 function formatMoney(value: number): string {
   try {
-    return new Intl.NumberFormat('pt-AO', {
+    // Use proper Angolan format with periods for thousands and commas for decimals
+    const formatted = new Intl.NumberFormat('pt-AO', {
       style: 'currency',
       currency: 'AOA',
       useGrouping: true,
-    }).format(value)
+    }).format(value);
+    
+    return formatted
       .replace('AOA', '')
       .trim() + ' kz';
   } catch (error) {
-    return `AOA ${value.toFixed(2)}`;
+    // Fallback formatting in case of error
+    const formatted = value.toFixed(2).replace('.', ',');
+    const parts = formatted.split(',');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return parts.join(',') + ' kz';
   }
 }
 

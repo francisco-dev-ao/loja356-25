@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
@@ -81,17 +82,27 @@ serve(async (req: Request) => {
     const minDigits = settingsData.currency_min_digits || 2;
     const maxDigits = settingsData.currency_max_digits || 2;
     
-    // Format currency with the stored settings
+    // Format currency with the stored settings - using proper Angolan format
     const formatCurrency = (amount: number): string => {
-      return new Intl.NumberFormat(currencyLocale, {
-        style: 'currency',
-        currency: currencyCode,
-        minimumFractionDigits: minDigits,
-        maximumFractionDigits: maxDigits,
-        useGrouping: true,
-      }).format(amount)
-        .replace(currencyCode, '')
-        .trim() + ' kz';
+      try {
+        const formatted = new Intl.NumberFormat(currencyLocale, {
+          style: 'currency',
+          currency: currencyCode,
+          minimumFractionDigits: minDigits,
+          maximumFractionDigits: maxDigits,
+        }).format(amount);
+        
+        // Clean up and ensure proper formatting
+        return formatted
+          .replace(currencyCode, '')
+          .trim() + ' kz';
+      } catch (error) {
+        // Fallback formatting
+        const formatted = amount.toFixed(2).replace('.', ',');
+        const parts = formatted.split(',');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return parts.join(',') + ' kz';
+      }
     };
     
     // Prepare order items for email
