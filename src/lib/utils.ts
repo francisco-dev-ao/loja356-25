@@ -1,4 +1,14 @@
 
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+/**
+ * Utility to combine Tailwind CSS classes conditionally
+ */
+export function cn(...inputs: ClassValue[]): string {
+  return twMerge(clsx(inputs));
+}
+
 /**
  * Calculate the discounted price based on base price, discount type, and discount value
  */
@@ -23,4 +33,42 @@ export const calculateDiscountedPrice = (
   }
 
   return basePrice;
+};
+
+/**
+ * Format a number as price in Angolan format: 5.000,00 kz
+ * @param value - The value to be formatted
+ * @returns A string formatted in Angolan standard with kz at the end
+ */
+export const formatCurrency = (value: number): string => {
+  return formatPrice(value);
+};
+
+/**
+ * Format a number as price in Angolan format: 5.000,00 kz
+ * @param value - The value to be formatted
+ * @returns A string formatted in Angolan standard with kz at the end
+ */
+export const formatPrice = (value: number): string => {
+  if (value === null || value === undefined || isNaN(value)) {
+    return "0,00 kz";
+  }
+  
+  try {
+    // Format using Intl with proper Angolan format
+    const formatted = new Intl.NumberFormat('pt-AO', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+      useGrouping: true,
+    }).format(value);
+    
+    // Return with kz suffix
+    return formatted + " kz";
+  } catch (error) {
+    // Fallback manual formatting
+    const formatted = value.toFixed(2).replace('.', ',');
+    const parts = formatted.split(',');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return parts.join(',') + " kz";
+  }
 };

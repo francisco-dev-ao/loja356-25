@@ -1,4 +1,6 @@
 
+import { formatPrice as formatPriceUtil } from './utils';
+
 // Type definition for currency settings
 type CurrencySettings = {
   locale: string;
@@ -54,27 +56,7 @@ export const parseFormattedNumber = (value: string): number => {
  * @returns Uma string formatada no padrão angolano com kz no final
  */
 export const formatPrice = (value: number): string => {
-  if (value === null || value === undefined || isNaN(value)) {
-    return "0,00 kz";
-  }
-  
-  try {
-    // Format using Intl with proper Angolan format
-    const formatted = new Intl.NumberFormat('pt-AO', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-      useGrouping: true,
-    }).format(value);
-    
-    // Return with kz suffix
-    return formatted + " kz";
-  } catch (error) {
-    // Fallback manual formatting
-    const formatted = value.toFixed(2).replace('.', ',');
-    const parts = formatted.split(',');
-    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    return parts.join(',') + " kz";
-  }
+  return formatPriceUtil(value);
 };
 
 // Formatação de moeda com configurações - use formatPrice para padrão angolano
