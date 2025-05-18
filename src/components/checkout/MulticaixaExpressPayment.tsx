@@ -8,8 +8,6 @@ import { useAuth } from '@/hooks/use-auth';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/hooks/use-cart';
 import { formatPrice } from '@/lib/formatters';
-import { Progress } from '@/components/ui/progress';
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface MulticaixaExpressPaymentProps {
   amount: number;
@@ -22,7 +20,6 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [showIframe, setShowIframe] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'processing' | 'completed' | 'failed'>('pending');
-  const [progress, setProgress] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const { user } = useAuth();
   const { clearCart } = useCart();
@@ -77,32 +74,6 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
     return () => window.removeEventListener('message', handleMessage);
   }, [orderId, navigate, clearCart]);
 
-  // Setup loading progress simulation
-  useEffect(() => {
-    let interval: number | undefined;
-    
-    if (isProcessing && !iframeLoaded && showIframe) {
-      setPaymentStatus('processing');
-      interval = window.setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 90) {
-            return prev;
-          }
-          return prev + 5;
-        });
-      }, 500);
-    }
-    
-    if (iframeLoaded) {
-      setProgress(100);
-      clearInterval(interval);
-    }
-    
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isProcessing, iframeLoaded, showIframe]);
-
   // Auto-initiate payment when component mounts if orderId exists
   useEffect(() => {
     if (orderId && !showIframe) {
@@ -146,7 +117,6 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
     
     setIsProcessing(true);
     setPaymentStatus('processing');
-    setProgress(10);
     
     try {
       // Generate payment reference
@@ -247,25 +217,13 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
       </div>
       
       {showIframe ? (
-        <div className="transition-all duration-300">
-          {!iframeLoaded && (
-            <div className="bg-gray-50 p-4 rounded-lg mb-4">
-              <p className="text-sm text-center text-gray-500 mb-2">Carregando página de pagamento segura...</p>
-              <Progress value={progress} className="h-2 mb-2" />
-              <p className="text-xs text-center text-gray-400">{progress}%</p>
-              <div className="flex justify-center mt-2">
-                <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
-              </div>
-            </div>
-          )}
-          <div className={`${iframeLoaded ? 'opacity-100' : 'opacity-40'} border rounded-lg overflow-hidden transition-all`}>
-            <iframe
-              ref={iframeRef}
-              onLoad={handleIframeLoad}
-              className="w-full h-[500px] border-0"
-              title="Pagamento Multicaixa Express"
-            />
-          </div>
+        <div className="border rounded-lg overflow-hidden">
+          <iframe
+            ref={iframeRef}
+            onLoad={handleIframeLoad}
+            className="w-full h-[500px] border-0"
+            title="Pagamento Multicaixa Express"
+          />
         </div>
       ) : (
         <Button
