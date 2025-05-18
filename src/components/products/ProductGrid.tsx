@@ -8,6 +8,7 @@ import { MinusCircle, PlusCircle } from 'lucide-react';
 import { useState } from 'react';
 import { useCart } from '@/hooks/use-cart';
 import { useNavigate } from 'react-router-dom';
+import { formatPrice } from '@/lib/formatters';
 
 interface ProductGridProps {
   products: Product[];
@@ -68,7 +69,7 @@ const ProductGrid = ({ products, title }: ProductGridProps) => {
                   <div>
                     <h4 className="font-medium">{selectedProduct.name}</h4>
                     <p className="text-microsoft-blue font-bold">
-                      {Number(selectedProduct.price).toLocaleString('pt-AO')} kz
+                      {formatPrice(selectedProduct.price)}
                     </p>
                   </div>
                 </div>
@@ -95,7 +96,7 @@ const ProductGrid = ({ products, title }: ProductGridProps) => {
                 <div className="flex justify-between items-center mt-4">
                   <span className="font-medium">Total:</span>
                   <span className="text-microsoft-blue font-bold">
-                    {(selectedProduct.price * quantity).toLocaleString('pt-AO')} kz
+                    {formatPrice(selectedProduct.price * quantity)}
                   </span>
                 </div>
               </div>

@@ -1,6 +1,6 @@
-
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { formatPrice } from "./formatters"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -58,11 +58,8 @@ export function responsive(
 /**
  * Formata valores numéricos para exibição
  */
-export const formatCurrency = (value: number, locale = 'pt-BR', currency = 'BRL') => {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-  }).format(value);
+export const formatCurrency = (value: number, locale = 'pt-AO', currency = 'AOA') => {
+  return formatPrice(value);
 };
 
 /**
@@ -126,4 +123,3 @@ export const applyCouponDiscount = (
 
   return total;
 };
-
