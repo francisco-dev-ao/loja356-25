@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { items } = useCart();
+  const { items = [] } = useCart(); // Valor padrão para evitar undefined
   const { isAuthenticated, logout, profile } = useAuth();
   const navigate = useNavigate();
 
@@ -76,7 +76,7 @@ const Navbar = () => {
             )}
             <Link to="/carrinho" className="relative">
               <ShoppingCart size={20} className="text-gray-700 hover:text-microsoft-blue transition-colors" />
-              {items.length > 0 && (
+              {items?.length > 0 && (
                 <span className="absolute -top-2 -right-2 bg-energy text-white text-xs font-bold rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center">
                   {items.length}
                 </span>

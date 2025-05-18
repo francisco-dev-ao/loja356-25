@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
@@ -32,6 +33,11 @@ type CartAction =
   | { type: 'REMOVE_ITEM'; payload: { id: string } }
   | { type: 'CLEAR_CART' }
   | { type: 'LOAD_CART'; payload: CartState };
+
+const initialState: CartState = {
+  items: [],
+  total: 0
+};
 
 const CartContext = createContext<{
   items: CartItem[];
@@ -70,7 +76,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         const newItem = { ...action.payload, quantity };
         return {
           ...state,
-          items: [...state.items, newItem],
+          items: [...state.items],
           total: state.total + newItem.price * quantity,
         };
       }
@@ -104,13 +110,13 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
     }
 
     case 'CLEAR_CART':
-      return {
-        items: [],
-        total: 0,
-      };
+      return initialState;
     
     case 'LOAD_CART':
-      return action.payload;
+      return {
+        ...action.payload,
+        items: action.payload.items || []
+      };
 
     default:
       return state;
@@ -119,10 +125,18 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
 
 export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const { user, isAuthenticated } = useAuth();
-  const [state, dispatch] = useReducer(cartReducer, { items: [], total: 0 }, () => {
+  const [state, dispatch] = useReducer(cartReducer, initialState, () => {
     // Load cart from localStorage on initialization
-    const savedCart = localStorage.getItem('cart');
-    return savedCart ? JSON.parse(savedCart) : { items: [], total: 0 };
+    try {
+      const savedCart = localStorage.getItem('cart');
+      return savedCart ? {
+        ...JSON.parse(savedCart),
+        items: JSON.parse(savedCart).items || []
+      } : initialState;
+    } catch (error) {
+      console.error('Error parsing cart from localStorage:', error);
+      return initialState;
+    }
   });
 
   // Efeito para carregar o carrinho do usuário quando ele faz login
@@ -218,7 +232,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <CartContext.Provider
       value={{
-        items: state.items,
+        items: state.items || [],
         total: state.total,
         addItem,
         updateQuantity,
