@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
@@ -88,8 +87,11 @@ serve(async (req: Request) => {
         style: 'currency',
         currency: currencyCode,
         minimumFractionDigits: minDigits,
-        maximumFractionDigits: maxDigits
-      }).format(amount);
+        maximumFractionDigits: maxDigits,
+        useGrouping: true,
+      }).format(amount)
+        .replace(currencyCode, '')
+        .trim() + ' kz';
     };
     
     // Prepare order items for email

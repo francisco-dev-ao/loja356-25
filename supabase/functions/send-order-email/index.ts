@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.6";
@@ -181,8 +180,11 @@ function formatMoney(value: number): string {
   try {
     return new Intl.NumberFormat('pt-AO', {
       style: 'currency',
-      currency: 'AOA'
-    }).format(value);
+      currency: 'AOA',
+      useGrouping: true,
+    }).format(value)
+      .replace('AOA', '')
+      .trim() + ' kz';
   } catch (error) {
     return `AOA ${value.toFixed(2)}`;
   }

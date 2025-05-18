@@ -49,7 +49,7 @@ export const parseFormattedNumber = (value: string): number => {
 };
 
 /**
- * Formata um número como preço no formato angolano: 1.234,56 kz
+ * Formata um número como preço no formato angolano: 5.000,00 kz
  * @param value - O valor a ser formatado
  * @returns Uma string formatada no padrão angolano com kz no final
  */
