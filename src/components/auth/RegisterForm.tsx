@@ -10,7 +10,7 @@ import { NifInput } from '../register/NifInput';
 import { PhoneInput } from '../register/PhoneInput';
 import { PasswordInput } from '../register/PasswordInput';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface RegisterFormProps {
   redirectAfter?: boolean;
@@ -18,6 +18,7 @@ interface RegisterFormProps {
 
 const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { register, isLoading } = useAuth();
   const [nif, setNif] = useState('');
   const [email, setEmail] = useState('');
@@ -27,6 +28,7 @@ const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
   const [address, setAddress] = useState('');
   const [nifError, setNifError] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const isCartPage = location.pathname === '/carrinho';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +68,8 @@ const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
         
         if (profileError) throw profileError;
         
-        if (redirectAfter) {
+        // Only redirect if redirectAfter is true AND we're not on the cart page
+        if (redirectAfter && !isCartPage) {
           navigate('/cliente/dashboard');
         }
       }

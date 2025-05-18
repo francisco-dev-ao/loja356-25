@@ -22,6 +22,7 @@ const LoginForm = ({ redirectAfter = true }: LoginFormProps) => {
   
   // Verificar se existe um redirecionamento na navegação
   const redirectPath = location.state?.redirectAfterLogin || '/cliente/dashboard';
+  const isCartPage = location.pathname === '/carrinho';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +36,8 @@ const LoginForm = ({ redirectAfter = true }: LoginFormProps) => {
     try {
       await login(email, password);
       
-      if (redirectAfter) {
+      // Only redirect if redirectAfter is true AND we're not on the cart page
+      if (redirectAfter && !isCartPage) {
         navigate(redirectPath);
       }
     } catch (err: any) {

@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
 import { supabase } from '@/integrations/supabase/client';
 import LoginForm from '@/components/auth/LoginForm';
-import { RegisterForm } from '@/components/register/RegisterForm';
+import RegisterForm from '@/components/auth/RegisterForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from '@/components/ui/card';
 
@@ -217,7 +217,7 @@ const Cart = () => {
                     </TabsContent>
                     <TabsContent value="register" className="mt-4">
                       <Card className="pt-4 px-4">
-                        <RegisterForm />
+                        <RegisterForm redirectAfter={false} />
                       </Card>
                     </TabsContent>
                   </Tabs>
