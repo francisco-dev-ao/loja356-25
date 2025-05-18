@@ -66,7 +66,7 @@ export const formatPrice = (value: number): string => {
       useGrouping: true,
     }).format(value);
     
-    // Return with kz suffix (without duplicating the currency code)
+    // Return with kz suffix
     return formatted + " kz";
   } catch (error) {
     // Fallback manual formatting
