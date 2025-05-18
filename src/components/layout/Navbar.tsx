@@ -30,11 +30,9 @@ const Navbar = () => {
             <span className="font-heading font-semibold text-base sm:text-xl hidden sm:inline-block">LicençasPRO</span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-4 lg:space-x-6">
+          {/* Desktop Navigation */}          <nav className="hidden md:flex items-center space-x-4 lg:space-x-6">
             <Link to="/" className="font-medium hover:text-microsoft-blue transition-colors text-sm lg:text-base">Home</Link>
             <Link to="/produtos" className="font-medium hover:text-microsoft-blue transition-colors text-sm lg:text-base">Produtos</Link>
-            <Link to="/sobre" className="font-medium hover:text-microsoft-blue transition-colors text-sm lg:text-base">Sobre</Link>
             <Link to="/contato" className="font-medium hover:text-microsoft-blue transition-colors text-sm lg:text-base">Contato</Link>
           </nav>
 
@@ -98,11 +96,9 @@ const Navbar = () => {
                 <Button variant="ghost" size="sm" className="p-1" onClick={() => setIsMenuOpen(false)}>
                   <X size={22} />
                 </Button>
-              </div>
-              <nav className="flex flex-col space-y-3">
+              </div>              <nav className="flex flex-col space-y-3">
                 <Link to="/" className="py-2 hover:text-microsoft-blue transition-colors" onClick={() => setIsMenuOpen(false)}>Home</Link>
                 <Link to="/produtos" className="py-2 hover:text-microsoft-blue transition-colors" onClick={() => setIsMenuOpen(false)}>Produtos</Link>
-                <Link to="/sobre" className="py-2 hover:text-microsoft-blue transition-colors" onClick={() => setIsMenuOpen(false)}>Sobre</Link>
                 <Link to="/contato" className="py-2 hover:text-microsoft-blue transition-colors" onClick={() => setIsMenuOpen(false)}>Contato</Link>
                 <div className="border-t border-gray-200 my-2"></div>
                 {isAuthenticated ? (
