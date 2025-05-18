@@ -1,9 +1,8 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { Product } from '@/models/product';
-import { parseFormattedNumber } from '@/lib/formatters';
+import { supabase } from '../../integrations/supabase/client';
+import { Product } from '../../types/database';
+import { parseFormattedNumber } from '../../lib/formatters';
 
 // Default empty product
 const emptyProduct: Product = {
@@ -16,7 +15,8 @@ const emptyProduct: Product = {
   discount_value: null,
   image: '',
   category: '',
-  stock: 0
+  stock: 0,
+  active: true
 };
 
 export const useProducts = () => {
@@ -42,8 +42,24 @@ export const useProducts = () => {
       const { data, error } = await query.order('name');
       
       if (error) throw error;
+
+      const typedProducts = data?.map(item => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        price: item.price,
+        base_price: item.base_price,
+        discount_type: item.discount_type as 'percentage' | 'fixed' | null,
+        discount_value: item.discount_value,
+        image: item.image,
+        category: item.category,
+        stock: item.stock,
+        active: item.active ?? true,
+        created_at: item.created_at,
+        updated_at: item.updated_at
+      })) || [];
       
-      setProducts(data || []);
+      setProducts(typedProducts);
     } catch (error: any) {
       toast.error(`Erro ao carregar produtos: ${error.message}`);
       console.error('Error fetching products:', error);
@@ -52,26 +68,22 @@ export const useProducts = () => {
     }
   }, [searchTerm]);
 
-  // Load products on mount and when searchTerm changes
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
 
-  // Handle click on "Edit" button
   const handleEditClick = (product: Product) => {
     setCurrentProduct(product);
     setIsNewProduct(false);
     setIsEditDialogOpen(true);
   };
 
-  // Handle click on "New Product" button
   const handleNewClick = () => {
     setCurrentProduct(emptyProduct);
     setIsNewProduct(true);
     setIsEditDialogOpen(true);
   };
 
-  // Save product (create or update)
   const handleSaveProduct = async () => {
     try {
       // Validation
@@ -80,20 +92,24 @@ export const useProducts = () => {
         return;
       }
 
-      // Process price inputs if they are strings
-      let processedProduct = { ...currentProduct };
+      let processedProduct = {
+        name: currentProduct.name,
+        description: currentProduct.description,
+        price: currentProduct.price,
+        base_price: currentProduct.base_price,
+        discount_type: currentProduct.discount_type,
+        discount_value: currentProduct.discount_value,
+        image: currentProduct.image,
+        category: currentProduct.category,
+        stock: currentProduct.stock,
+        active: currentProduct.active
+      };
       
-      // Convert string base price to number
       if (typeof processedProduct.base_price === 'string') {
         processedProduct.base_price = parseFormattedNumber(processedProduct.base_price);
       }
       
-      // If new product, generate ID and create
       if (isNewProduct) {
-        // Generate a UUID
-        const { data: idData } = await supabase.rpc('generate_uuid');
-        processedProduct.id = idData || crypto.randomUUID();
-        
         const { error } = await supabase
           .from('products')
           .insert(processedProduct);
@@ -102,18 +118,16 @@ export const useProducts = () => {
         
         toast.success('Produto criado com sucesso!');
       } else {
-        // Update existing product
         const { error } = await supabase
           .from('products')
           .update(processedProduct)
-          .eq('id', processedProduct.id);
+          .eq('id', currentProduct.id);
           
         if (error) throw error;
         
         toast.success('Produto atualizado com sucesso!');
       }
       
-      // Close dialog and refresh products
       setIsEditDialogOpen(false);
       fetchProducts();
     } catch (error: any) {
@@ -122,7 +136,6 @@ export const useProducts = () => {
     }
   };
 
-  // Delete product
   const handleDeleteProduct = async (productId: string) => {
     if (!confirm('Tem certeza que deseja excluir este produto?')) {
       return;
@@ -144,6 +157,26 @@ export const useProducts = () => {
     }
   };
 
+  const handleToggleActive = async (productId: string, active: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ active })
+        .eq('id', productId);
+        
+      if (error) throw error;
+
+      setProducts(prev => prev.map(p => 
+        p.id === productId ? { ...p, active } : p
+      ));
+      
+      toast.success(`Produto ${active ? 'ativado' : 'desativado'} com sucesso`);
+    } catch (error: any) {
+      toast.error(`Erro ao ${active ? 'ativar' : 'desativar'} produto: ${error.message}`);
+      console.error('Error toggling product status:', error);
+    }
+  };
+
   return {
     products,
     loading,
@@ -158,5 +191,6 @@ export const useProducts = () => {
     handleNewClick,
     handleSaveProduct,
     handleDeleteProduct,
+    handleToggleActive
   };
 };

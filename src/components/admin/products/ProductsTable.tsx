@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -23,6 +22,7 @@ const ProductsTable = () => {
     handleNewClick,
     handleSaveProduct,
     handleDeleteProduct,
+    handleToggleActive
   } = useProducts();
   
   return (
@@ -73,6 +73,7 @@ const ProductsTable = () => {
                   product={product}
                   onEdit={handleEditClick}
                   onDelete={handleDeleteProduct}
+                  onToggleActive={handleToggleActive}
                 />
               ))
             ) : (

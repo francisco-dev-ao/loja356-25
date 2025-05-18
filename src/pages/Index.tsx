@@ -1,15 +1,16 @@
-
 import React from 'react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ProductGrid from '@/components/products/ProductGrid';
-import products from '@/data/products';
+import { useProducts } from '@/hooks/use-products';
+import { Loader } from 'lucide-react';
 
 const Index = () => {
-  // Get featured products (first 3)
-  const featuredProducts = products.slice(0, 3);
+  const { data: products, isLoading } = useProducts();
+  // Get featured products (first 3 active products)
+  const featuredProducts = products?.filter(p => p.active).slice(0, 3) || [];
   
   return (
     <Layout>
@@ -51,8 +52,19 @@ const Index = () => {
             </p>
           </div>
           
-          <ProductGrid products={featuredProducts} />
-          
+          {isLoading ? (
+            <div className="text-center py-12">
+              <Loader className="h-8 w-8 animate-spin mx-auto mb-4" />
+              <p className="text-muted-foreground">Carregando produtos...</p>
+            </div>
+          ) : featuredProducts.length > 0 ? (
+            <ProductGrid products={featuredProducts} />
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Nenhum produto encontrado</p>
+            </div>
+          )}
+
           <div className="flex justify-center mt-12">
             <Button asChild className="bg-microsoft-blue hover:bg-microsoft-blue/90">
               <Link to="/produtos">

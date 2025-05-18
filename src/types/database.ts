@@ -1,4 +1,3 @@
-
 export type Product = {
   id: string;
   name: string;
@@ -11,4 +10,6 @@ export type Product = {
   category: string;
   stock: number;
   active: boolean;
+  created_at?: string | null;
+  updated_at?: string | null;
 };

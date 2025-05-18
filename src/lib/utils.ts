@@ -1,4 +1,3 @@
-
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -51,21 +50,17 @@ export const formatCurrency = (value: number): string => {
  */
 export const formatPrice = (value: number): string => {
   if (value === null || value === undefined || isNaN(value)) {
-    return "0,00 kz";
+    return "0 kz";
   }
-  
-  try {
-    // Format using Intl with proper Angolan format
-    const formatted = new Intl.NumberFormat('pt-AO', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-      useGrouping: true,
-    }).format(value);
+    try {
+    // Format using custom formatting for Angolan currency without decimals
+    const integerValue = Math.round(value); // Arredonda para o número inteiro mais próximo
+    const formattedInteger = integerValue.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     
-    // Return with kz suffix
-    return formatted + " kz";
-  } catch (error) {
-    // Fallback manual formatting
+    // Return with proper formatting: 1.234 kz
+    return `${formattedInteger} kz`;
+  } catch {
+    // Fallback formatting
     const formatted = value.toFixed(2).replace('.', ',');
     const parts = formatted.split(',');
     parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');

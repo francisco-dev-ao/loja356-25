@@ -122,8 +122,7 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      products: {
+      }      products: {
         Row: {
           base_price: number | null
           category: string
@@ -137,6 +136,7 @@ export type Database = {
           price: number
           stock: number
           updated_at: string | null
+          active: boolean
         }
         Insert: {
           base_price?: number | null

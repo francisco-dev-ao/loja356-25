@@ -1,23 +1,29 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Pencil, Trash2 } from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
 import { Product } from '@/models/product';
+import { Switch } from '@/components/ui/switch';
 
 interface ProductListItemProps {
   product: Product;
   onEdit: (product: Product) => void;
   onDelete: (productId: string) => void;
+  onToggleActive: (productId: string, active: boolean) => void;
 }
 
-export const ProductListItem: React.FC<ProductListItemProps> = ({ product, onEdit, onDelete }) => {
+export const ProductListItem: React.FC<ProductListItemProps> = ({ product, onEdit, onDelete, onToggleActive }) => {
   return (
-    <TableRow>
+    <TableRow className={!product.active ? 'opacity-60' : ''}>
       <TableCell>
         <div className="flex items-center">
-          <div className="w-10 h-10 bg-gray-100 rounded mr-3 overflow-hidden flex-shrink-0">
+          <Switch 
+            checked={product.active} 
+            onCheckedChange={(checked) => onToggleActive(product.id, checked)}
+            className="mr-3"
+          />
+          <div className={`w-10 h-10 bg-gray-100 rounded mr-3 overflow-hidden flex-shrink-0 ${!product.active ? 'grayscale' : ''}`}>
             <img 
               src={product.image || '/placeholder.svg'} 
               alt={product.name}
@@ -25,7 +31,14 @@ export const ProductListItem: React.FC<ProductListItemProps> = ({ product, onEdi
             />
           </div>
           <div>
-            <p className="font-medium">{product.name}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-medium">{product.name}</p>
+              {!product.active && (
+                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                  Inativo
+                </span>
+              )}
+            </div>
             <p className="text-xs text-gray-500 truncate max-w-xs">
               {product.description}
             </p>

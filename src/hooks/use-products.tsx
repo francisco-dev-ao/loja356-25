@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
@@ -15,13 +14,17 @@ export type Product = {
   category: string;
   stock: number;
   quantity: number;  // Changed from optional to required to match use-cart.tsx
+  active: boolean;
 };
 
 export const useProducts = (category?: string) => {
   const [isFiltering, setIsFiltering] = useState(false);
 
   const fetchProducts = async (): Promise<Product[]> => {
-    let query = supabase.from('products').select('*');
+    let query = supabase.from('products')
+      .select('*')
+      // Apenas produtos ativos na listagem pública
+      .eq('active', true);
     
     if (category && category !== 'all') {
       setIsFiltering(true);
@@ -58,6 +61,7 @@ export const useProduct = (id: string) => {
       .from('products')
       .select('*')
       .eq('id', id)
+      .eq('active', true)  // Garante que apenas produtos ativos sejam carregados
       .single();
     
     if (error) {

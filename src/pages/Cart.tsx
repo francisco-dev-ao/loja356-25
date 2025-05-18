@@ -327,7 +327,7 @@ const Cart = () => {
                     }}
                   >
                     <span className="flex items-center">
-                      Prosseguir para Checkout
+                      Prosseguir Compra
                       <ArrowRight size={18} className="ml-2" />
                     </span>
                   </Button>
