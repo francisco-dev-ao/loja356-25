@@ -48,6 +48,117 @@ export type Database = {
         }
         Relationships: []
       }
+      multicaixa_express_callbacks: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          id: number
+          ip_address: string | null
+          payment_reference: string | null
+          processed_successfully: boolean | null
+          raw_data: string
+          status: string | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string | null
+          id?: number
+          ip_address?: string | null
+          payment_reference?: string | null
+          processed_successfully?: boolean | null
+          raw_data: string
+          status?: string | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string | null
+          id?: number
+          ip_address?: string | null
+          payment_reference?: string | null
+          processed_successfully?: boolean | null
+          raw_data?: string
+          status?: string | null
+        }
+        Relationships: []
+      }
+      multicaixa_express_config: {
+        Row: {
+          callback_url: string
+          commission_rate: number | null
+          created_at: string | null
+          css_url: string | null
+          error_url: string
+          frame_token: string
+          id: number
+          is_active: boolean | null
+          success_url: string
+          updated_at: string | null
+        }
+        Insert: {
+          callback_url: string
+          commission_rate?: number | null
+          created_at?: string | null
+          css_url?: string | null
+          error_url: string
+          frame_token: string
+          id?: number
+          is_active?: boolean | null
+          success_url: string
+          updated_at?: string | null
+        }
+        Update: {
+          callback_url?: string
+          commission_rate?: number | null
+          created_at?: string | null
+          css_url?: string | null
+          error_url?: string
+          frame_token?: string
+          id?: number
+          is_active?: boolean | null
+          success_url?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      multicaixa_express_payments: {
+        Row: {
+          amount: number
+          completed_at: string | null
+          created_at: string | null
+          emis_response: string | null
+          emis_token: string | null
+          id: number
+          order_id: string
+          payment_method: string | null
+          reference: string
+          status: string
+        }
+        Insert: {
+          amount: number
+          completed_at?: string | null
+          created_at?: string | null
+          emis_response?: string | null
+          emis_token?: string | null
+          id?: number
+          order_id: string
+          payment_method?: string | null
+          reference: string
+          status?: string
+        }
+        Update: {
+          amount?: number
+          completed_at?: string | null
+          created_at?: string | null
+          emis_response?: string | null
+          emis_token?: string | null
+          id?: number
+          order_id?: string
+          payment_method?: string | null
+          reference?: string
+          status?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string | null
@@ -95,6 +206,7 @@ export type Database = {
           created_at: string | null
           id: string
           payment_method: string
+          payment_reference: string | null
           payment_status: string
           status: string
           total: number
@@ -105,6 +217,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           payment_method: string
+          payment_reference?: string | null
           payment_status?: string
           status?: string
           total: number
@@ -115,6 +228,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           payment_method?: string
+          payment_reference?: string | null
           payment_status?: string
           status?: string
           total?: number
@@ -122,8 +236,54 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }      products: {
+      }
+      payment_transactions: {
         Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          order_id: string
+          payment_data: Json | null
+          payment_method: string
+          reference: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          order_id: string
+          payment_data?: Json | null
+          payment_method?: string
+          reference: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          order_id?: string
+          payment_data?: Json | null
+          payment_method?: string
+          reference?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          active: boolean
           base_price: number | null
           category: string
           created_at: string | null
@@ -136,9 +296,9 @@ export type Database = {
           price: number
           stock: number
           updated_at: string | null
-          active: boolean
         }
         Insert: {
+          active?: boolean
           base_price?: number | null
           category: string
           created_at?: string | null
@@ -153,6 +313,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          active?: boolean
           base_price?: number | null
           category?: string
           created_at?: string | null
@@ -215,6 +376,10 @@ export type Database = {
           email: string | null
           email_template_order: string | null
           id: string
+          multicaixa_callback: string | null
+          multicaixa_error: string | null
+          multicaixa_frametoken: string | null
+          multicaixa_success: string | null
           name: string | null
           nif: string | null
           phone: string | null
@@ -237,6 +402,10 @@ export type Database = {
           email?: string | null
           email_template_order?: string | null
           id: string
+          multicaixa_callback?: string | null
+          multicaixa_error?: string | null
+          multicaixa_frametoken?: string | null
+          multicaixa_success?: string | null
           name?: string | null
           nif?: string | null
           phone?: string | null
@@ -259,6 +428,10 @@ export type Database = {
           email?: string | null
           email_template_order?: string | null
           id?: string
+          multicaixa_callback?: string | null
+          multicaixa_error?: string | null
+          multicaixa_frametoken?: string | null
+          multicaixa_success?: string | null
           name?: string | null
           nif?: string | null
           phone?: string | null
