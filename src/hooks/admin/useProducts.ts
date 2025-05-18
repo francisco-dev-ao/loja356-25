@@ -24,6 +24,7 @@ export const useProducts = () => {
     image: '',
     category: '',
     stock: 0,
+    active: true
   });
   
   // Fetch products
@@ -40,7 +41,8 @@ export const useProducts = () => {
       // Type cast the data to ensure it matches our Product type
       const typedData = data?.map(item => ({
         ...item,
-        discount_type: item.discount_type as 'percentage' | 'fixed' | null
+        discount_type: item.discount_type as 'percentage' | 'fixed' | null,
+        active: item.active ?? true // Default to true if active is not defined
       })) || [];
       
       setProducts(typedData);
@@ -83,6 +85,7 @@ export const useProducts = () => {
       image: '',
       category: '',
       stock: 0,
+      active: true
     });
     setIsNewProduct(true);
     setIsEditDialogOpen(true);
@@ -163,6 +166,27 @@ export const useProducts = () => {
     }
   };
 
+  // Toggle product active status
+  const handleToggleActive = async (productId: string, active: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ active })
+        .eq('id', productId);
+        
+      if (error) throw error;
+      
+      setProducts(prev => prev.map(p => 
+        p.id === productId ? { ...p, active } : p
+      ));
+      
+      toast.success(`Produto ${active ? 'ativado' : 'desativado'} com sucesso!`);
+    } catch (error) {
+      console.error('Error toggling product status:', error);
+      toast.error(`Erro ao ${active ? 'ativar' : 'desativar'} produto`);
+    }
+  };
+
   return {
     products: filteredProducts,
     loading,
@@ -177,5 +201,6 @@ export const useProducts = () => {
     handleNewClick,
     handleSaveProduct,
     handleDeleteProduct,
+    handleToggleActive
   };
 };
