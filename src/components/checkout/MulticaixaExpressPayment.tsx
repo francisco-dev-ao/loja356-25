@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
@@ -7,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/hooks/use-cart';
-import { formatCurrency } from '@/lib/formatters';
+import { formatPrice } from '@/lib/formatters';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
@@ -242,7 +241,7 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
       <div className="p-4 bg-blue-50 rounded-md border border-blue-100">
         <h3 className="text-sm font-medium text-blue-800">Informação de Pagamento</h3>
         <p className="text-sm text-blue-600 mt-1">
-          Total a pagar: <strong>{formatCurrency(amount)} kz</strong>
+          Total a pagar: <strong>{formatPrice(amount)}</strong>
         </p>
       </div>
       

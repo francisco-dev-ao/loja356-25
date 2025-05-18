@@ -4,7 +4,7 @@ import { useCart } from '@/hooks/use-cart';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Trash, Plus, Minus } from 'lucide-react';
-import { formatCurrency } from '@/lib/formatters';
+import { formatPrice } from '@/lib/formatters';
 
 interface CartItemProps {
   id: string;
@@ -63,13 +63,13 @@ const CartItem = ({
         <h3 className="text-sm font-medium">{name}</h3>
         <div className="mt-1 flex items-center gap-2">
           <p className="text-sm font-medium text-microsoft-blue">
-            {formatCurrency(price)}
+            {formatPrice(price)}
           </p>
           
           {hasDiscount && (
             <>
               <p className="text-xs line-through text-gray-500">
-                {formatCurrency(base_price)}
+                {formatPrice(base_price)}
               </p>
               <Badge variant="destructive" className="text-xs">
                 -{discountPercentage}%

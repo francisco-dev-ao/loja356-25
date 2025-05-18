@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -15,7 +14,7 @@ import BankTransferPayment from '@/components/checkout/BankTransferPayment';
 import LoginForm from '@/components/auth/LoginForm';
 import RegisterForm from '@/components/auth/RegisterForm';
 import { supabase } from '@/integrations/supabase/client';
-import { formatCurrency } from '@/lib/formatters';
+import { formatPrice } from '@/lib/formatters';
 import { Badge } from '@/components/ui/badge';
 
 const Checkout = () => {
@@ -316,7 +315,7 @@ const Checkout = () => {
                             Qtd: {item.quantity}
                           </span>
                           <span className="text-sm">
-                            {formatCurrency(item.price * item.quantity)}
+                            {formatPrice(item.price * item.quantity)}
                           </span>
                         </div>
                         {item.base_price && item.base_price > item.price && (
@@ -334,7 +333,7 @@ const Checkout = () => {
                 <div className="border-t border-gray-200 pt-4 space-y-2">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span>{formatCurrency(total)}</span>
+                    <span>{formatPrice(total)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Taxa de processamento</span>
@@ -344,7 +343,7 @@ const Checkout = () => {
                     <div className="flex justify-between font-medium">
                       <span>Total</span>
                       <span className="text-xl text-microsoft-blue">
-                        {formatCurrency(total)}
+                        {formatPrice(total)}
                       </span>
                     </div>
                   </div>

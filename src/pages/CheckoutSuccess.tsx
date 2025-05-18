@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -9,7 +8,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
-import { formatCurrency } from '@/lib/formatters';
+import { formatCurrency, formatPrice } from '@/lib/formatters';
 
 interface OrderItem {
   id: string;
@@ -229,8 +228,8 @@ const CheckoutSuccess = () => {
         const tableRows = order.items.map(item => [
           item.productName || 'Produto',
           item.quantity,
-          `${formatCurrency(item.price)} kz`,
-          `${formatCurrency(item.price * item.quantity)} kz`
+          formatPrice(item.price),
+          formatPrice(item.price * item.quantity)
         ]);
         
         // @ts-ignore
@@ -264,7 +263,7 @@ const CheckoutSuccess = () => {
       doc.setFont('helvetica', 'bold');
       doc.text('Total:', 150, finalY + 10);
       doc.setFontSize(12);
-      doc.text(`${formatCurrency(order.total)} kz`, 190, finalY + 10, { align: 'right' });
+      doc.text(formatPrice(order.total), 190, finalY + 10, { align: 'right' });
       
       // Informações de pagamento
       doc.setFontSize(10);

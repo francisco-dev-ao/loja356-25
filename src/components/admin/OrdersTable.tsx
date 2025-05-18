@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -178,10 +177,7 @@ const OrderDetails = ({ orderId }: { orderId: string }) => {
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-AO', {
-      style: 'currency',
-      currency: 'AOA',
-    }).format(value);
+    return formatPrice(value);
   };
 
   if (orderLoading || itemsLoading) {
@@ -329,10 +325,7 @@ const OrdersTable = () => {
   const totalPages = Math.ceil((totalOrders || 0) / itemsPerPage);
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-AO', {
-      style: 'currency',
-      currency: 'AOA',
-    }).format(value);
+    return formatPrice(value);
   };
 
   const handleSelectOrder = (orderId: string) => {

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -11,7 +10,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useCoupon } from '@/hooks/use-products';
 import { ArrowLeft, ArrowRight, ShoppingCart, LogIn, Tag, Check, X, User } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatCurrency } from '@/lib/formatters';
+import { formatPrice } from '@/lib/formatters';
 import { supabase } from '@/integrations/supabase/client';
 import LoginForm from '@/components/auth/LoginForm';
 import RegisterForm from '@/components/auth/RegisterForm';
@@ -246,7 +245,7 @@ const Cart = () => {
                           <span className="text-xs text-green-700 block mt-1">
                             {couponData.discount_type === 'percentage'
                               ? `${couponData.discount_value}% de desconto`
-                              : `${formatCurrency(couponData.discount_value)} de desconto`}
+                              : `${formatPrice(couponData.discount_value)} de desconto`}
                           </span>
                         )}
                       </div>
@@ -286,7 +285,7 @@ const Cart = () => {
                 <div className="space-y-4">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>
-                    <span>{formatCurrency(total)}</span>
+                    <span>{formatPrice(total)}</span>
                   </div>
                   
                   {discount > 0 && (
@@ -297,7 +296,7 @@ const Cart = () => {
                           {discountPercentage}%
                         </Badge>
                       </span>
-                      <span>- {formatCurrency(discount)}</span>
+                      <span>- {formatPrice(discount)}</span>
                     </div>
                   )}
                   
@@ -309,7 +308,7 @@ const Cart = () => {
                   <div className="border-t border-gray-200 pt-4 flex justify-between font-medium">
                     <span>Total</span>
                     <span className="text-xl text-microsoft-blue">
-                      {formatCurrency(discountedTotal)}
+                      {formatPrice(discountedTotal)}
                     </span>
                   </div>
                 </div>

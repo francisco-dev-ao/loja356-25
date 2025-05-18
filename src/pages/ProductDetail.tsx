@@ -8,6 +8,7 @@ import { useCart } from '@/hooks/use-cart';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MinusCircle, PlusCircle } from 'lucide-react';
 import { useProduct } from '@/hooks/use-products';
+import { formatPrice } from '@/lib/formatters';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -91,7 +92,7 @@ const ProductDetail = () => {
               </span>
               <h1 className="text-3xl font-heading font-bold mb-2">{product.name}</h1>
               <p className="text-2xl font-bold text-microsoft-blue mb-4">
-                {Number(product.price).toLocaleString('pt-AO')} kz
+                {formatPrice(product.price)}
               </p>
               <div className="border-t border-b py-4 my-4">
                 <p className="text-muted-foreground whitespace-pre-line">
@@ -154,7 +155,7 @@ const ProductDetail = () => {
                   <div>
                     <h4 className="font-medium">{product.name}</h4>
                     <p className="text-microsoft-blue font-bold">
-                      {Number(product.price).toLocaleString('pt-AO')} kz
+                      {formatPrice(product.price)}
                     </p>
                   </div>
                 </div>
@@ -182,7 +183,7 @@ const ProductDetail = () => {
                 <div className="flex justify-between items-center mt-4">
                   <span className="font-medium">Total:</span>
                   <span className="text-microsoft-blue font-bold">
-                    {(product.price * quantity).toLocaleString('pt-AO')} kz
+                    {formatPrice(product.price * quantity)}
                   </span>
                 </div>
               </div>

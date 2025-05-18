@@ -1,6 +1,4 @@
 
-// Format currency according to the settings
-
 // Type definition for currency settings
 type CurrencySettings = {
   locale: string;
@@ -50,22 +48,23 @@ export const parseFormattedNumber = (value: string): number => {
   return isNaN(parsedValue) ? 0 : parsedValue;
 };
 
-// Format a number as currency according to the settings but remove the symbol and add kz at the end
-export const formatCurrency = (value: number): string => {
-  const settings = getCurrencySettings();
-  
-  try {
-    const formatted = new Intl.NumberFormat(settings.locale, {
-      style: 'decimal', 
-      minimumFractionDigits: settings.minDigits,
-      maximumFractionDigits: settings.maxDigits
-    }).format(value);
-    
-    return `${formatted} kz`; // Ensures format like "1.648,90 kz"
-  } catch (error) {
-    console.error('Error formatting currency:', error);
-    
-    // Fallback to a simple format if the Intl formatter fails
-    return `${value.toFixed(settings.minDigits)} kz`;
+/**
+ * Formata um número como preço no formato angolano: 1.234,56 kz
+ * @param value - O valor a ser formatado
+ * @returns Uma string formatada no padrão angolano com kz no final
+ */
+export const formatPrice = (value: number): string => {
+  if (value === null || value === undefined || isNaN(value)) {
+    return "0,00 kz";
   }
+  
+  return new Intl.NumberFormat('pt-AO', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value) + " kz";
+};
+
+// Formatação de moeda com configurações - use formatPrice para padrão angolano
+export const formatCurrency = (value: number): string => {
+  return formatPrice(value);
 };
