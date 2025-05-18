@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -18,7 +17,7 @@ const Navbar = () => {
     toast.success('Sessão encerrada com sucesso');
     navigate('/');
   };
-
+  
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
       <div className="container-page py-3 sm:py-4">
