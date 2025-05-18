@@ -10,12 +10,14 @@ import { NifInput } from '../register/NifInput';
 import { PhoneInput } from '../register/PhoneInput';
 import { PasswordInput } from '../register/PasswordInput';
 import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
 interface RegisterFormProps {
   redirectAfter?: boolean;
 }
 
 const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
+  const navigate = useNavigate();
   const { register, isLoading } = useAuth();
   const [nif, setNif] = useState('');
   const [email, setEmail] = useState('');
@@ -63,6 +65,10 @@ const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
           .eq('id', user.id);
         
         if (profileError) throw profileError;
+        
+        if (redirectAfter) {
+          navigate('/cliente/dashboard');
+        }
       }
     } catch (err: any) {
       console.error('Registration error:', err);

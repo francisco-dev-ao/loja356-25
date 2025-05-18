@@ -1,104 +1,42 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import LoginForm from '@/components/auth/LoginForm';
+import RegisterForm from '@/components/auth/RegisterForm';
+import { useAuth } from '@/hooks/use-auth';
 
 const Login = () => {
   const navigate = useNavigate();
-  const [loginData, setLoginData] = useState({ email: '', password: '' });
-  const [registerData, setRegisterData] = useState({ 
-    name: '', 
-    email: '', 
-    password: '', 
-    confirmPassword: '' 
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
-
-  const handleLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setLoginData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleRegisterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setRegisterData((prev) => ({ ...prev, [name]: value }));
-    
-    if (name === 'confirmPassword' || name === 'password') {
-      if (name === 'confirmPassword' && value !== registerData.password) {
-        setPasswordError('As senhas não coincidem');
-      } else if (name === 'password' && registerData.confirmPassword && value !== registerData.confirmPassword) {
-        setPasswordError('As senhas não coincidem');
-      } else {
-        setPasswordError('');
-      }
-    }
-  };
-
-  const handleLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: loginData.email,
-        password: loginData.password,
-      });
-      
-      if (error) {
-        throw error;
-      }
-      
-      toast.success('Login realizado com sucesso!');
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
       navigate('/cliente/dashboard');
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error.message || 'Erro ao fazer login. Verifique suas credenciais.');
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+  }, [isAuthenticated, isLoading, navigate]);
 
-  const handleRegisterSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (registerData.password !== registerData.confirmPassword) {
-      setPasswordError('As senhas não coincidem');
-      return;
-    }
-    
-    setIsSubmitting(true);
-    
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email: registerData.email,
-        password: registerData.password,
-        options: {
-          data: {
-            name: registerData.name,
-          },
-        },
-      });
-      
-      if (error) {
-        throw error;
-      }
-      
-      toast.success('Conta criada com sucesso! Por favor, verifique seu email para confirmar o registro.');
-      setRegisterData({ name: '', email: '', password: '', confirmPassword: '' });
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error.message || 'Erro ao criar conta. Tente novamente.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
+  // If still checking authentication status, show loading
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="container-page py-12">
+          <div className="max-w-md mx-auto text-center">
+            <div className="flex justify-center items-center space-x-2">
+              <div className="animate-spin h-5 w-5 border-2 border-microsoft-blue border-t-transparent rounded-full"></div>
+              <p>Verificando autenticação...</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+  
+  // If not authenticated, show login/register tabs
   return (
     <Layout>
       <div className="container-page py-12">
@@ -118,130 +56,11 @@ const Login = () => {
               </TabsList>
               
               <TabsContent value="login">
-                <form onSubmit={handleLoginSubmit}>
-                  <div className="space-y-4">
-                    <div>
-                      <label htmlFor="email" className="block text-sm font-medium mb-1">
-                        Email
-                      </label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        placeholder="seu@email.com"
-                        value={loginData.email}
-                        onChange={handleLoginChange}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <label htmlFor="password" className="block text-sm font-medium mb-1">
-                          Senha
-                        </label>
-                        <Link to="/cliente/esqueci-senha" className="text-xs text-microsoft-blue hover:underline">
-                          Esqueceu a senha?
-                        </Link>
-                      </div>
-                      <Input
-                        id="password"
-                        name="password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={loginData.password}
-                        onChange={handleLoginChange}
-                        required
-                      />
-                    </div>
-                    <Button 
-                      type="submit" 
-                      className="w-full bg-microsoft-blue hover:bg-microsoft-blue/90" 
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? 'Entrando...' : 'Entrar'}
-                    </Button>
-                  </div>
-                </form>
-                
-                <div className="mt-6 text-sm text-center">
-                  <p className="text-muted-foreground">
-                    Para testar, use:<br />
-                    Cliente: cliente@example.com / cliente123<br />
-                    Admin: admin@example.com / admin123
-                  </p>
-                </div>
+                <LoginForm />
               </TabsContent>
               
               <TabsContent value="register">
-                <form onSubmit={handleRegisterSubmit}>
-                  <div className="space-y-4">
-                    <div>
-                      <label htmlFor="name" className="block text-sm font-medium mb-1">
-                        Nome completo
-                      </label>
-                      <Input
-                        id="name"
-                        name="name"
-                        placeholder="Seu nome"
-                        value={registerData.name}
-                        onChange={handleRegisterChange}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="register-email" className="block text-sm font-medium mb-1">
-                        Email
-                      </label>
-                      <Input
-                        id="register-email"
-                        name="email"
-                        type="email"
-                        placeholder="seu@email.com"
-                        value={registerData.email}
-                        onChange={handleRegisterChange}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="register-password" className="block text-sm font-medium mb-1">
-                        Senha
-                      </label>
-                      <Input
-                        id="register-password"
-                        name="password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={registerData.password}
-                        onChange={handleRegisterChange}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="confirm-password" className="block text-sm font-medium mb-1">
-                        Confirmar senha
-                      </label>
-                      <Input
-                        id="confirm-password"
-                        name="confirmPassword"
-                        type="password"
-                        placeholder="••••••••"
-                        value={registerData.confirmPassword}
-                        onChange={handleRegisterChange}
-                        required
-                      />
-                      {passwordError && (
-                        <p className="text-red-500 text-xs mt-1">{passwordError}</p>
-                      )}
-                    </div>
-                    <Button 
-                      type="submit" 
-                      className="w-full bg-microsoft-blue hover:bg-microsoft-blue/90" 
-                      disabled={isSubmitting || !!passwordError}
-                    >
-                      {isSubmitting ? 'Criando conta...' : 'Criar conta'}
-                    </Button>
-                  </div>
-                </form>
+                <RegisterForm />
               </TabsContent>
             </Tabs>
           </div>
