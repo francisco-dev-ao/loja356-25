@@ -11,7 +11,11 @@ import { PhoneInput } from './PhoneInput';
 import { PasswordInput } from './PasswordInput';
 import { supabase } from '@/integrations/supabase/client';
 
-export const RegisterForm = () => {
+interface RegisterFormProps {
+  redirectAfter?: boolean;
+}
+
+export const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
   const navigate = useNavigate();
   const [nif, setNif] = useState('');
   const [email, setEmail] = useState('');
@@ -65,7 +69,9 @@ export const RegisterForm = () => {
       }
       
       toast.success('Conta criada com sucesso! Por favor, verifique seu email para confirmar o registro.');
-      navigate('/cliente/login');
+      if (redirectAfter) {
+        navigate('/cliente/login');
+      }
     } catch (error) {
       console.error('Registration error:', error);
       toast.error('Ocorreu um erro ao criar a conta. Por favor, tente novamente.');
@@ -164,16 +170,9 @@ export const RegisterForm = () => {
             "Criar nova conta"
           )}
         </Button>
-        
-        <div className="text-center mt-4">
-          <p className="text-sm text-muted-foreground">
-            Já tem uma conta?{' '}
-            <Link to="/cliente/login" className="text-microsoft-blue hover:underline">
-              Entrar
-            </Link>
-          </p>
-        </div>
       </div>
     </form>
   );
 };
+
+export default RegisterForm;

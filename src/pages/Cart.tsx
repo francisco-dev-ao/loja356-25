@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -8,19 +9,24 @@ import CartItem from '@/components/cart/CartItem';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
 import { useCoupon } from '@/hooks/use-products';
-import { ArrowLeft, ArrowRight, ShoppingCart, LogIn, Tag, Check, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ShoppingCart, LogIn, Tag, Check, X, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
 import { supabase } from '@/integrations/supabase/client';
+import LoginForm from '@/components/auth/LoginForm';
+import { RegisterForm } from '@/components/register/RegisterForm';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card } from '@/components/ui/card';
 
 const Cart = () => {
   const { items, total, clearCart } = useCart();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const { data: couponData, isLoading: isLoadingCoupon } = useCoupon(appliedCoupon);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
 
   const discountedTotal = React.useMemo(() => {
     if (couponData && !('error' in couponData)) {
@@ -36,7 +42,7 @@ const Cart = () => {
   const discount = total - discountedTotal;
   const discountPercentage = discount > 0 ? Math.round((discount / total) * 100) : 0;
 
-  if (items.length === 0) {
+  if (items?.length === 0) {
     return (
       <Layout>
         <div className="container-page py-12">
@@ -62,8 +68,7 @@ const Cart = () => {
     if (isAuthenticated) {
       navigate('/checkout');
     } else {
-      toast.info('Por favor, faça login para continuar com a compra');
-      navigate('/cliente/login', { state: { redirectAfterLogin: '/checkout' } });
+      setShowAuth(true);
     }
   };
 
@@ -153,7 +158,7 @@ const Cart = () => {
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
               <div className="p-6">
-                {items.map((item) => (
+                {items?.map((item) => (
                   <CartItem
                     key={item.id}
                     id={item.id}
@@ -190,6 +195,35 @@ const Cart = () => {
                 </Button>
               </div>
             </div>
+
+            {/* Authentication Section (Only shown when needed) */}
+            {showAuth && !isAuthenticated && (
+              <div className="mt-8 bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <div className="p-6">
+                  <div className="flex items-center mb-4">
+                    <User size={20} className="text-microsoft-blue mr-2" />
+                    <h2 className="text-xl font-semibold">Autenticação</h2>
+                  </div>
+                  
+                  <Tabs defaultValue="login" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="login">Login</TabsTrigger>
+                      <TabsTrigger value="register">Cadastrar</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="login" className="mt-4">
+                      <Card className="pt-4 px-4">
+                        <LoginForm redirectAfter={false} />
+                      </Card>
+                    </TabsContent>
+                    <TabsContent value="register" className="mt-4">
+                      <Card className="pt-4 px-4">
+                        <RegisterForm />
+                      </Card>
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              </div>
+            )}
           </div>
           
           {/* Order Summary */}
@@ -282,28 +316,33 @@ const Cart = () => {
               </div>
               
               <div className="p-6 border-t border-gray-200">
-                <Button 
-                  className="w-full bg-microsoft-blue hover:bg-microsoft-blue/90 text-lg py-6"
-                  onClick={() => {
-                    // Register coupon use when proceeding to checkout
-                    if (appliedCoupon && couponData && !('error' in couponData)) {
-                      incrementCouponUses();
-                    }
-                    handleProceedToCheckout();
-                  }}
-                >
-                  {isAuthenticated ? (
+                {isAuthenticated ? (
+                  <Button 
+                    className="w-full bg-microsoft-blue hover:bg-microsoft-blue/90 text-lg py-6"
+                    onClick={() => {
+                      // Register coupon use when proceeding to checkout
+                      if (appliedCoupon && couponData && !('error' in couponData)) {
+                        incrementCouponUses();
+                      }
+                      navigate('/checkout');
+                    }}
+                  >
                     <span className="flex items-center">
                       Prosseguir para Checkout
                       <ArrowRight size={18} className="ml-2" />
                     </span>
-                  ) : (
+                  </Button>
+                ) : (
+                  <Button 
+                    className="w-full bg-microsoft-blue hover:bg-microsoft-blue/90 text-lg py-6"
+                    onClick={handleProceedToCheckout}
+                  >
                     <span className="flex items-center">
-                      Entrar para Comprar
+                      {showAuth ? "Complete a autenticação acima" : "Entrar para Comprar"}
                       <LogIn size={18} className="ml-2" />
                     </span>
-                  )}
-                </Button>
+                  </Button>
+                )}
                 
                 <div className="mt-4 text-center text-sm text-muted-foreground">
                   <p>Pagamentos processados com segurança</p>
