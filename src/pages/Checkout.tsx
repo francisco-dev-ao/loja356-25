@@ -1,21 +1,22 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Check, CreditCard, Send, ShoppingCart } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
-import CartItem from '@/components/cart/CartItem';
 import { toast } from 'sonner';
-import MulticaixaExpressPayment from '@/components/checkout/MulticaixaExpressPayment';
-import BankTransferPayment from '@/components/checkout/BankTransferPayment';
-import LoginForm from '@/components/auth/LoginForm';
-import RegisterForm from '@/components/auth/RegisterForm';
 import { supabase } from '@/integrations/supabase/client';
-import { formatPrice } from '@/lib/formatters';
-import { Badge } from '@/components/ui/badge';
+
+// Import refactored components
+import CheckoutSteps from '@/components/checkout/CheckoutSteps';
+import CheckoutSummary from '@/components/checkout/CheckoutSummary';
+import CheckoutPaymentMethods from '@/components/checkout/CheckoutPaymentMethods';
+import AccountTabs from '@/components/checkout/AccountTabs';
+import PaymentProcessor from '@/components/checkout/PaymentProcessor';
 
 const Checkout = () => {
   const { items, total, clearCart } = useCart();
@@ -26,14 +27,14 @@ const Checkout = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
 
-  // Redirecionar para o carrinho se estiver vazio
+  // Redirect to cart if empty
   useEffect(() => {
     if (items.length === 0) {
       navigate('/carrinho');
     }
   }, [items, navigate]);
 
-  // Definir a aba ativa com base no estado de autenticação
+  // Set active tab based on authentication state
   useEffect(() => {
     if (isAuthenticated) {
       setActiveTab('payment');
@@ -60,7 +61,7 @@ const Checkout = () => {
     setIsProcessing(true);
 
     try {
-      // Criar um novo pedido na base de dados
+      // Create a new order in the database
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -77,7 +78,7 @@ const Checkout = () => {
         throw new Error(`Erro ao criar pedido: ${orderError.message}`);
       }
 
-      // Inserir itens do pedido
+      // Insert order items
       const orderItems = items.map(item => ({
         order_id: orderData.id,
         product_id: item.id,
@@ -96,7 +97,7 @@ const Checkout = () => {
       setOrderId(orderData.id);
       console.log("Pedido criado com sucesso:", orderData.id);
 
-      // Se o método de pagamento for transferência bancária, redirecionar imediatamente para a página de sucesso
+      // If the payment method is bank transfer, redirect immediately to the success page
       if (paymentMethod === 'bank_transfer') {
         navigate(`/checkout/success?orderId=${orderData.id}`);
         clearCart();
@@ -112,7 +113,7 @@ const Checkout = () => {
     setPaymentMethod(method);
   };
   
-  // Redirecionar para a página principal se não houver itens no carrinho
+  // Redirect to home page if cart is empty
   if (items.length === 0) {
     return (
       <Layout>
@@ -143,39 +144,14 @@ const Checkout = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Etapas do checkout */}
+          {/* Checkout steps and payment section */}
           <div className="lg:col-span-2">
-            <div className="mb-6">
-              <div className="flex items-center mb-4">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${activeTab === 'account' || isAuthenticated ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'} mr-2`}>
-                  {isAuthenticated ? <Check size={16} /> : 1}
-                </div>
-                <div>
-                  <h2 className="font-medium">Conta</h2>
-                  {isAuthenticated ? (
-                    <p className="text-sm text-muted-foreground">
-                      Logado como {profile?.name || user?.email}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      Login ou cadastro
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${activeTab === 'payment' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'} mr-2`}>
-                  2
-                </div>
-                <div>
-                  <h2 className="font-medium">Pagamento</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Escolha o método de pagamento
-                  </p>
-                </div>
-              </div>
-            </div>
+            <CheckoutSteps 
+              activeTab={activeTab} 
+              isAuthenticated={isAuthenticated} 
+              profile={profile} 
+              userEmail={user?.email}
+            />
 
             <Card>
               <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -185,179 +161,34 @@ const Checkout = () => {
                 </TabsList>
                 
                 <TabsContent value="account">
-                  {!isAuthenticated && (
-                    <CardContent className="p-6">
-                      <Tabs defaultValue="login" className="w-full">
-                        <TabsList className="grid grid-cols-2 mb-6">
-                          <TabsTrigger value="login">Login</TabsTrigger>
-                          <TabsTrigger value="register">Cadastro</TabsTrigger>
-                        </TabsList>
-                        
-                        <TabsContent value="login">
-                          <LoginForm redirectAfter={false} />
-                        </TabsContent>
-                        
-                        <TabsContent value="register">
-                          <RegisterForm redirectAfter={false} />
-                        </TabsContent>
-                      </Tabs>
-                    </CardContent>
-                  )}
+                  {!isAuthenticated && <AccountTabs />}
                 </TabsContent>
                 
                 <TabsContent value="payment">
-                  <CardContent className="p-6">
+                  <div className="p-6">
                     <h3 className="text-lg font-medium mb-4">Método de Pagamento</h3>
                     
-                    {/* Seção de escolha de método de pagamento */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                      <Card 
-                        className={`border cursor-pointer transition-all duration-200 ease-in-out
-                          ${paymentMethod === 'multicaixa' 
-                            ? 'border-microsoft-blue bg-microsoft-light/20 shadow-md' 
-                            : 'hover:border-microsoft-blue/50 hover:bg-microsoft-light/10 hover:shadow-md'
-                          }`}
-                        onClick={() => handleSelectPaymentMethod('multicaixa')}
-                      >
-                        <CardContent className="p-6">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <div className="w-10 h-10 bg-microsoft-light rounded-full flex items-center justify-center mr-3 transition-transform group-hover:scale-105">
-                                <CreditCard size={20} className="text-microsoft-blue" />
-                              </div>
-                              <div>
-                                <h4 className="font-medium">Multicaixa Express</h4>
-                                <p className="text-sm text-muted-foreground">Pagamento instantâneo</p>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card 
-                        className={`border cursor-pointer transition-all duration-200 ease-in-out
-                          ${paymentMethod === 'bank_transfer' 
-                            ? 'border-microsoft-blue bg-microsoft-light/20 shadow-md' 
-                            : 'hover:border-microsoft-blue/50 hover:bg-microsoft-light/10 hover:shadow-md'
-                          }`}
-                        onClick={() => handleSelectPaymentMethod('bank_transfer')}
-                      >
-                        <CardContent className="p-6">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <div className="w-10 h-10 bg-microsoft-light rounded-full flex items-center justify-center mr-3 transition-transform group-hover:scale-105">
-                                <Send size={20} className="text-microsoft-blue" />
-                              </div>
-                              <div>
-                                <h4 className="font-medium">Transferência Bancária</h4>
-                                <p className="text-sm text-muted-foreground">Processamento em até 24h</p>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
+                    <CheckoutPaymentMethods 
+                      paymentMethod={paymentMethod} 
+                      handleSelectPaymentMethod={handleSelectPaymentMethod} 
+                    />
 
-                    {/* Botão Finalizar Pedido */}
-                    {paymentMethod && !isProcessing && !orderId && (
-                      <Button 
-                        onClick={handleCreateOrder}
-                        className="w-full"
-                        disabled={!paymentMethod || isProcessing}
-                      >
-                        Finalizar Pedido
-                      </Button>
-                    )}
-
-                    {/* Exibir o componente de pagamento apropriado após a criação do pedido */}
-                    {isProcessing && !orderId ? (
-                      <div className="flex flex-col items-center justify-center py-8">
-                        <div className="animate-spin h-8 w-8 border-4 border-microsoft-blue border-t-transparent rounded-full mb-4"></div>
-                        <p>Criando pedido...</p>
-                      </div>
-                    ) : (
-                      <>
-                        {paymentMethod === 'multicaixa' && orderId && (
-                          <MulticaixaExpressPayment 
-                            amount={total} 
-                            orderId={orderId} 
-                          />
-                        )}
-                        
-                        {paymentMethod === 'bank_transfer' && orderId && (
-                          <BankTransferPayment />
-                        )}
-                      </>
-                    )}
-                  </CardContent>
+                    <PaymentProcessor
+                      paymentMethod={paymentMethod}
+                      isProcessing={isProcessing}
+                      orderId={orderId}
+                      total={total}
+                      handleCreateOrder={handleCreateOrder}
+                    />
+                  </div>
                 </TabsContent>
               </Tabs>
             </Card>
           </div>
           
-          {/* Resumo do pedido */}
+          {/* Order summary */}
           <div className="lg:col-span-1">
-            <Card className="sticky top-24">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium">Resumo do Pedido</h3>
-                  <Badge variant="outline" className="text-xs px-2 py-1 rounded">
-                    {items.length} {items.length === 1 ? 'item' : 'itens'}
-                  </Badge>
-                </div>
-                
-                <div className="max-h-64 overflow-y-auto mb-4">
-                  {items.map((item) => (
-                    <div key={item.id} className="flex items-center py-2 border-b border-gray-100 last:border-0">
-                      <div className="w-10 h-10 bg-gray-100 rounded mr-3 flex-shrink-0 overflow-hidden">
-                        <img 
-                          src={item.image} 
-                          alt={item.name} 
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-grow">
-                        <p className="text-sm font-medium truncate">{item.name}</p>
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-muted-foreground">
-                            Qtd: {item.quantity}
-                          </span>
-                          <span className="text-sm">
-                            {formatPrice(item.price * item.quantity)}
-                          </span>
-                        </div>
-                        {item.base_price && item.base_price > item.price && (
-                          <div className="mt-1">
-                            <Badge variant="destructive" className="text-xs">
-                              -{Math.round(((item.base_price - item.price) / item.base_price) * 100)}%
-                            </Badge>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="border-t border-gray-200 pt-4 space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span>{formatPrice(total)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Taxa de processamento</span>
-                    <span>Grátis</span>
-                  </div>
-                  <div className="border-t border-gray-200 pt-2 mt-2">
-                    <div className="flex justify-between font-medium">
-                      <span>Total</span>
-                      <span className="text-xl text-microsoft-blue">
-                        {formatPrice(total)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <CheckoutSummary items={items} total={total} />
           </div>
         </div>
       </div>
