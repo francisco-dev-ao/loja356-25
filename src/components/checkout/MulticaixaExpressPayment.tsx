@@ -19,6 +19,7 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
   const [isProcessing, setIsProcessing] = useState(false);
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [showIframe, setShowIframe] = useState(false);
+  const [paymentUrl, setPaymentUrl] = useState('');
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'processing' | 'completed' | 'failed'>('pending');
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const { user } = useAuth();
@@ -81,6 +82,19 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
     }
   }, [orderId]);
 
+  // Setup automatic payment verification checking
+  useEffect(() => {
+    if (!orderId) return;
+
+    const checkPaymentStatus = () => {
+      verifyPaymentStatus();
+    };
+
+    const interval = setInterval(checkPaymentStatus, 1500);
+    
+    return () => clearInterval(interval);
+  }, [orderId]);
+
   const handleIframeLoad = () => {
     console.log('Iframe loaded successfully');
     setIframeLoaded(true);
@@ -104,6 +118,29 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
     }
   };
 
+  // Verify if payment was completed
+  const verifyPaymentStatus = async () => {
+    try {
+      console.log('Checking payment status for order:', orderId);
+      const { data, error } = await supabase
+        .from('orders')
+        .select('payment_status')
+        .eq('id', orderId)
+        .single();
+      
+      if (error) throw error;
+      
+      if (data && data.payment_status === 'paid') {
+        console.log('Payment confirmed as paid!');
+        setPaymentStatus('completed');
+        clearCart();
+        navigate(`/checkout/success?orderId=${orderId}`);
+      }
+    } catch (error) {
+      console.error('Error checking payment status:', error);
+    }
+  };
+
   const handlePayment = async () => {
     if (!user) {
       toast.error('Você precisa estar logado para efetuar o pagamento');
@@ -122,40 +159,25 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
       // Generate payment reference
       const reference = generateReference();
       
-      // Create EMIS payment session
-      const emisPaymentUrl = await createEmisSession(amount, reference);
-      
-      if (!emisPaymentUrl) {
-        throw new Error('Falha ao gerar sessão de pagamento');
-      }
-      
       // Store reference in local storage (similar to PHP session)
       localStorage.setItem(`refer_rce_${orderId}`, reference);
       
-      console.log('Payment URL generated:', emisPaymentUrl);
+      // Get settings from the database
+      const { data: settingsData, error: settingsError } = await supabase
+        .from('settings')
+        .select('multicaixa_frametoken, multicaixa_callback, multicaixa_success, multicaixa_error')
+        .single();
       
-      // Show the iframe and set its source to the payment URL
-      setShowIframe(true);
-      if (iframeRef.current) {
-        iframeRef.current.src = emisPaymentUrl;
+      if (settingsError) {
+        throw new Error('Erro ao buscar configurações de pagamento');
       }
-    } catch (error) {
-      console.error('Error initiating payment:', error);
-      setPaymentStatus('failed');
-      toast.error('Ocorreu um erro ao iniciar o pagamento');
-      setIsProcessing(false);
-    }
-  };
-  
-  // Create EMIS payment session using production values
-  const createEmisSession = async (amount: number, reference: string): Promise<string> => {
-    try {
-      // These are production values from EMIS based on the PHP code
-      const frameToken = "YOUR_FRAME_TOKEN"; // Using the placeholder from PHP code
-      const callbackUrl = window.location.origin + "/api/payment-callback"; // Replace with your actual callback URL
+      
+      // Create payment parameters
+      const frameToken = settingsData?.multicaixa_frametoken || 'a53787fd-b49e-4469-a6ab-fa6acf19db48';
+      const callbackUrl = settingsData?.multicaixa_callback || window.location.origin + "/api/payment-callback";
       const cssUrl = window.location.origin + "/multicaixa-express.css";
       
-      // Using the corrected production URL for EMIS frame token
+      // Construct the payment URL with the correct params
       const emisBaseUrl = "https://pagamentonline.emis.co.ao/online-payment-gateway/portal/frameToken";
       
       // URL parameters for EMIS payment page
@@ -170,32 +192,31 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
         callbackUrl: callbackUrl,
       });
       
-      return `${emisBaseUrl}?${params.toString()}`;
-    } catch (error) {
-      console.error('Error creating EMIS session:', error);
-      return '';
-    }
-  };
-
-  // Function to verify payment status
-  const checkPaymentStatus = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('status, payment_status')
-        .eq('id', orderId)
-        .single();
+      const paymentUrl = `${emisBaseUrl}?${params.toString()}`;
+      console.log('Generated payment URL:', paymentUrl);
       
-      if (error) throw error;
+      // Show the iframe and set its source
+      setPaymentUrl(paymentUrl);
+      setShowIframe(true);
       
-      if (data && data.payment_status === 'paid') {
-        setPaymentStatus('completed');
-        toast.success('Pagamento confirmado!');
-        clearCart();
-        navigate(`/checkout/success?orderId=${orderId}`);
-      }
+      // Save the payment transaction to the database
+      await supabase
+        .from('payment_transactions')
+        .insert({
+          order_id: orderId,
+          amount: amount,
+          payment_method: 'multicaixa',
+          reference: reference,
+          status: 'pending',
+        });
+      
+      console.log('Payment transaction recorded in database');
+      
     } catch (error) {
-      console.error('Error checking payment status:', error);
+      console.error('Error initiating payment:', error);
+      setPaymentStatus('failed');
+      toast.error('Ocorreu um erro ao iniciar o pagamento');
+      setIsProcessing(false);
     }
   };
 
@@ -220,6 +241,7 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
         <div className="border rounded-lg overflow-hidden">
           <iframe
             ref={iframeRef}
+            src={paymentUrl}
             onLoad={handleIframeLoad}
             className="w-full h-[500px] border-0"
             title="Pagamento Multicaixa Express"
@@ -244,6 +266,16 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
           )}
         </Button>
       )}
+      
+      <div className="bg-white p-6 rounded-lg text-center text-gray-700 border">
+        <h3 className="font-bold text-lg mb-4">Dicas para ter um pagamento de sucesso!</h3>
+        <ol className="text-left space-y-2">
+          <li>1. Após clicar em pagar escolha a opção Multicaixa Express e clique em confirmar.</li>
+          <li>2. Certifique-se que tenha o aplicativo Multicaixa Express instalado.</li>
+          <li>3. Insira o seu contacto associado ao Multicaixa Express.</li>
+          <li>4. Verifique o valor a ser cobrado no Multicaixa Express e confirme a compra.</li>
+        </ol>
+      </div>
     </div>
   );
 };
