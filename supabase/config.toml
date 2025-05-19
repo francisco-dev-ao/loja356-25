@@ -20,3 +20,7 @@ verify_jwt = false
 # Order email function
 [functions.send-order-email]
 verify_jwt = false
+
+# Payment callback function for Multicaixa Express
+[functions.payment-callback]
+verify_jwt = false

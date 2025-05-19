@@ -96,23 +96,44 @@ export const useMulticaixaPayment = ({ amount, orderId }: UseMulticaixaPaymentPr
       // Get settings from the database
       const { data: settingsData, error: settingsError } = await supabase
         .from('settings')
-        .select('multicaixa_frametoken, multicaixa_callback, multicaixa_success, multicaixa_error')
+        .select('*')
         .single();
       
       if (settingsError) {
         throw new Error('Erro ao buscar configurações de pagamento');
       }
       
+      if (!settingsData) {
+        throw new Error('Configurações não encontradas');
+      }
+      
       // Create payment parameters
-      const frameToken = settingsData?.multicaixa_frametoken || 'a53787fd-b49e-4469-a6ab-fa6acf19db48';
-      const callbackUrl = settingsData?.multicaixa_callback || window.location.origin + "/api/payment-callback";
+      const frameToken = settingsData.multicaixa_frametoken || 'a53787fd-b49e-4469-a6ab-fa6acf19db48';
+      const callbackUrl = settingsData.multicaixa_callback || window.location.origin + "/api/payment-callback";
       const cssUrl = window.location.origin + "/multicaixa-express.css";
       
       // Construct the payment URL with the correct params
       const emisBaseUrl = "https://pagamentonline.emis.co.ao/online-payment-gateway/portal/frameToken";
       
-      // URL parameters for EMIS payment page
-      const params = new URLSearchParams({
+      // Save the payment transaction to the database
+      const { data: paymentData, error: paymentError } = await supabase
+        .from('multicaixa_express_payments')
+        .insert({
+          order_id: orderId,
+          reference: reference,
+          amount: amount,
+          status: 'pending',
+          payment_method: 'multicaixa'
+        })
+        .select()
+        .single();
+        
+      if (paymentError) {
+        throw new Error(`Erro ao registrar transação: ${paymentError.message}`);
+      }
+      
+      // URL parameters for EMIS payment page - this matches the PHP implementation
+      const params = {
         reference: reference,
         amount: amount.toString(),
         token: frameToken,
@@ -120,34 +141,45 @@ export const useMulticaixaPayment = ({ amount, orderId }: UseMulticaixaPaymentPr
         card: 'DISABLED',
         qrCode: 'PAYMENT',
         cssUrl: cssUrl,
-        callbackUrl: callbackUrl,
+        callbackUrl: callbackUrl
+      };
+      
+      // Make API request to EMIS
+      const response = await fetch(emisBaseUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(params),
       });
       
-      const paymentUrl = `${emisBaseUrl}?${params.toString()}`;
-      console.log('Generated payment URL:', paymentUrl);
+      const responseData = await response.json();
+      
+      if (!responseData.id) {
+        throw new Error(responseData.message || 'Erro ao gerar token de pagamento');
+      }
+      
+      // Update payment record with token
+      await supabase
+        .from('multicaixa_express_payments')
+        .update({
+          emis_token: responseData.id
+        })
+        .eq('reference', reference);
+      
+      // Construct the iframe URL
+      const iframeUrl = `https://pagamentonline.emis.co.ao/online-payment-gateway/portal/frame?token=${responseData.id}`;
+      console.log('Generated payment URL:', iframeUrl);
       
       // Show the iframe and set its source
-      setPaymentUrl(paymentUrl);
+      setPaymentUrl(iframeUrl);
       setShowIframe(true);
       setIsProcessing(false);
       
-      // Save the payment transaction to the database
-      await supabase
-        .from('payment_transactions')
-        .insert({
-          order_id: orderId,
-          amount: amount,
-          payment_method: 'multicaixa',
-          reference: reference,
-          status: 'pending',
-        });
-      
-      console.log('Payment transaction recorded in database');
-      
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error initiating payment:', error);
       setPaymentStatus('failed');
-      toast.error('Ocorreu um erro ao iniciar o pagamento');
+      toast.error(error.message || 'Ocorreu um erro ao iniciar o pagamento');
       setIsProcessing(false);
     }
   };
