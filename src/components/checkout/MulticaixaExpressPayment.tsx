@@ -20,6 +20,7 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
   
   const { 
     isProcessing,
+    setIsProcessing,
     paymentStatus,
     handlePayment,
     updateOrderStatus
@@ -32,7 +33,7 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
     }
   });
 
-  // Use the message handler hook with a wrapper function to adapt the signature
+  // Use the message handler hook
   usePaymentMessageHandler({
     orderId,
     updateOrderStatus: (status, paymentStatus) => {
@@ -43,7 +44,8 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
       return updateOrderStatus(orderId, typedStatus, typedPaymentStatus);
     },
     setPaymentStatus: () => {}, // We're handling this in useMulticaixaPayment
-    setIsModalOpen: setIsModalOpen
+    setIsModalOpen,
+    setIsProcessing
   });
 
   // Auto-initiate payment when component mounts if orderId exists
@@ -55,6 +57,13 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
+  };
+
+  const handleRetryPayment = () => {
+    if (user) {
+      setPaymentToken(null);
+      handlePayment(user.id);
+    }
   };
 
   if (!orderId) {
@@ -71,9 +80,22 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
       
       {!paymentToken && (
         <PaymentButton 
-          onClick={() => handlePayment(user?.id)}
+          onClick={() => user && handlePayment(user.id)}
           isProcessing={isProcessing}
         />
+      )}
+      
+      {paymentToken && !isModalOpen && (
+        <div className="flex flex-col space-y-4 mt-4">
+          <div className="p-4 bg-amber-50 rounded-md border border-amber-100">
+            <p className="text-sm text-amber-600">O pagamento anterior foi cancelado ou falhou. Por favor, tente novamente.</p>
+          </div>
+          <PaymentButton 
+            onClick={handleRetryPayment}
+            isProcessing={isProcessing}
+            label="Tentar Novamente"
+          />
+        </div>
       )}
       
       <PaymentTips />

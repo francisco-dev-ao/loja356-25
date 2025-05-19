@@ -64,6 +64,19 @@ export const usePaymentMessageHandler = ({
           
           if (setIsProcessing) setIsProcessing(false);
           if (setIsModalOpen) setIsModalOpen(false);
+          
+          updateOrderStatus('failed', 'failed');
+        }
+        
+        // Handle payment cancellation
+        if (event.data && event.data.status === 'CANCELLED') {
+          setPaymentStatus('failed');
+          toast.error('Pagamento cancelado pelo usuário.');
+          
+          if (setIsProcessing) setIsProcessing(false);
+          if (setIsModalOpen) setIsModalOpen(false);
+          
+          updateOrderStatus('cancelled', 'failed');
         }
       } catch (error) {
         console.error('Error processing message:', error);

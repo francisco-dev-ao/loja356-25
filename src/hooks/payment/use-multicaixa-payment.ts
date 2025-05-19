@@ -174,6 +174,7 @@ export const useMulticaixaPayment = ({
 
   return {
     isProcessing,
+    setIsProcessing,
     paymentToken,
     paymentStatus,
     handlePayment,
