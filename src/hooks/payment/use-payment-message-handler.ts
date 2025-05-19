@@ -9,7 +9,7 @@ interface UsePaymentMessageHandlerProps {
   orderId: string;
   updateOrderStatus: (status: string, paymentStatus: string) => Promise<void>;
   setPaymentStatus: (status: 'pending' | 'processing' | 'completed' | 'failed') => void;
-  setShowIframe?: (show: boolean) => void;
+  setIsModalOpen?: (open: boolean) => void;
   setIsProcessing?: (processing: boolean) => void;
 }
 
@@ -17,7 +17,7 @@ export const usePaymentMessageHandler = ({
   orderId,
   updateOrderStatus,
   setPaymentStatus,
-  setShowIframe,
+  setIsModalOpen,
   setIsProcessing
 }: UsePaymentMessageHandlerProps) => {
   const navigate = useNavigate();
@@ -45,6 +45,11 @@ export const usePaymentMessageHandler = ({
           // Update order status in the database
           updateOrderStatus('completed', 'paid');
           
+          // Close the modal if setIsModalOpen is provided
+          if (setIsModalOpen) {
+            setIsModalOpen(false);
+          }
+          
           // Clear cart
           clearCart();
           
@@ -56,8 +61,9 @@ export const usePaymentMessageHandler = ({
         if (event.data && event.data.status === 'DECLINED') {
           setPaymentStatus('failed');
           toast.error('Falha no pagamento. Por favor, tente novamente.');
+          
           if (setIsProcessing) setIsProcessing(false);
-          if (setShowIframe) setShowIframe(false);
+          if (setIsModalOpen) setIsModalOpen(false);
         }
       } catch (error) {
         console.error('Error processing message:', error);
@@ -66,5 +72,5 @@ export const usePaymentMessageHandler = ({
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [orderId, navigate, clearCart, updateOrderStatus, setPaymentStatus]);
+  }, [orderId, navigate, clearCart, updateOrderStatus, setPaymentStatus, setIsModalOpen, setIsProcessing]);
 };

@@ -1,12 +1,12 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useMulticaixaPayment } from '@/hooks/payment/use-multicaixa-payment';
 import { usePaymentMessageHandler } from '@/hooks/payment/use-payment-message-handler';
 import PaymentInfo from './payment/PaymentInfo';
 import PaymentButton from './payment/PaymentButton';
-import PaymentFrame from './payment/PaymentFrame';
 import PaymentTips from './payment/PaymentTips';
+import MulticaixaExpressModal from './payment/MulticaixaExpressModal';
 
 interface MulticaixaExpressPaymentProps {
   amount: number;
@@ -15,15 +15,22 @@ interface MulticaixaExpressPaymentProps {
 
 const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentProps) => {
   const { user } = useAuth();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [paymentToken, setPaymentToken] = useState<string | null>(null);
+  
   const { 
     isProcessing,
-    showIframe,
-    paymentUrl,
     paymentStatus,
-    setIframeLoaded,
     handlePayment,
     updateOrderStatus
-  } = useMulticaixaPayment({ amount, orderId });
+  } = useMulticaixaPayment({ 
+    amount, 
+    orderId,
+    onTokenGenerated: (token) => {
+      setPaymentToken(token);
+      setIsModalOpen(true);
+    }
+  });
 
   // Use the message handler hook with a wrapper function to adapt the signature
   usePaymentMessageHandler({
@@ -35,19 +42,19 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
       
       return updateOrderStatus(orderId, typedStatus, typedPaymentStatus);
     },
-    setPaymentStatus: () => {} // We're handling this in useMulticaixaPayment
+    setPaymentStatus: () => {}, // We're handling this in useMulticaixaPayment
+    setIsModalOpen: setIsModalOpen
   });
 
   // Auto-initiate payment when component mounts if orderId exists
   useEffect(() => {
-    if (orderId && !showIframe && user) {
+    if (orderId && !isModalOpen && !paymentToken && user) {
       handlePayment(user.id);
     }
-  }, [orderId, showIframe, user]);
+  }, [orderId, isModalOpen, paymentToken, user, handlePayment]);
 
-  const handleIframeLoad = () => {
-    console.log('Iframe loaded successfully');
-    setIframeLoaded(true);
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
   };
 
   if (!orderId) {
@@ -62,12 +69,7 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
     <div className="space-y-4">
       <PaymentInfo amount={amount} />
       
-      {showIframe ? (
-        <PaymentFrame 
-          src={paymentUrl}
-          onLoad={handleIframeLoad}
-        />
-      ) : (
+      {!paymentToken && (
         <PaymentButton 
           onClick={() => handlePayment(user?.id)}
           isProcessing={isProcessing}
@@ -75,6 +77,14 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
       )}
       
       <PaymentTips />
+
+      {paymentToken && (
+        <MulticaixaExpressModal
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          token={paymentToken}
+        />
+      )}
     </div>
   );
 };

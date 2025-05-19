@@ -4,29 +4,30 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/hooks/use-cart';
 import { usePaymentVerification } from './use-payment-verification';
-import { useMulticaixaIframe } from './use-multicaixa-iframe';
 import { generateReference, storePaymentReference } from './utils/payment-reference';
 import { getActiveMulticaixaConfig, getMulticaixaSettings } from './utils/payment-config';
-import { generateEmisToken, updatePaymentWithEmisToken } from './utils/emis-token';
+import { generateEmisToken, updatePaymentWithEmisToken, constructIframeUrl } from './utils/emis-token';
 import { savePaymentTransaction } from './utils/payment-transaction';
 import { updateOrderStatus } from './utils/payment-status';
 
 interface UseMulticaixaPaymentProps {
   amount: number;
   orderId: string;
+  onTokenGenerated?: (token: string) => void;
 }
 
-export const useMulticaixaPayment = ({ amount, orderId }: UseMulticaixaPaymentProps) => {
+export const useMulticaixaPayment = ({ 
+  amount, 
+  orderId, 
+  onTokenGenerated 
+}: UseMulticaixaPaymentProps) => {
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentToken, setPaymentToken] = useState<string | null>(null);
   const { clearCart } = useCart();
   
   // Use the smaller hooks we created
   const { paymentStatus, setPaymentStatus } = usePaymentVerification({ orderId });
-  const { 
-    iframeLoaded, showIframe, paymentUrl, 
-    setIframeLoaded, setShowIframe, showPaymentIframe 
-  } = useMulticaixaIframe();
   
   const handlePayment = async (userId: string | undefined) => {
     if (!userId) {
@@ -86,15 +87,25 @@ export const useMulticaixaPayment = ({ amount, orderId }: UseMulticaixaPaymentPr
             emisTokenData
           );
           
-          // Show the payment iframe
-          showPaymentIframe(emisTokenData.id);
+          // Store the token for the modal
+          setPaymentToken(emisTokenData.id);
+          
+          // Call the callback if provided
+          if (onTokenGenerated) {
+            onTokenGenerated(emisTokenData.id);
+          }
           
         } catch (error: any) {
           console.error('Error processing EMIS token:', error);
           
           // For demo purposes only - show a fallback interface
           const mockToken = `mock-token-${Date.now()}`;
-          showPaymentIframe(mockToken);
+          setPaymentToken(mockToken);
+          
+          // Call the callback if provided
+          if (onTokenGenerated) {
+            onTokenGenerated(mockToken);
+          }
         }
       } else {
         // Fallback to settings table if no active config found
@@ -127,8 +138,13 @@ export const useMulticaixaPayment = ({ amount, orderId }: UseMulticaixaPaymentPr
             emisTokenData
           );
           
-          // Show the payment iframe
-          showPaymentIframe(emisTokenData.id);
+          // Store the token for the modal
+          setPaymentToken(emisTokenData.id);
+          
+          // Call the callback if provided
+          if (onTokenGenerated) {
+            onTokenGenerated(emisTokenData.id);
+          }
           
         } catch (error) {
           console.error('Error processing EMIS token:', error);
@@ -136,7 +152,12 @@ export const useMulticaixaPayment = ({ amount, orderId }: UseMulticaixaPaymentPr
           // FALLBACK for demo/development
           console.log('Using fallback mock payment URL due to CORS/API issues');
           const mockToken = `mock-token-${Date.now()}`;
-          showPaymentIframe(mockToken);
+          setPaymentToken(mockToken);
+          
+          // Call the callback if provided
+          if (onTokenGenerated) {
+            onTokenGenerated(mockToken);
+          }
         }
       }
       
@@ -153,11 +174,8 @@ export const useMulticaixaPayment = ({ amount, orderId }: UseMulticaixaPaymentPr
 
   return {
     isProcessing,
-    iframeLoaded,
-    showIframe,
-    paymentUrl,
+    paymentToken,
     paymentStatus,
-    setIframeLoaded,
     handlePayment,
     updateOrderStatus
   };
