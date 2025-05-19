@@ -8,6 +8,9 @@ import PaymentButton from './payment/PaymentButton';
 import PaymentTips from './payment/PaymentTips';
 import MulticaixaExpressModal from './payment/MulticaixaExpressModal';
 import { toast } from 'sonner';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface MulticaixaExpressPaymentProps {
   amount: number;
@@ -19,6 +22,7 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [paymentToken, setPaymentToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   
   const { 
     isProcessing,
@@ -53,14 +57,14 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
 
   // Auto-initiate payment when component mounts if orderId exists
   useEffect(() => {
-    if (orderId && !isModalOpen && !paymentToken && user) {
+    if (orderId && !isModalOpen && !paymentToken && user && retryCount === 0) {
       handlePayment(user.id).catch(err => {
         console.error('Erro ao iniciar pagamento automático:', err);
         setError('Não foi possível iniciar o pagamento automaticamente. Por favor, tente manualmente.');
         toast.error('Erro ao iniciar pagamento. Por favor, tente novamente.');
       });
     }
-  }, [orderId, isModalOpen, paymentToken, user, handlePayment]);
+  }, [orderId, isModalOpen, paymentToken, user, handlePayment, retryCount]);
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
@@ -70,10 +74,13 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
     if (user) {
       setError(null);
       setPaymentToken(null);
+      setRetryCount(prev => prev + 1);
+      setIsProcessing(true);
       handlePayment(user.id).catch(err => {
         console.error('Erro ao tentar novamente o pagamento:', err);
         setError('Não foi possível processar o pagamento. Por favor, tente novamente mais tarde.');
         toast.error('Erro ao processar pagamento. Por favor, tente novamente mais tarde.');
+        setIsProcessing(false);
       });
     }
   };
@@ -98,16 +105,34 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
       )}
       
       {error && (
-        <div className="p-4 bg-red-50 rounded-md border border-red-100">
-          <p className="text-sm text-red-600">{error}</p>
-        </div>
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Erro no Pagamento</AlertTitle>
+          <AlertDescription>
+            <p className="mb-2">{error}</p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRetryPayment} 
+              disabled={isProcessing}
+              className="mt-2"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Tentar Novamente
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
       
       {paymentToken && !isModalOpen && (
         <div className="flex flex-col space-y-4 mt-4">
-          <div className="p-4 bg-amber-50 rounded-md border border-amber-100">
-            <p className="text-sm text-amber-600">O pagamento anterior foi cancelado ou falhou. Por favor, tente novamente.</p>
-          </div>
+          <Alert variant="warning">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Pagamento Interrompido</AlertTitle>
+            <AlertDescription>
+              O pagamento anterior foi cancelado ou falhou. Por favor, tente novamente.
+            </AlertDescription>
+          </Alert>
           <PaymentButton 
             onClick={handleRetryPayment}
             isProcessing={isProcessing}

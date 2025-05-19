@@ -83,6 +83,7 @@ export const useMulticaixaPayment = ({
         let callbackUrl: string | undefined;
         let cssUrl: string | undefined;
         
+        // Check if it's a MulticaixaConfig or Settings object
         if ('frame_token' in activeConfig) {
           // This is a MulticaixaConfig
           frameToken = (activeConfig as MulticaixaConfig).frame_token;
@@ -90,9 +91,10 @@ export const useMulticaixaPayment = ({
           cssUrl = (activeConfig as MulticaixaConfig).css_url;
         } else {
           // This is a Settings object
-          frameToken = (activeConfig as Settings).multicaixa_frametoken || undefined;
-          callbackUrl = (activeConfig as Settings).multicaixa_callback || undefined;
-          cssUrl = (activeConfig as Settings).multicaixa_cssurl || undefined;
+          const settingsObj = activeConfig as Settings;
+          frameToken = settingsObj.multicaixa_frametoken;
+          callbackUrl = settingsObj.multicaixa_callback;
+          cssUrl = settingsObj.multicaixa_cssurl;
         }
           
         if (!frameToken) {
