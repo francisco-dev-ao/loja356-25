@@ -100,17 +100,23 @@ export const useMulticaixaPayment = ({ amount, orderId }: UseMulticaixaPaymentPr
         .single();
       
       if (settingsError) {
-        throw new Error('Erro ao buscar configurações de pagamento');
+        throw new Error('Erro ao buscar configurações de pagamento: ' + settingsError.message);
       }
       
       if (!settingsData) {
         throw new Error('Configurações não encontradas');
       }
+
+      console.log('Settings data:', settingsData);
+      
+      if (!settingsData.multicaixa_frametoken) {
+        throw new Error('Token do Multicaixa Express não configurado');
+      }
       
       // Create payment parameters
-      const frameToken = settingsData.multicaixa_frametoken || 'a53787fd-b49e-4469-a6ab-fa6acf19db48';
+      const frameToken = settingsData.multicaixa_frametoken;
       const callbackUrl = settingsData.multicaixa_callback || window.location.origin + "/api/payment-callback";
-      const cssUrl = window.location.origin + "/multicaixa-express.css";
+      const cssUrl = settingsData.multicaixa_cssurl || window.location.origin + "/multicaixa-express.css";
       
       // Construct the payment URL with the correct params
       const emisBaseUrl = "https://pagamentonline.emis.co.ao/online-payment-gateway/portal/frameToken";
@@ -144,6 +150,8 @@ export const useMulticaixaPayment = ({ amount, orderId }: UseMulticaixaPaymentPr
         callbackUrl: callbackUrl
       };
       
+      console.log('Payment params:', params);
+      
       // Make API request to EMIS
       const response = await fetch(emisBaseUrl, {
         method: 'POST',
@@ -154,6 +162,7 @@ export const useMulticaixaPayment = ({ amount, orderId }: UseMulticaixaPaymentPr
       });
       
       const responseData = await response.json();
+      console.log('EMIS response:', responseData);
       
       if (!responseData.id) {
         throw new Error(responseData.message || 'Erro ao gerar token de pagamento');
