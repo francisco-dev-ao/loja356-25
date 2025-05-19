@@ -25,10 +25,12 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
     updateOrderStatus
   } = useMulticaixaPayment({ amount, orderId });
 
-  // Use the message handler hook
+  // Use the message handler hook with a wrapper function to adapt the signature
   usePaymentMessageHandler({
     orderId,
-    updateOrderStatus,
+    updateOrderStatus: (status, paymentStatus) => {
+      return updateOrderStatus(orderId, status, paymentStatus);
+    },
     setPaymentStatus: () => {} // We're handling this in useMulticaixaPayment
   });
 
