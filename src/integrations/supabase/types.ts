@@ -377,6 +377,7 @@ export type Database = {
           email_template_order: string | null
           id: string
           multicaixa_callback: string | null
+          multicaixa_cssurl: string | null
           multicaixa_error: string | null
           multicaixa_frametoken: string | null
           multicaixa_success: string | null
@@ -403,6 +404,7 @@ export type Database = {
           email_template_order?: string | null
           id: string
           multicaixa_callback?: string | null
+          multicaixa_cssurl?: string | null
           multicaixa_error?: string | null
           multicaixa_frametoken?: string | null
           multicaixa_success?: string | null
@@ -429,6 +431,7 @@ export type Database = {
           email_template_order?: string | null
           id?: string
           multicaixa_callback?: string | null
+          multicaixa_cssurl?: string | null
           multicaixa_error?: string | null
           multicaixa_frametoken?: string | null
           multicaixa_success?: string | null
