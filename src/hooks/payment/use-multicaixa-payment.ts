@@ -9,6 +9,7 @@ import { getActiveMulticaixaConfig, getMulticaixaSettings } from './utils/paymen
 import { generateEmisToken, updatePaymentWithEmisToken } from './utils/emis-token';
 import { savePaymentTransaction } from './utils/payment-transaction';
 import { updateOrderStatus } from './utils/payment-status';
+import { MulticaixaConfig, Settings } from '@/types/database';
 
 interface UseMulticaixaPaymentProps {
   amount: number;
@@ -77,21 +78,34 @@ export const useMulticaixaPayment = ({
         
         console.log('Using Multicaixa Express configuration:', activeConfig);
         
-        const frameToken = configData ? 
-          configData.frame_token : 
-          activeConfig.multicaixa_frametoken;
+        // Handle different property names based on config type
+        let frameToken: string | undefined;
+        let callbackUrl: string | undefined;
+        let cssUrl: string | undefined;
+        
+        if ('frame_token' in activeConfig) {
+          // This is a MulticaixaConfig
+          frameToken = (activeConfig as MulticaixaConfig).frame_token;
+          callbackUrl = (activeConfig as MulticaixaConfig).callback_url;
+          cssUrl = (activeConfig as MulticaixaConfig).css_url;
+        } else {
+          // This is a Settings object
+          frameToken = (activeConfig as Settings).multicaixa_frametoken || undefined;
+          callbackUrl = (activeConfig as Settings).multicaixa_callback || undefined;
+          cssUrl = (activeConfig as Settings).multicaixa_cssurl || undefined;
+        }
           
         if (!frameToken) {
           throw new Error('Token do Multicaixa Express não configurado');
         }
         
-        const callbackUrl = configData ?
-          configData.callback_url :
-          activeConfig.multicaixa_callback || `${window.location.origin}/api/payment-callback`;
+        if (!callbackUrl) {
+          callbackUrl = `${window.location.origin}/api/payment-callback`;
+        }
           
-        const cssUrl = configData ?
-          configData.css_url :
-          activeConfig.multicaixa_cssurl || `${window.location.origin}/multicaixa-express.css`;
+        if (!cssUrl) {
+          cssUrl = `${window.location.origin}/multicaixa-express.css`;
+        }
         
         // Generate token from edge function
         const emisTokenData = await generateEmisToken({
