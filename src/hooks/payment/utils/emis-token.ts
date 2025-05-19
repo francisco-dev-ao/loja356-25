@@ -41,12 +41,15 @@ export const generateEmisToken = async (params: EmisTokenParams): Promise<EmisTo
     return emisTokenData;
   } catch (error: any) {
     console.error('Error generating EMIS token:', error);
+    
     // For development purposes, return a mock token
     const mockToken = `mock-token-${Date.now()}`;
+    console.log('Using mock token for development:', mockToken);
+    
     return { 
       id: mockToken,
       status: "MOCK", 
-      message: "Mock token for development (EMIS API unreachable)" 
+      message: "Modo de simulação ativo (API EMIS não disponível)" 
     };
   }
 };
@@ -72,6 +75,8 @@ export const updatePaymentWithEmisToken = async (reference: string, emisToken: s
  * Construct the iframe URL for the payment page - using direct portal/frame URL format
  */
 export const constructIframeUrl = (emisTokenId: string): string => {
+  if (emisTokenId.startsWith('mock-token')) {
+    return `${window.location.origin}/multicaixa-express.html?token=${emisTokenId}`;
+  }
   return `https://pagamentonline.emis.co.ao/online-payment-gateway/portal/frame?token=${emisTokenId}`;
 };
-

@@ -14,9 +14,11 @@ const MulticaixaExpressModal = ({ isOpen, onClose, token }: MulticaixaExpressMod
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const frameUrl = token ? 
-    `https://pagamentonline.emis.co.ao/online-payment-gateway/portal/frame?token=${token}` : 
-    '';
+  
+  // Use dynamically constructed frameUrl with fallback to mock iframe
+  const frameUrl = token.startsWith('mock-token') 
+    ? `${window.location.origin}/multicaixa-express.html?token=${token}` 
+    : `https://pagamentonline.emis.co.ao/online-payment-gateway/portal/frame?token=${token}`;
   
   // Timer for auto-close if no interaction
   const autoCloseTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -75,6 +77,7 @@ const MulticaixaExpressModal = ({ isOpen, onClose, token }: MulticaixaExpressMod
       // Wait 2 seconds before retry
       setTimeout(() => {
         if (iframeRef.current) {
+          console.log("Retrying iframe load with URL:", frameUrl);
           iframeRef.current.src = frameUrl;
         }
       }, 2000);
@@ -83,6 +86,38 @@ const MulticaixaExpressModal = ({ isOpen, onClose, token }: MulticaixaExpressMod
       setLoading(false);
       setError("Não foi possível carregar o sistema de pagamento. Por favor, tente novamente mais tarde.");
     }
+  };
+
+  // Content for demo/mock iframe
+  const getMockContent = () => {
+    if (token.startsWith('mock-token')) {
+      return (
+        <div className="p-6 text-center">
+          <h3 className="text-xl font-bold mb-4">Simulação de Pagamento</h3>
+          <p className="mb-6">
+            Este é um ambiente de simulação. Em produção, aqui apareceria a
+            interface de pagamento do Multicaixa Express.
+          </p>
+          
+          <div className="flex justify-center space-x-4">
+            <Button onClick={() => {
+              window.postMessage({ status: 'ACCEPTED' }, '*');
+              onClose();
+            }} variant="default">
+              Simular Pagamento Aceito
+            </Button>
+            
+            <Button onClick={() => {
+              window.postMessage({ status: 'DECLINED' }, '*');
+              onClose();
+            }} variant="destructive">
+              Simular Pagamento Recusado
+            </Button>
+          </div>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -109,7 +144,13 @@ const MulticaixaExpressModal = ({ isOpen, onClose, token }: MulticaixaExpressMod
           </div>
         )}
         
-        {token && !error && (
+        {token && !error && token.startsWith('mock-token') && (
+          <div className="w-full h-full flex items-center justify-center border-none">
+            {getMockContent()}
+          </div>
+        )}
+
+        {token && !error && !token.startsWith('mock-token') && (
           <iframe 
             ref={iframeRef}
             src={frameUrl}

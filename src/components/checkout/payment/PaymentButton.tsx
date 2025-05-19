@@ -6,9 +6,10 @@ import { Send } from 'lucide-react';
 interface PaymentButtonProps {
   onClick: () => void;
   isProcessing: boolean;
+  label?: string; // Make label optional
 }
 
-const PaymentButton = ({ onClick, isProcessing }: PaymentButtonProps) => {
+const PaymentButton = ({ onClick, isProcessing, label }: PaymentButtonProps) => {
   return (
     <Button
       onClick={onClick}
@@ -22,7 +23,7 @@ const PaymentButton = ({ onClick, isProcessing }: PaymentButtonProps) => {
         </span>
       ) : (
         <span className="flex items-center">
-          Pagar com Multicaixa Express
+          {label || "Pagar com Multicaixa Express"}
           <Send size={16} className="ml-2" />
         </span>
       )}

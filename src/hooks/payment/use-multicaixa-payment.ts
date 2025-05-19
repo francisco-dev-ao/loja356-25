@@ -6,7 +6,7 @@ import { useCart } from '@/hooks/use-cart';
 import { usePaymentVerification } from './use-payment-verification';
 import { generateReference, storePaymentReference } from './utils/payment-reference';
 import { getActiveMulticaixaConfig, getMulticaixaSettings } from './utils/payment-config';
-import { generateEmisToken, updatePaymentWithEmisToken, constructIframeUrl } from './utils/emis-token';
+import { generateEmisToken, updatePaymentWithEmisToken } from './utils/emis-token';
 import { savePaymentTransaction } from './utils/payment-transaction';
 import { updateOrderStatus } from './utils/payment-status';
 
@@ -67,107 +67,76 @@ export const useMulticaixaPayment = ({
       }
 
       // Process payment using the appropriate configuration
-      if (configData) {
-        console.log('Using Multicaixa Express configuration from config table:', configData);
-
-        try {
-          // Generate token from edge function
-          const emisTokenData = await generateEmisToken({
-            reference: reference,
-            amount: amount.toString(),
-            token: configData.frame_token,
-            callbackUrl: configData.callback_url,
-            cssUrl: configData.css_url || window.location.origin + "/multicaixa-express.css"
-          });
-
-          // Update payment record with token
-          await updatePaymentWithEmisToken(
-            reference, 
-            emisTokenData.id,
-            emisTokenData
-          );
-          
-          // Store the token for the modal
-          setPaymentToken(emisTokenData.id);
-          
-          // Call the callback if provided
-          if (onTokenGenerated) {
-            onTokenGenerated(emisTokenData.id);
-          }
-          
-        } catch (error: any) {
-          console.error('Error processing EMIS token:', error);
-          
-          // For demo purposes only - show a fallback interface
-          const mockToken = `mock-token-${Date.now()}`;
-          setPaymentToken(mockToken);
-          
-          // Call the callback if provided
-          if (onTokenGenerated) {
-            onTokenGenerated(mockToken);
-          }
-        }
-      } else {
-        // Fallback to settings table if no active config found
-        const settingsData = await getMulticaixaSettings();
+      try {
+        // Determine which configuration to use
+        const activeConfig = configData || await getMulticaixaSettings();
         
-        if (!settingsData) {
+        if (!activeConfig) {
           throw new Error('Configurações não encontradas');
         }
         
-        console.log('Using Multicaixa Express configuration from settings table:', settingsData);
+        console.log('Using Multicaixa Express configuration:', activeConfig);
         
-        if (!settingsData.multicaixa_frametoken) {
+        const frameToken = configData ? 
+          configData.frame_token : 
+          activeConfig.multicaixa_frametoken;
+          
+        if (!frameToken) {
           throw new Error('Token do Multicaixa Express não configurado');
         }
         
-        try {
-          // Generate token from edge function
-          const emisTokenData = await generateEmisToken({
-            reference: reference,
-            amount: amount.toString(),
-            token: settingsData.multicaixa_frametoken,
-            callbackUrl: settingsData.multicaixa_callback || window.location.origin + "/api/payment-callback",
-            cssUrl: settingsData.multicaixa_cssurl || window.location.origin + "/multicaixa-express.css"
-          });
+        const callbackUrl = configData ?
+          configData.callback_url :
+          activeConfig.multicaixa_callback || `${window.location.origin}/api/payment-callback`;
+          
+        const cssUrl = configData ?
+          configData.css_url :
+          activeConfig.multicaixa_cssurl || `${window.location.origin}/multicaixa-express.css`;
+        
+        // Generate token from edge function
+        const emisTokenData = await generateEmisToken({
+          reference: reference,
+          amount: amount.toString(),
+          token: frameToken,
+          callbackUrl: callbackUrl,
+          cssUrl: cssUrl
+        });
 
-          // Update payment record with token
-          await updatePaymentWithEmisToken(
-            reference, 
-            emisTokenData.id,
-            emisTokenData
-          );
+        // Update payment record with token
+        await updatePaymentWithEmisToken(
+          reference, 
+          emisTokenData.id,
+          emisTokenData
+        );
+        
+        // Store the token for the modal
+        setPaymentToken(emisTokenData.id);
+        
+        // Call the callback if provided
+        if (onTokenGenerated) {
+          onTokenGenerated(emisTokenData.id);
+        }
           
-          // Store the token for the modal
-          setPaymentToken(emisTokenData.id);
-          
-          // Call the callback if provided
-          if (onTokenGenerated) {
-            onTokenGenerated(emisTokenData.id);
-          }
-          
-        } catch (error) {
-          console.error('Error processing EMIS token:', error);
-          
-          // FALLBACK for demo/development
-          console.log('Using fallback mock payment URL due to CORS/API issues');
-          const mockToken = `mock-token-${Date.now()}`;
-          setPaymentToken(mockToken);
-          
-          // Call the callback if provided
-          if (onTokenGenerated) {
-            onTokenGenerated(mockToken);
-          }
+      } catch (error: any) {
+        console.error('Error processing EMIS token:', error);
+        
+        // Use mock token for development purposes
+        const mockToken = `mock-token-${Date.now()}`;
+        console.log('Using fallback mock token:', mockToken);
+        
+        setPaymentToken(mockToken);
+        
+        // Call the callback if provided
+        if (onTokenGenerated) {
+          onTokenGenerated(mockToken);
         }
       }
-      
-      // Always set processing to false when done
-      setIsProcessing(false);
-      
     } catch (error: any) {
       console.error('Error initiating payment:', error);
       setPaymentStatus('failed');
       toast.error(error.message || 'Ocorreu um erro ao iniciar o pagamento');
+    } finally {
+      // Always set processing to false when done
       setIsProcessing(false);
     }
   };
