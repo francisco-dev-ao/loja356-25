@@ -39,45 +39,27 @@ serve(async (req) => {
 
     console.log("Sending to EMIS API:", params)
     
-    try {
-      // Make API request to EMIS
-      const response = await fetch(emisApiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(params),
-      })
-      
-      if (!response.ok) {
-        throw new Error(`EMIS API responded with status: ${response.status}`)
-      }
-      
-      const responseData = await response.json()
-      console.log("EMIS API response:", responseData)
-
-      // Return the EMIS response
-      return new Response(JSON.stringify(responseData), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      })
-    } catch (error) {
-      console.error("Error calling EMIS API:", error)
-      
-      // For development purposes, return a mock token
-      // In production, this would be an error response
-      console.log("Returning mock token for development")
-      const mockResponse = {
-        id: `mock-token-${Date.now()}`,
-        status: "MOCK",
-        message: "Mock token for development (EMIS API unreachable)"
-      }
-      
-      return new Response(JSON.stringify(mockResponse), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      })
+    // Make API request to EMIS
+    const response = await fetch(emisApiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(params),
+    })
+    
+    if (!response.ok) {
+      throw new Error(`EMIS API responded with status: ${response.status}`)
     }
+    
+    const responseData = await response.json()
+    console.log("EMIS API response:", responseData)
+
+    // Return the EMIS response
+    return new Response(JSON.stringify(responseData), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    })
   } catch (error) {
     console.error("Error in edge function:", error)
     

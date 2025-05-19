@@ -15,10 +15,8 @@ const MulticaixaExpressModal = ({ isOpen, onClose, token }: MulticaixaExpressMod
   const [error, setError] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   
-  // Use dynamically constructed frameUrl with fallback to mock iframe
-  const frameUrl = token.startsWith('mock-token') 
-    ? `${window.location.origin}/multicaixa-express.html?token=${token}` 
-    : `https://pagamentonline.emis.co.ao/online-payment-gateway/portal/frame?token=${token}`;
+  // Construct frame URL for EMIS payment portal
+  const frameUrl = `https://pagamentonline.emis.co.ao/online-payment-gateway/portal/frame?token=${token}`;
   
   // Timer for auto-close if no interaction
   const autoCloseTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -88,38 +86,6 @@ const MulticaixaExpressModal = ({ isOpen, onClose, token }: MulticaixaExpressMod
     }
   };
 
-  // Content for demo/mock iframe
-  const getMockContent = () => {
-    if (token.startsWith('mock-token')) {
-      return (
-        <div className="p-6 text-center">
-          <h3 className="text-xl font-bold mb-4">Simulação de Pagamento</h3>
-          <p className="mb-6">
-            Este é um ambiente de simulação. Em produção, aqui apareceria a
-            interface de pagamento do Multicaixa Express.
-          </p>
-          
-          <div className="flex justify-center space-x-4">
-            <Button onClick={() => {
-              window.postMessage({ status: 'ACCEPTED' }, '*');
-              onClose();
-            }} variant="default">
-              Simular Pagamento Aceito
-            </Button>
-            
-            <Button onClick={() => {
-              window.postMessage({ status: 'DECLINED' }, '*');
-              onClose();
-            }} variant="destructive">
-              Simular Pagamento Recusado
-            </Button>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-3xl h-[80vh] p-0">
@@ -143,14 +109,8 @@ const MulticaixaExpressModal = ({ isOpen, onClose, token }: MulticaixaExpressMod
             </div>
           </div>
         )}
-        
-        {token && !error && token.startsWith('mock-token') && (
-          <div className="w-full h-full flex items-center justify-center border-none">
-            {getMockContent()}
-          </div>
-        )}
 
-        {token && !error && !token.startsWith('mock-token') && (
+        {token && !error && (
           <iframe 
             ref={iframeRef}
             src={frameUrl}

@@ -130,20 +130,9 @@ export const useMulticaixaPayment = ({
         if (onTokenGenerated) {
           onTokenGenerated(emisTokenData.id);
         }
-          
       } catch (error: any) {
         console.error('Error processing EMIS token:', error);
-        
-        // Use mock token for development purposes
-        const mockToken = `mock-token-${Date.now()}`;
-        console.log('Using fallback mock token:', mockToken);
-        
-        setPaymentToken(mockToken);
-        
-        // Call the callback if provided
-        if (onTokenGenerated) {
-          onTokenGenerated(mockToken);
-        }
+        throw error;
       }
     } catch (error: any) {
       console.error('Error initiating payment:', error);
