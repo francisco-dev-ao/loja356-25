@@ -90,6 +90,12 @@ export const useSettingsManager = () => {
         currency_min_digits: settings.currency_min_digits,
         currency_max_digits: settings.currency_max_digits,
         email_template_order: settings.email_template_order,
+        // Add Multicaixa Express fields
+        multicaixa_frametoken: settings.multicaixa_frametoken,
+        multicaixa_callback: settings.multicaixa_callback,
+        multicaixa_success: settings.multicaixa_success,
+        multicaixa_error: settings.multicaixa_error,
+        multicaixa_cssurl: settings.multicaixa_cssurl,
       };
       
       await saveSettingsToDB(settingsToSave);
