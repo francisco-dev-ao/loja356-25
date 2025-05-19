@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/hooks/use-cart';
+import { OrderStatus, PaymentStatus } from './utils/payment-status';
 
 interface UsePaymentMessageHandlerProps {
   orderId: string;

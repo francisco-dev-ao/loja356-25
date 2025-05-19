@@ -69,8 +69,9 @@ export const updatePaymentWithEmisToken = async (reference: string, emisToken: s
 };
 
 /**
- * Construct the iframe URL for the payment page
+ * Construct the iframe URL for the payment page - using direct portal/frame URL format
  */
 export const constructIframeUrl = (emisTokenId: string): string => {
   return `https://pagamentonline.emis.co.ao/online-payment-gateway/portal/frame?token=${emisTokenId}`;
 };
+

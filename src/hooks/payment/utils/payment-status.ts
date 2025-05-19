@@ -5,8 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
  * Utility functions for payment status updates
  */
 
-type OrderStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
-type PaymentStatus = 'pending' | 'processing' | 'paid' | 'failed';
+export type OrderStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+export type PaymentStatus = 'pending' | 'processing' | 'paid' | 'failed';
 
 /**
  * Update the order status in the database

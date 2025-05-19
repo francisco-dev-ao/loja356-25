@@ -29,7 +29,11 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
   usePaymentMessageHandler({
     orderId,
     updateOrderStatus: (status, paymentStatus) => {
-      return updateOrderStatus(orderId, status, paymentStatus);
+      // Convert string parameters to the required types
+      const typedStatus = status as 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+      const typedPaymentStatus = paymentStatus as 'pending' | 'processing' | 'paid' | 'failed';
+      
+      return updateOrderStatus(orderId, typedStatus, typedPaymentStatus);
     },
     setPaymentStatus: () => {} // We're handling this in useMulticaixaPayment
   });
