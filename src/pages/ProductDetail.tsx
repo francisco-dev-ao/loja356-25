@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -78,7 +77,7 @@ const ProductDetail = () => {
           {/* Product Image */}
           <div className="bg-microsoft-light rounded-lg overflow-hidden flex items-center justify-center p-8">
             <img 
-              src={product.image} 
+              src={`/images/${product.image}`} 
               alt={product.name} 
               className="max-w-full max-h-[400px] object-contain" 
             />

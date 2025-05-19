@@ -96,10 +96,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsLoading(false);
     }
   };
-
   const register = async (name: string, email: string, password: string) => {
     setIsLoading(true);
     try {
+      // Registrar o usuário
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -112,6 +112,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (error) {
         throw new Error(error.message);
+      }
+
+      if (data.user) {
+        // Configurar o papel do usuário como 'customer' por padrão
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ 
+            name,
+            role: 'customer' 
+          })
+          .eq('id', data.user.id);
+          
+        if (profileError) {
+          throw new Error(profileError.message);
+        }
       }
       
       toast.success('Registro completo! Verifique seu email para confirmar sua conta.');

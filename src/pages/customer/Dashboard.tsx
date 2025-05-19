@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
@@ -37,7 +36,7 @@ const Dashboard = () => {
 
   // Informações da empresa
   const companyInfo = {
-    name: "LicençasPRO, Lda",
+    name: "Office365, Lda",
     address: "Rua Comandante Gika, n.º 100, Luanda, Angola",
     nif: "5417124080",
     phone: "+244 923 456 789",
@@ -170,7 +169,7 @@ const Dashboard = () => {
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(24);
       doc.setFont('helvetica', 'bold');
-      doc.text('LicençasPRO', 15, 25);
+      doc.text('Office365', 15, 25);
       
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
@@ -288,7 +287,7 @@ const Dashboard = () => {
       // Rodapé
       doc.setFontSize(8);
       doc.setTextColor(100, 100, 100);
-      doc.text('Obrigado por escolher a LicençasPRO!', 105, 280, { align: 'center' });
+      doc.text('Obrigado por escolher a Office365!', 105, 280, { align: 'center' });
       doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, 105, 285, { align: 'center' });
       
       // Salvar o PDF

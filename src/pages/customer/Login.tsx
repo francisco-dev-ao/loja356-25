@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -23,7 +22,7 @@ const Login = () => {
   // If still checking authentication status, show loading
   if (isLoading) {
     return (
-      <Layout>
+      <Layout hideFooter>
         <div className="container-page py-12">
           <div className="max-w-md mx-auto text-center">
             <div className="flex justify-center items-center space-x-2">
@@ -38,7 +37,7 @@ const Login = () => {
   
   // If not authenticated, show login/register tabs
   return (
-    <Layout>
+    <Layout hideFooter>
       <div className="container-page py-12">
         <div className="max-w-md mx-auto">
           <div className="text-center mb-6">

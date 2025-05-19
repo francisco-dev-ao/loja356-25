@@ -52,12 +52,12 @@ const CheckoutSuccess = () => {
   
   // Informações da empresa
   const companyInfo: CompanyInfo = {
-    name: "LicençasPRO, Lda",
+    name: "Office365, Lda",
     address: "Rua Comandante Gika, n.º 100, Luanda, Angola",
     nif: "5417124080",
     phone: "+244 923 456 789",
-    email: "financeiro@licencaspro.ao",
-    website: "www.licencaspro.ao"
+    email: "financeiro@office365.ao",
+    website: "www.office365.ao"
   };
 
   useEffect(() => {
@@ -167,7 +167,7 @@ const CheckoutSuccess = () => {
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(24);
       doc.setFont('helvetica', 'bold');
-      doc.text('LicençasPRO', 15, 25);
+      doc.text('Office365', 15, 25);
       
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
@@ -255,15 +255,13 @@ const CheckoutSuccess = () => {
         });
       }
       
-      // Adicionar total
-      // @ts-ignore
-      const finalY = doc.lastAutoTable.finalY || 150;
+      // Adicionar total      // @ts-ignore
+      let finalY = doc.lastAutoTable.finalY || 150;
       
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text('Total:', 150, finalY + 10);
-      doc.setFontSize(12);
-      doc.text(formatPrice(order.total), 190, finalY + 10, { align: 'right' });
+      doc.setFontSize(12);      doc.text(formatPrice(order.total), 190, finalY + 10, { align: 'right' });
       
       // Informações de pagamento
       doc.setFontSize(10);
@@ -272,6 +270,29 @@ const CheckoutSuccess = () => {
       doc.setFont('helvetica', 'normal');
       const paymentMethod = order.payment_method === 'multicaixa' ? 'Multicaixa Express' : 'Transferência Bancária';
       doc.text(paymentMethod, 60, finalY + 25);
+
+      // Se for transferência bancária, adicionar detalhes da conta
+      if (order.payment_method === 'bank_transfer') {
+        const { data: settings } = await supabase
+          .from('settings')
+          .select('bank_name, bank_account_holder, bank_account_number, bank_iban')
+          .single();
+
+        if (settings) {
+          finalY += 35;
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'bold');
+          doc.text('Informações Bancárias:', 15, finalY);
+          doc.setFont('helvetica', 'normal');
+          
+          doc.text(`Banco: ${settings.bank_name}`, 15, finalY + 8);
+          doc.text(`Titular: ${settings.bank_account_holder}`, 15, finalY + 16);
+          doc.text(`Conta: ${settings.bank_account_number}`, 15, finalY + 24);
+          doc.text(`IBAN: ${settings.bank_iban}`, 15, finalY + 32);
+          
+          finalY += 42;
+        }
+      }
       
       // Notas e termos
       doc.setFontSize(8);
@@ -285,7 +306,7 @@ const CheckoutSuccess = () => {
       // Rodapé
       doc.setFontSize(8);
       doc.setTextColor(100, 100, 100);
-      doc.text('Obrigado por escolher a LicençasPRO!', 105, 280, { align: 'center' });
+      doc.text('Obrigado por escolher a Office365!', 105, 280, { align: 'center' });
       doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, 105, 285, { align: 'center' });
       
       // Salvar o PDF

@@ -22,10 +22,14 @@ export const defaultSettings: CompanySettings = {
   currency_min_digits: 2,
   currency_max_digits: 2,
   email_template_order: '',
-  // New Multicaixa Express fields
-  multicaixa_frametoken: null,
+  // New Multicaixa Express fields  multicaixa_frametoken: null,
   multicaixa_callback: null,
   multicaixa_success: null,
   multicaixa_error: null,
   multicaixa_cssurl: null,
+  bank_name: '',
+  bank_account_holder: '',
+  bank_account_number: '',
+  bank_iban: ' AO06 0055 0000 3795713510103',
+  bank_logo_url: null,
 };

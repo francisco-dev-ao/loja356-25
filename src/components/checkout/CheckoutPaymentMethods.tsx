@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { CreditCard, Send } from 'lucide-react';
@@ -13,9 +12,10 @@ const CheckoutPaymentMethods = ({ paymentMethod, handleSelectPaymentMethod }: Ch
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
       <Card 
         className={`border cursor-pointer transition-all duration-200 ease-in-out
-          ${paymentMethod === 'multicaixa' 
-            ? 'border-microsoft-blue bg-microsoft-light/20 shadow-md' 
-            : 'hover:border-microsoft-blue/50 hover:bg-microsoft-light/10 hover:shadow-md'
+          ${
+            paymentMethod === 'multicaixa' 
+              ? 'border-microsoft-blue bg-microsoft-light/20 shadow-md' 
+              : 'hover:border-microsoft-blue/50 hover:bg-microsoft-light/10 hover:shadow-md'
           }`}
         onClick={() => handleSelectPaymentMethod('multicaixa')}
       >
@@ -33,12 +33,13 @@ const CheckoutPaymentMethods = ({ paymentMethod, handleSelectPaymentMethod }: Ch
           </div>
         </CardContent>
       </Card>
-      
+
       <Card 
         className={`border cursor-pointer transition-all duration-200 ease-in-out
-          ${paymentMethod === 'bank_transfer' 
-            ? 'border-microsoft-blue bg-microsoft-light/20 shadow-md' 
-            : 'hover:border-microsoft-blue/50 hover:bg-microsoft-light/10 hover:shadow-md'
+          ${
+            paymentMethod === 'bank_transfer' 
+              ? 'border-microsoft-blue bg-microsoft-light/20 shadow-md' 
+              : 'hover:border-microsoft-blue/50 hover:bg-microsoft-light/10 hover:shadow-md'
           }`}
         onClick={() => handleSelectPaymentMethod('bank_transfer')}
       >

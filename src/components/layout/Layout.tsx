@@ -1,13 +1,14 @@
-
 import React from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
 
+// Adicionar uma propriedade para controlar a exibição do footer
 interface LayoutProps {
   children: React.ReactNode;
+  hideFooter?: boolean;
 }
 
-const Layout = ({ children }: LayoutProps) => {
+const Layout = ({ children, hideFooter }: LayoutProps) => {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -16,7 +17,7 @@ const Layout = ({ children }: LayoutProps) => {
           {children}
         </div>
       </main>
-      <Footer />
+      {!hideFooter && <Footer />}
     </div>
   );
 };

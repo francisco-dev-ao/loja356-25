@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 
@@ -8,7 +7,7 @@ const Footer = () => {
       <div className="container-page py-8 md:py-12">
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
           <div className="col-span-2 sm:col-span-2 md:col-span-1">
-            <h3 className="text-xl font-heading font-semibold mb-3 md:mb-4">LicençasPRO</h3>
+            <h3 className="text-xl font-heading font-semibold mb-3 md:mb-4">Office365</h3>
             <p className="text-gray-300 mb-4 text-sm md:text-base">
               Seu parceiro confiável para licenças Microsoft originais com preços acessíveis.
             </p>
@@ -61,7 +60,7 @@ const Footer = () => {
         
         <div className="border-t border-gray-700 mt-6 md:mt-8 pt-6 md:pt-8 text-xs md:text-sm text-gray-400">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <p>© {new Date().getFullYear()} LicençasPRO. Todos os direitos reservados.</p>
+            <p>© {new Date().getFullYear()} Office365. Todos os direitos reservados.</p>
             <div className="mt-3 md:mt-0">
               <p>Microsoft e Windows são marcas registradas da Microsoft Corporation.</p>
             </div>

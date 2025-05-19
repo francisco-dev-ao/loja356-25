@@ -17,8 +17,8 @@ const Index = () => {
       {/* Hero Section */}
       <section className="relative bg-gradient-to-r from-microsoft-blue to-blue-700 text-white">
         <div className="absolute inset-0 bg-[url('https://img-prod-cms-rt-microsoft-com.akamaized.net/cms/api/am/imageFileData/RE4wyU9')] bg-cover bg-center opacity-10"></div>
-        <div className="container-page py-20 md:py-28 relative z-10">
-          <div className="max-w-2xl animate-fade-in">
+        <div className="container-page py-20 md:py-28 relative z-10 flex flex-col md:flex-row items-center">
+          <div className="max-w-2xl animate-fade-in md:mr-8">
             <h1 className="text-4xl md:text-5xl font-heading font-bold mb-6">
               Soluções Microsoft Originais para seu Negócio
             </h1>
@@ -32,12 +32,19 @@ const Index = () => {
                   <ArrowRight size={18} className="ml-2" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white/10">
+              <Button asChild variant="outline" size="lg" className="border-white text-microsoft-blue hover:bg-white/10">
                 <Link to="/contato">
                   Fale Conosco
                 </Link>
               </Button>
             </div>
+          </div>
+          <div className="w-1/2 flex justify-center items-center">
+            <img
+              src="/principal.png"
+              alt="Foto inicial"
+              className="max-w-full h-auto object-cover rounded-lg shadow-md"
+            />
           </div>
         </div>
       </section>
@@ -80,7 +87,7 @@ const Index = () => {
       <section className="py-16">
         <div className="container-page">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-heading font-bold mb-3">Por que escolher a LicençasPRO?</h2>
+            <h2 className="text-3xl font-heading font-bold mb-3">Por que escolher a Office365?</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Oferecemos a melhor experiência para aquisição de licenças Microsoft com preços competitivos
             </p>

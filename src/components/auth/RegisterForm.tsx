@@ -57,12 +57,12 @@ const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
       if (user) {
         // Update profile with additional information
         const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
+          .from('profiles')          .update({
             name: companyName,
             nif: nif,
             phone: phone,
-            address: address
+            address: address,
+            role: 'customer'
           })
           .eq('id', user.id);
         

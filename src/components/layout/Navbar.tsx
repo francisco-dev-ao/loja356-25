@@ -25,9 +25,9 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-microsoft-blue rounded-md flex items-center justify-center">
-              <span className="text-white font-bold text-lg sm:text-xl">M</span>
+              <span className="text-white font-bold text-lg sm:text-xl">O</span>
             </div>
-            <span className="font-heading font-semibold text-base sm:text-xl hidden sm:inline-block">LicençasPRO</span>
+            <span className="font-heading font-semibold text-base sm:text-xl hidden sm:inline-block">Office365</span>
           </Link>
 
           {/* Desktop Navigation */}          <nav className="hidden md:flex items-center space-x-4 lg:space-x-6">

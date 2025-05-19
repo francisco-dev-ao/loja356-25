@@ -1,13 +1,14 @@
 
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building, Mail, Currency, MailCheck, CreditCard } from 'lucide-react';
+import { Building, Mail, Currency, MailCheck, CreditCard, Building as Bank } from 'lucide-react';
 import { SettingsProvider, useSettings } from './settings/SettingsContext';
 import CompanyInfoTab from './settings/CompanyInfoTab';
 import EmailSettingsTab from './settings/EmailSettingsTab';
 import CurrencySettingsTab from './settings/CurrencySettingsTab';
 import EmailTemplateTab from './settings/EmailTemplateTab';
 import MulticaixaSettingsTab from './settings/MulticaixaSettingsTab';
+import BankTransferSettingsTab from './settings/BankTransferSettingsTab';
 import LoadingIndicator from './settings/LoadingIndicator';
 
 const CompanySettings = () => {
@@ -46,10 +47,13 @@ const CompanySettingsContent = () => {
           <TabsTrigger value="templates">
             <MailCheck size={16} className="mr-2" />
             Modelos de Email
-          </TabsTrigger>
-          <TabsTrigger value="multicaixa">
+          </TabsTrigger>          <TabsTrigger value="multicaixa">
             <CreditCard size={16} className="mr-2" />
             Multicaixa Express
+          </TabsTrigger>
+          <TabsTrigger value="bank">
+            <Bank size={16} className="mr-2" />
+            Transferência Bancária
           </TabsTrigger>
         </TabsList>
         
@@ -68,9 +72,12 @@ const CompanySettingsContent = () => {
         <TabsContent value="templates">
           <EmailTemplateTab />
         </TabsContent>
-        
-        <TabsContent value="multicaixa">
+          <TabsContent value="multicaixa">
           <MulticaixaSettingsTab />
+        </TabsContent>
+
+        <TabsContent value="bank">
+          <BankTransferSettingsTab />
         </TabsContent>
       </Tabs>
     </div>

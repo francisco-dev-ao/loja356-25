@@ -1,4 +1,3 @@
-
 import { Product } from '@/hooks/use-cart';
 
 // Mock product data
@@ -8,7 +7,7 @@ const products: Product[] = [
     name: 'Microsoft 365 - Pacote Básico',
     description: 'Pacote Microsoft 365 com aplicativos essenciais para pequenas empresas. Inclui Word, Excel, PowerPoint, Outlook e 1TB de armazenamento OneDrive por usuário.',
     price: 149.90,
-    image: 'https://img-prod-cms-rt-microsoft-com.akamaized.net/cms/api/am/imageFileData/RE4FKnv?ver=5fd5',
+    image: 'office365.png', // Caminho atualizado para office.png
     category: 'Microsoft 365',
     quantity: 0
   },

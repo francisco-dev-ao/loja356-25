@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useCart } from '@/hooks/use-cart';
 import { Button } from '@/components/ui/button';
@@ -51,7 +50,7 @@ const CartItem = ({
 
   return (
     <div className="flex items-center gap-4 py-4 border-b border-gray-200">
-      <div className="h-16 w-16 overflow-hidden rounded bg-gray-100">
+      <div className="h-12 w-12 overflow-hidden rounded bg-gray-100">
         <img 
           src={image} 
           alt={name}

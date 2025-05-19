@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import MulticaixaExpressPayment from './MulticaixaExpressPayment';
@@ -40,12 +39,26 @@ const PaymentProcessor = ({
     );
   }
 
-  if (paymentMethod === 'multicaixa') {
-    return <MulticaixaExpressPayment amount={total} orderId={orderId} />;
-  }
+  const handlePaymentSuccess = (paymentReference: string) => {
+    console.log('Payment successful:', { paymentReference });
+    // TODO: Add logic to handle successful payment, e.g., redirect to a success page or update order status
+  };
 
+  const handlePaymentError = (error: any) => {
+    console.error('Payment error:', error);
+    // TODO: Add logic to handle payment error, e.g., show an error message to the user
+  };
+
+  if (paymentMethod === 'multicaixa') {
+    return <MulticaixaExpressPayment 
+             amount={total} 
+             reference={orderId} 
+             onPaymentSuccess={handlePaymentSuccess} 
+             onPaymentError={handlePaymentError} 
+           />;
+  } 
   if (paymentMethod === 'bank_transfer') {
-    return <BankTransferPayment />;
+    return <BankTransferPayment total={total} orderId={orderId} />;
   }
 
   return null;

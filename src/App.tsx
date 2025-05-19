@@ -6,7 +6,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "@/hooks/use-cart";
 import { AuthProvider } from "@/hooks/use-auth";
-import { useState } from "react"; // Import useState
+import { useState } from "react";
+import AdminRoute from "@/components/auth/AdminRoute";
+import CustomerRoute from "@/components/auth/CustomerRoute";
 
 // Pages
 import Index from "./pages/Index";
@@ -43,13 +45,20 @@ const AppWithProviders = () => {
                 <Route path="/checkout/success" element={<CheckoutSuccess />} />
                 <Route path="/contato" element={<Contact />} />
                 <Route path="/cadastro" element={<Register />} />
-                
-                {/* Customer Routes */}
+                  {/* Customer Routes */}
                 <Route path="/cliente/login" element={<Login />} />
-                <Route path="/cliente/dashboard" element={<CustomerDashboard />} />
+                <Route path="/cliente/dashboard" element={
+                  <CustomerRoute>
+                    <CustomerDashboard />
+                  </CustomerRoute>
+                } />
                 
                 {/* Admin Routes */}
-                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                <Route path="/admin/dashboard" element={
+                  <AdminRoute>
+                    <AdminDashboard />
+                  </AdminRoute>
+                } />
 
                 {/* 404 Page */}
                 <Route path="*" element={<NotFound />} />

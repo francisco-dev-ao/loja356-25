@@ -65,8 +65,7 @@ export const useSettingsManager = () => {
       [name]: value === 'true'
     }));
   };
-  
-  const handleSaveSettings = async () => {
+    const handleSaveSettings = async () => {
     setSaving(true);
     try {
       // Create a clean version of settings to send to Supabase
@@ -84,7 +83,7 @@ export const useSettingsManager = () => {
         smtp_password: settings.smtp_password,
         smtp_from_email: settings.smtp_from_email,
         smtp_from_name: settings.smtp_from_name,
-        smtp_secure: settings.smtp_secure,
+        smtp_secure: Boolean(settings.smtp_secure),
         currency_locale: settings.currency_locale,
         currency_code: settings.currency_code,
         currency_min_digits: settings.currency_min_digits,
@@ -96,6 +95,12 @@ export const useSettingsManager = () => {
         multicaixa_success: settings.multicaixa_success,
         multicaixa_error: settings.multicaixa_error,
         multicaixa_cssurl: settings.multicaixa_cssurl,
+        // Add bank transfer settings
+        bank_name: settings.bank_name,
+        bank_account_holder: settings.bank_account_holder,
+        bank_account_number: settings.bank_account_number,
+        bank_iban: settings.bank_iban,
+        bank_logo_url: settings.bank_logo_url,
       };
       
       await saveSettingsToDB(settingsToSave);
