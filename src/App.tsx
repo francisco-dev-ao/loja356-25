@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -5,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "@/hooks/use-cart";
 import { AuthProvider } from "@/hooks/use-auth";
-import React from "react"; // Add React import
+import { useState } from "react"; // Import useState
 
 // Pages
 import Index from "./pages/Index";
@@ -21,10 +22,9 @@ import CustomerDashboard from "./pages/customer/Dashboard";
 import AdminDashboard from "./pages/admin/Dashboard";
 import NotFound from "./pages/NotFound";
 
-// Create a new QueryClient instance inside the component
 const AppWithProviders = () => {
-  // Create QueryClient inside the component to ensure React hooks work properly
-  const queryClient = new QueryClient();
+  // Use useState to create the QueryClient instance
+  const [queryClient] = useState(() => new QueryClient());
   
   return (
     <QueryClientProvider client={queryClient}>
