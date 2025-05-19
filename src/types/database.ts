@@ -36,7 +36,7 @@ export type MulticaixaConfig = {
   error_url: string;
   css_url?: string;
   commission_rate?: number;
-  is_active?: boolean;
+  is_active: boolean;
   created_at?: string;
   updated_at?: string;
 };
@@ -58,4 +58,12 @@ export type Settings = {
   currency_code?: string;
   currency_min_digits?: number;
   currency_max_digits?: number;
+  smtp_host?: string;
+  smtp_port?: string;
+  smtp_user?: string;
+  smtp_password?: string;
+  smtp_from_email?: string;
+  smtp_from_name?: string;
+  smtp_secure?: boolean;
+  email_template_order?: string;
 };

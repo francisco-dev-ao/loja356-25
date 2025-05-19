@@ -1,12 +1,13 @@
 
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building, Mail, Currency, MailCheck } from 'lucide-react';
+import { Building, Mail, Currency, MailCheck, CreditCard } from 'lucide-react';
 import { SettingsProvider, useSettings } from './settings/SettingsContext';
 import CompanyInfoTab from './settings/CompanyInfoTab';
 import EmailSettingsTab from './settings/EmailSettingsTab';
 import CurrencySettingsTab from './settings/CurrencySettingsTab';
 import EmailTemplateTab from './settings/EmailTemplateTab';
+import MulticaixaSettingsTab from './settings/MulticaixaSettingsTab';
 import LoadingIndicator from './settings/LoadingIndicator';
 
 const CompanySettings = () => {
@@ -46,6 +47,10 @@ const CompanySettingsContent = () => {
             <MailCheck size={16} className="mr-2" />
             Modelos de Email
           </TabsTrigger>
+          <TabsTrigger value="multicaixa">
+            <CreditCard size={16} className="mr-2" />
+            Multicaixa Express
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="company">
@@ -62,6 +67,10 @@ const CompanySettingsContent = () => {
         
         <TabsContent value="templates">
           <EmailTemplateTab />
+        </TabsContent>
+        
+        <TabsContent value="multicaixa">
+          <MulticaixaSettingsTab />
         </TabsContent>
       </Tabs>
     </div>
