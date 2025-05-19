@@ -126,7 +126,7 @@ const MulticaixaExpressPayment = ({ amount, orderId }: MulticaixaExpressPaymentP
       
       {paymentToken && !isModalOpen && (
         <div className="flex flex-col space-y-4 mt-4">
-          <Alert variant="warning">
+          <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Pagamento Interrompido</AlertTitle>
             <AlertDescription>
