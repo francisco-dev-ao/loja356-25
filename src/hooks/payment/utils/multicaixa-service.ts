@@ -127,8 +127,9 @@ export const initiateMulticaixaExpressPayment = async (
     });
     
     // Salvar a referência de pagamento no banco de dados
+    // Using multicaixa_express_payments instead of payment_references
     const { data: paymentRef, error: paymentRefError } = await supabase
-      .from("payment_references")
+      .from("multicaixa_express_payments")
       .insert({
         order_id: paymentDetails.orderId,
         reference: reference,
