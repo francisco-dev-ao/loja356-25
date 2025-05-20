@@ -1,8 +1,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Loader2 } from "lucide-react";
 import { generateReference } from '@/hooks/payment/utils/payment-reference';
+import { PaymentLoader } from './payment-components/PaymentLoader';
+import { PaymentError } from './payment-components/PaymentError';
+import { PaymentMethods } from './payment-components/PaymentMethods';
 
 interface MulticaixaExpressModalProps {
   isOpen: boolean;
@@ -113,66 +115,12 @@ const MulticaixaExpressModal = ({
           Diálogo de pagamento com Multicaixa Express
         </div>
         
-        {loading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 z-10">
-            <Loader2 className="h-16 w-16 animate-spin text-primary" />
-            <p className="mt-4 text-lg font-medium">Carregando pagamento...</p>
-            <p className="text-sm text-muted-foreground">
-              Por favor, aguarde enquanto conectamos ao sistema de pagamento.
-            </p>
-          </div>
-        )}
+        {loading && <PaymentLoader />}
         
-        {error && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-background z-10">
-            <div className="text-center p-6 max-w-md">
-              <p className="mb-6 text-muted-foreground">{error}</p>
-            </div>
-          </div>
-        )}
+        {error && <PaymentError message={error} />}
 
         {!loading && !error && (
-          <div className="flex flex-col h-full">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold mb-2">Multicaixa Express</h2>
-              <p className="text-muted-foreground">Complete o pagamento usando um dos métodos abaixo.</p>
-            </div>
-            
-            <div className="grid md:grid-cols-2 gap-6 flex-1">
-              <div className="border rounded-lg p-6 flex flex-col items-center">
-                <h3 className="text-lg font-medium mb-4">QR Code</h3>
-                <div className="bg-gray-200 w-48 h-48 flex items-center justify-center rounded-lg mb-4">
-                  <span className="text-sm text-muted-foreground">QR Code do Pagamento</span>
-                </div>
-                <p className="text-sm text-center text-muted-foreground">
-                  Abra o aplicativo Multicaixa Express e escaneie este QR Code para pagar.
-                </p>
-              </div>
-              
-              <div className="border rounded-lg p-6 flex flex-col">
-                <h3 className="text-lg font-medium mb-4">Pagamento por Telefone</h3>
-                <div className="space-y-4 flex-1">
-                  <div>
-                    <p className="text-sm font-medium">Referência</p>
-                    <p className="font-mono text-lg">{token.substring(0, 9)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Valor</p>
-                    <p className="font-mono text-lg">AOA 105.000,00</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Tempo restante</p>
-                    <p className="font-mono">{Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')}</p>
-                  </div>
-                  <div className="mt-auto">
-                    <p className="text-sm text-muted-foreground">
-                      Insira o código de referência no aplicativo Multicaixa Express para completar o pagamento.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <PaymentMethods token={token} countdown={countdown} />
         )}
       </DialogContent>
     </Dialog>
