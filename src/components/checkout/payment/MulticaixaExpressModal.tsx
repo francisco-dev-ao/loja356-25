@@ -5,7 +5,7 @@ import { PaymentLoader } from './payment-components/PaymentLoader';
 import { PaymentError } from './payment-components/PaymentError';
 import PaymentFrame from './PaymentFrame';
 import { toast } from 'sonner';
-import { constructEmisIframeUrl } from "@/hooks/payment/utils/multicaixa-service";
+import { constructEmisIframeUrl } from "@/hooks/payment/utils/emis-api";
 
 interface MulticaixaExpressModalProps {
   isOpen: boolean;

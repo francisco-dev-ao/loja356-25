@@ -14,12 +14,6 @@ const PaymentFrame = ({ src, onLoad }: PaymentFrameProps) => {
     // Add extra logging to debug iframe loading
     console.log("PaymentFrame mounted with source:", src);
     
-    // Check if iframe is already loaded (some browsers might load it very quickly)
-    if (iframeRef.current?.complete) {
-      console.log("Iframe was already loaded when component mounted");
-      onLoad();
-    }
-    
     return () => {
       console.log("PaymentFrame unmounted");
     };

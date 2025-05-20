@@ -58,3 +58,61 @@ export const verifyPaymentStatus = async (orderId: string): Promise<PaymentStatu
     throw error;
   }
 };
+
+/**
+ * Function to verify the payment status
+ */
+export const verifyMulticaixaPaymentStatus = async (paymentReference: string): Promise<string> => {
+  try {
+    const { data, error } = await supabase
+      .from('multicaixa_express_payments')
+      .select('status')
+      .eq('reference', paymentReference)
+      .single();
+
+    if (error) {
+      throw new Error(`Error verifying payment status: ${error.message}`);
+    }
+
+    return data?.status || 'pending';
+  } catch (error) {
+    console.error('Failed to verify payment status:', error);
+    return 'pending';
+  }
+};
+
+/**
+ * Function to update payment status
+ */
+export const updateMulticaixaPaymentStatus = async (
+  paymentReference: string, 
+  status: 'pending' | 'completed' | 'failed', 
+  emisResponse?: any
+): Promise<void> => {
+  try {
+    const updateData: any = {
+      status,
+      updated_at: new Date().toISOString()
+    };
+
+    if (status === 'completed') {
+      updateData.completed_at = new Date().toISOString();
+    }
+
+    if (emisResponse) {
+      updateData.emis_response = emisResponse;
+    }
+
+    const { error } = await supabase
+      .from('multicaixa_express_payments')
+      .update(updateData)
+      .eq('reference', paymentReference);
+
+    if (error) {
+      throw new Error(`Error updating payment status: ${error.message}`);
+    }
+  } catch (error) {
+    console.error('Failed to update payment status:', error);
+    throw error;
+  }
+};

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Loader2, CreditCard } from 'lucide-react';
-import { initiateMulticaixaExpressPayment } from '@/hooks/payment/utils/multicaixa-service';
+import { initiateMulticaixaExpressPayment } from '@/hooks/payment/utils/emis-api';
 import MulticaixaExpressModal from './payment/MulticaixaExpressModal';
 
 interface MulticaixaExpressPaymentProps {
