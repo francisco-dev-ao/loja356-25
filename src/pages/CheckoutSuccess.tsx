@@ -255,13 +255,15 @@ const CheckoutSuccess = () => {
         });
       }
       
-      // Adicionar total      // @ts-ignore
-      let finalY = doc.lastAutoTable.finalY || 150;
+      // Fix the jsPDF type issue for lastAutoTable
+      // @ts-ignore - using type assertion for jsPDF with autoTable plugin
+      const finalY = (doc as any).lastAutoTable?.finalY || 150;
       
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text('Total:', 150, finalY + 10);
-      doc.setFontSize(12);      doc.text(formatPrice(order.total), 190, finalY + 10, { align: 'right' });
+      doc.setFontSize(12);
+      doc.text(formatPrice(order.total), 190, finalY + 10, { align: 'right' });
       
       // Informações de pagamento
       doc.setFontSize(10);

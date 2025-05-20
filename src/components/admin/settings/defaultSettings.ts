@@ -22,7 +22,8 @@ export const defaultSettings: CompanySettings = {
   currency_min_digits: 2,
   currency_max_digits: 2,
   email_template_order: '',
-  // New Multicaixa Express fields  multicaixa_frametoken: null,
+  // Multicaixa Express fields
+  multicaixa_frametoken: null,
   multicaixa_callback: null,
   multicaixa_success: null,
   multicaixa_error: null,

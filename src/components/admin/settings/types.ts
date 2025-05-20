@@ -20,7 +20,8 @@ export type CompanySettings = {
   currency_min_digits: number;
   currency_max_digits: number;
   email_template_order: string;
-  // Add Multicaixa Express fields  multicaixa_frametoken: string | null;
+  // Add Multicaixa Express fields
+  multicaixa_frametoken: string | null;
   multicaixa_callback: string | null;
   multicaixa_success: string | null;
   multicaixa_error: string | null;

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useSettings } from './SettingsContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -5,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Bank, Loader2, ImagePlus, ExternalLink } from 'lucide-react';
+import { Building, Loader2, ImagePlus, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
@@ -81,7 +82,7 @@ export const BankTransferSettingsTab = () => {
               Configure as informações bancárias que serão exibidas para os clientes e nas faturas.
             </CardDescription>
           </div>
-          <Bank className="h-8 w-8 text-microsoft-blue" />
+          <Building className="h-8 w-8 text-microsoft-blue" />
         </div>
       </CardHeader>
 
