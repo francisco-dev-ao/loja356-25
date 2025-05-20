@@ -133,6 +133,23 @@ export const initiateMulticaixaExpressPayment = async (
     console.log("Enviando requisição para API EMIS:", requestBody);
     
     try {
+      // Salvando a referência do pagamento no banco de dados antes de chamar a Edge Function
+      const { data: paymentRef, error: paymentRefError } = await supabase
+        .from("multicaixa_express_payments")
+        .insert({
+          order_id: paymentDetails.orderId,
+          reference: reference,
+          amount: paymentDetails.amount,
+          status: "pending"
+        })
+        .select()
+        .single();
+      
+      if (paymentRefError) {
+        console.error("Error saving payment reference:", paymentRefError);
+        // Continue mesmo com erro
+      }
+      
       // Fazer a chamada para a Edge Function que se conecta à API EMIS
       const { data, error } = await supabase.functions.invoke(
         'generate-emis-token',
@@ -144,28 +161,28 @@ export const initiateMulticaixaExpressPayment = async (
         }
       );
       
-      if (error || !data || !data.id) {
-        console.error('Erro na resposta da Edge Function:', error || "Resposta inválida");
-        throw new Error(error?.message || "Resposta inválida da função");
+      if (error) {
+        console.error('Erro na resposta da Edge Function:', error);
+        throw new Error(error.message || "Erro na função de geração de token");
+      }
+      
+      if (!data || !data.id) {
+        console.error('Resposta inválida da Edge Function:', data);
+        throw new Error("Resposta inválida da função de geração de token");
       }
       
       console.log("Resposta da Edge Function (EMIS token):", data);
       
-      // Salvando a referência do pagamento no banco de dados
-      const { data: paymentRef, error: paymentRefError } = await supabase
+      // Atualizar o registro do pagamento com o token EMIS
+      const { error: updateError } = await supabase
         .from("multicaixa_express_payments")
-        .insert({
-          order_id: paymentDetails.orderId,
-          reference: reference,
-          amount: paymentDetails.amount,
-          status: "pending",
+        .update({
           token: data.id
         })
-        .select()
-        .single();
+        .eq("reference", reference);
       
-      if (paymentRefError) {
-        console.error("Error saving payment reference:", paymentRefError);
+      if (updateError) {
+        console.error("Error updating payment record with token:", updateError);
         // Continue mesmo com erro
       }
       

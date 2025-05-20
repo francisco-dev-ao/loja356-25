@@ -1,10 +1,6 @@
 
 /// <reference types="https://deno.land/x/deno/cli/types/dts/index.d.ts" />
 
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
-
 import { corsHeaders } from '../_shared/cors.ts' 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
@@ -35,10 +31,12 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Use a fallback if the environment variable is not set
     // @ts-ignore - Deno object is available in Supabase Edge Functions runtime environment
-    const GPO_CALLBACK_URL = Deno.env.get('EMIS_CALLBACK_URL');
+    const GPO_CALLBACK_URL = Deno.env.get('EMIS_CALLBACK_URL') || 'https://angohost.co.ao/pay/MulticaixaExpress/02e7e7694cea3a9b472271420efb0029/callback';
+    
     if (!GPO_CALLBACK_URL) {
-        console.error("CRITICAL: EMIS_CALLBACK_URL environment variable is not set.");
+        console.error("CRITICAL: EMIS_CALLBACK_URL environment variable is not set and no fallback provided.");
         return new Response(JSON.stringify({
           error: "Configuration error: EMIS_CALLBACK_URL is not set.",
           details: "The server is missing a critical configuration for payment processing."
@@ -48,10 +46,25 @@ serve(async (req: Request) => {
         });
     }
 
-    console.log("MCX Config: Using FrameToken:", GPO_FRAME_TOKEN ? '******' : 'MISSING', "CallbackURL:", GPO_CALLBACK_URL, "CSS_URL:", GPO_CSS_URL);
+    console.log("MCX Config: Using FrameToken:", GPO_FRAME_TOKEN ? 'SET' : 'MISSING', 
+                "CallbackURL:", GPO_CALLBACK_URL, 
+                "CSS_URL:", GPO_CSS_URL);
 
-    const requestData = await req.json();
-    console.log("Received request data:", requestData);
+    let requestData;
+    try {
+      requestData = await req.json();
+      console.log("Received request data:", requestData);
+    } catch (parseError) {
+      console.error("Error parsing request JSON:", parseError);
+      return new Response(JSON.stringify({
+        error: "Invalid JSON in request body",
+        details: String(parseError)
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400
+      });
+    }
+    
     const { reference: originalReference, amount } = requestData;
 
     if (!originalReference || typeof originalReference !== 'string' || !amount || typeof amount !== 'number' || amount <= 0) {
@@ -78,23 +91,47 @@ serve(async (req: Request) => {
       mobile: 'PAYMENT', 
       card: 'DISABLED', 
       qrCode: 'PAYMENT',
-      cssUrl: GPO_CSS_URL, // Adicionando o CSS URL correto
+      cssUrl: GPO_CSS_URL,
       callbackUrl: GPO_CALLBACK_URL
     };
 
     console.log("EMIS API Request: URL:", emisApiUrl, "Payload:", JSON.stringify(params));
 
-    const emisResponse = await fetch(emisApiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify(params),
-    });
+    let emisResponse;
+    try {
+      emisResponse = await fetch(emisApiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(params),
+      });
+    } catch (fetchError) {
+      console.error("Network error when calling EMIS API:", fetchError);
+      return new Response(JSON.stringify({
+        error: "Network error when connecting to EMIS API",
+        details: String(fetchError)
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 502
+      });
+    }
 
-    const responseText = await emisResponse.text();
-    console.log(`EMIS API Response: Status: ${emisResponse.status}, Raw Body: ${responseText}`);
+    let responseText;
+    try {
+      responseText = await emisResponse.text();
+      console.log(`EMIS API Response: Status: ${emisResponse.status}, Raw Body: ${responseText}`);
+    } catch (textError) {
+      console.error("Error reading EMIS API response body:", textError);
+      return new Response(JSON.stringify({
+        error: "Error reading EMIS API response",
+        details: String(textError)
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 502
+      });
+    }
 
     if (!emisResponse.ok) {
       console.error(`EMIS API ERROR: Status ${emisResponse.status}. Body: ${responseText}`);

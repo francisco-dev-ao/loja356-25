@@ -22,6 +22,7 @@ const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [emisToken, setEmisToken] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   
   const handlePayment = async () => {
     setIsLoading(true);
@@ -55,6 +56,11 @@ const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({
     }
   };
 
+  const handleRetry = async () => {
+    setRetryCount(prev => prev + 1);
+    await handlePayment();
+  };
+
   const handleModalClose = () => {
     setShowModal(false);
     console.log("Modal de pagamento fechado pelo usuário.");
@@ -74,7 +80,7 @@ const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({
 
   return (
     <div className="mt-4">
-      <Button onClick={handlePayment} disabled={isLoading} className="w-full">
+      <Button onClick={isLoading ? undefined : handlePayment} disabled={isLoading} className="w-full">
         {isLoading ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : (
@@ -82,6 +88,20 @@ const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({
         )}
         Pagar com Multicaixa Express
       </Button>
+
+      {retryCount > 0 && retryCount < 3 && (
+        <p className="mt-2 text-xs text-amber-600">
+          Tivemos um problema na comunicação com o serviço de pagamentos. 
+          Se o problema persistir, entre em contato com suporte.
+        </p>
+      )}
+
+      {retryCount >= 3 && (
+        <p className="mt-2 text-xs text-red-600">
+          Múltiplas tentativas falharam. Por favor, escolha outro método de pagamento 
+          ou tente novamente mais tarde.
+        </p>
+      )}
 
       {/* EMIS Payment Modal */}
       {showModal && emisToken && (

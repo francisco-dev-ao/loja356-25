@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PaymentLoader } from './payment-components/PaymentLoader';
 import { PaymentError } from './payment-components/PaymentError';
 import PaymentFrame from './PaymentFrame';
+import { toast } from 'sonner';
 
 interface MulticaixaExpressModalProps {
   isOpen: boolean;
@@ -37,6 +38,9 @@ const MulticaixaExpressModal = ({
   // Set up message handler to listen for payment events from the iframe
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
+      // Log all received messages to help with debugging
+      console.log('Received message from:', event.origin, 'Data:', event.data);
+      
       // Verify origin for security (EMIS production domain)
       if (event.origin !== 'https://pagamentonline.emis.co.ao') {
         console.log('Received message from unauthorized origin:', event.origin);
@@ -90,6 +94,12 @@ const MulticaixaExpressModal = ({
 
   const handleIframeLoad = () => {
     console.log('Iframe EMIS carregado com sucesso');
+    setLoading(false);
+  };
+
+  const handleIframeError = () => {
+    console.error('Erro ao carregar iframe EMIS');
+    setError('Erro ao conectar com o serviço de pagamento Multicaixa Express.');
     setLoading(false);
   };
 
