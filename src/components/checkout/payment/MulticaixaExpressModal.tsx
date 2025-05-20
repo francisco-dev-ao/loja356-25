@@ -1,8 +1,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import { generateReference } from '@/hooks/payment/utils/payment-reference';
 
 interface MulticaixaExpressModalProps {
@@ -22,22 +21,16 @@ const MulticaixaExpressModal = ({
 }: MulticaixaExpressModalProps) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [simulationState, setSimulationState] = useState<'pending' | 'success' | 'failed' | 'cancelled'>('pending');
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Instead of constructing a real frame URL, we're simulating the payment flow locally
-  // because of CORS issues with the real EMIS portal
+  const [countdown, setCountdown] = useState(120);
   
   // Timer for auto-close if no interaction
   const autoCloseTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [countdown, setCountdown] = useState(120);
 
   // Set up timers and cleanup
   useEffect(() => {
     if (isOpen) {
       setLoading(true);
       setError(null);
-      setSimulationState('pending');
       setCountdown(120);
       
       // Simulate loading completion after 2 seconds
@@ -66,37 +59,52 @@ const MulticaixaExpressModal = ({
         clearTimeout(loadTimer);
         clearTimeout(autoCloseTimerRef.current!);
         clearInterval(countdownInterval);
-        if (timerRef.current) clearTimeout(timerRef.current);
       };
     }
   }, [isOpen, onClose]);
 
-  // Handle simulated payment events
-  const handleSimulatedPayment = (type: 'success' | 'failed' | 'cancelled') => {
-    // Clear any existing timers
-    if (timerRef.current) clearTimeout(timerRef.current);
-    if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
-    
-    // Update state
-    setSimulationState(type);
-    
-    // Set timer to close modal after showing result
-    timerRef.current = setTimeout(() => {
-      const paymentReference = generateReference();
-      
-      if (type === 'success' && onPaymentSuccess) {
-        onPaymentSuccess(paymentReference);
-      } else if (type !== 'success' && onPaymentError) {
-        onPaymentError(
-          type === 'failed' 
-            ? 'Pagamento rejeitado pelo Multicaixa Express' 
-            : 'Pagamento cancelado pelo usuário'
-        );
+  // Set up message handler to listen for payment events
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Verify origin for security (EMIS production domain)
+      if (event.origin !== 'https://pagamentonline.emis.co.ao') {
+        console.log('Received message from unauthorized origin:', event.origin);
+        return;
       }
       
-      onClose();
-    }, 2000);
-  };
+      try {
+        console.log('Received message from EMIS:', event.data);
+        
+        if (event.data && typeof event.data === 'object') {
+          if (event.data.status === 'ACCEPTED') {
+            // Payment successful
+            const paymentReference = generateReference();
+            if (onPaymentSuccess) {
+              onPaymentSuccess(paymentReference);
+            }
+            onClose();
+          } else if (event.data.status === 'DECLINED') {
+            // Payment declined
+            if (onPaymentError) {
+              onPaymentError('Pagamento rejeitado pelo Multicaixa Express');
+            }
+            onClose();
+          } else if (event.data.status === 'CANCELLED') {
+            // Payment cancelled by user
+            if (onPaymentError) {
+              onPaymentError('Pagamento cancelado pelo usuário');
+            }
+            onClose();
+          }
+        }
+      } catch (err) {
+        console.error('Error processing message from EMIS:', err);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [onClose, onPaymentSuccess, onPaymentError]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -118,15 +126,12 @@ const MulticaixaExpressModal = ({
         {error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-background z-10">
             <div className="text-center p-6 max-w-md">
-              <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-              <h3 className="text-xl font-bold mb-2">Erro de Conexão</h3>
               <p className="mb-6 text-muted-foreground">{error}</p>
-              <Button onClick={onClose} className="mx-auto">Voltar</Button>
             </div>
           </div>
         )}
 
-        {!loading && !error && simulationState === 'pending' && (
+        {!loading && !error && (
           <div className="flex flex-col h-full">
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold mb-2">Multicaixa Express</h2>
@@ -137,7 +142,7 @@ const MulticaixaExpressModal = ({
               <div className="border rounded-lg p-6 flex flex-col items-center">
                 <h3 className="text-lg font-medium mb-4">QR Code</h3>
                 <div className="bg-gray-200 w-48 h-48 flex items-center justify-center rounded-lg mb-4">
-                  <span className="text-sm text-muted-foreground">QR Code Simulado</span>
+                  <span className="text-sm text-muted-foreground">QR Code do Pagamento</span>
                 </div>
                 <p className="text-sm text-center text-muted-foreground">
                   Abra o aplicativo Multicaixa Express e escaneie este QR Code para pagar.
@@ -167,56 +172,6 @@ const MulticaixaExpressModal = ({
                 </div>
               </div>
             </div>
-            
-            <div className="flex flex-col mt-8 space-y-3">
-              <p className="text-sm text-center text-muted-foreground mb-2">
-                Simulação de pagamento (apenas para ambiente de desenvolvimento)
-              </p>
-              <div className="flex justify-center space-x-4">
-                <Button 
-                  onClick={() => handleSimulatedPayment('success')}
-                  variant="default"
-                >
-                  Simular Sucesso
-                </Button>
-                <Button 
-                  onClick={() => handleSimulatedPayment('failed')}
-                  variant="destructive"
-                >
-                  Simular Falha
-                </Button>
-                <Button 
-                  onClick={() => handleSimulatedPayment('cancelled')}
-                  variant="outline"
-                >
-                  Simular Cancelamento
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {!loading && !error && simulationState === 'success' && (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <CheckCircle2 className="h-16 w-16 text-green-500 mb-4" />
-            <h3 className="text-xl font-bold mb-2">Pagamento Bem-Sucedido</h3>
-            <p className="text-muted-foreground">Seu pagamento foi processado com sucesso.</p>
-          </div>
-        )}
-        
-        {!loading && !error && simulationState === 'failed' && (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <AlertTriangle className="h-16 w-16 text-red-500 mb-4" />
-            <h3 className="text-xl font-bold mb-2">Pagamento Recusado</h3>
-            <p className="text-muted-foreground">Seu pagamento foi recusado. Por favor, tente novamente.</p>
-          </div>
-        )}
-        
-        {!loading && !error && simulationState === 'cancelled' && (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <AlertTriangle className="h-16 w-16 text-yellow-500 mb-4" />
-            <h3 className="text-xl font-bold mb-2">Pagamento Cancelado</h3>
-            <p className="text-muted-foreground">Você cancelou o pagamento.</p>
           </div>
         )}
       </DialogContent>

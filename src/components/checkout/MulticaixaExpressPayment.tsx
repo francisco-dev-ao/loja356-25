@@ -3,8 +3,6 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { generateTemporaryReference } from '@/hooks/payment/utils/payment-reference';
 import MulticaixaExpressModal from './payment/MulticaixaExpressModal';
 
@@ -71,9 +69,6 @@ const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({ amo
     setEmisToken(null);
     setErrorMessage(null);
     
-    // Simulate direct token creation (instead of failed API call)
-    // In production, this should be done through a server-side proxy to avoid CORS
-    // For now, we'll use a mock token based on the reference
     try {
       console.log("Iniciando pagamento MCX. Valor:", amount, "Referência:", paymentReference);
       
@@ -82,12 +77,12 @@ const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({ amo
         console.warn("AVISO: Token padrão de teste em uso. Configure o token real para ambiente de produção.");
       }
       
-      // Generate a token-like string based on the current time and reference
-      // In production, this should be a real token from your backend
-      const mockToken = btoa(`${paymentReference}-${Date.now()}`).substring(0, 32);
+      // Generate token for payment
+      // In production, this would be generated via the backend
+      const token = paymentReference;
       
-      console.log("Token simulado gerado:", mockToken);
-      setEmisToken(mockToken);
+      console.log("Token gerado:", token);
+      setEmisToken(token);
       setShowModal(true);
     } catch (err: any) {
       console.error("Erro ao iniciar pagamento MCX:", err);
@@ -116,7 +111,7 @@ const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({ amo
         Pagar com Multicaixa Express
       </Button>
 
-      {/* Use our custom modal instead of Dialog directly */}
+      {/* Multicaixa Express Payment Modal */}
       {showModal && emisToken && (
         <MulticaixaExpressModal
           isOpen={showModal}
@@ -126,39 +121,6 @@ const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({ amo
           onPaymentError={onPaymentError}
         />
       )}
-
-      <Dialog open={showModal && !emisToken} onOpenChange={(open) => !open && handleModalClose()}>
-        <DialogContent className="sm:max-w-[425px] md:max-w-[600px] lg:max-w-[650px] p-0 overflow-hidden">
-          <DialogHeader className="p-6 pb-0">
-            <DialogTitle>Pagamento Multicaixa Express</DialogTitle>
-          </DialogHeader>
-          <div className="p-6 pt-2 pb-4 min-h-[450px] flex flex-col items-center justify-center">
-            {isLoading && (
-              <div className="flex flex-col items-center justify-center h-full">
-                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-                <p className="text-muted-foreground">A preparar o pagamento...</p>
-              </div>
-            )}
-            
-            {errorMessage && (
-              <Alert variant="destructive" className="mt-4">
-                <AlertDescription>{errorMessage}</AlertDescription>
-              </Alert>
-            )}
-            
-            {!isLoading && !errorMessage && (
-              <div className="flex flex-col items-center justify-center h-full text-center">
-                <p className="text-sm text-muted-foreground mb-4">Aguardando conexão com o terminal de pagamento...</p>
-              </div>
-            )}
-          </div>
-          <DialogFooter className="p-6 pt-0">
-            <Button type="button" variant="outline" onClick={handleModalClose}>
-              Fechar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
