@@ -1,5 +1,4 @@
 
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 /**
@@ -21,66 +20,66 @@ interface EmisTokenResponse {
 }
 
 /**
- * Generate EMIS token using the server-side edge function
+ * Generate EMIS token directly from the client
+ * Note: This approach should only be used if backend token generation is not available
+ * Ideally, token generation should be handled server-side
  */
 export const generateEmisToken = async (params: EmisTokenParams): Promise<EmisTokenResponse> => {
   try {
-    console.log("Calling EMIS token generation with params:", params);
+    console.log("Generating EMIS token directly with params:", params);
 
-    const { data: emisTokenData, error: emisTokenError } = await supabase
-      .functions.invoke('generate-emis-token', {
-        body: params
-      });
+    const requestOptions = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(params)
+    };
 
-    if (emisTokenError) {
-      console.error('Error calling EMIS token function:', emisTokenError);
-      throw new Error(`Error calling EMIS token function: ${emisTokenError.message}`);
-    }
-
-    if (!emisTokenData) {
-      throw new Error('No response data received from EMIS token function');
-    }
-
-    if (emisTokenData.error) {
-      console.error('EMIS token function returned error:', emisTokenData.error);
-      throw new Error(`EMIS token error: ${emisTokenData.error}`);
-    }
-
-    if (!emisTokenData.id) {
-      console.error('EMIS token response missing ID:', emisTokenData);
-      throw new Error('Falha ao obter token de pagamento: ID não encontrado');
-    }
+    const response = await fetch('https://pagamentonline.emis.co.ao/online-payment-gateway/portal/frameToken', requestOptions);
     
-    console.log('EMIS token response:', emisTokenData);
-    return emisTokenData;
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error response from EMIS API:', response.status, errorText);
+      throw new Error(`Erro na API EMIS: ${response.status} ${errorText}`);
+    }
+
+    const responseText = await response.text();
+    console.log('EMIS API response text:', responseText);
+    
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      console.error('Invalid JSON in EMIS response:', responseText, e);
+      throw new Error('Resposta inválida da API EMIS');
+    }
+
+    if (!data || !data.id) {
+      console.error('Missing token ID in EMIS response:', data);
+      throw new Error('ID do token não encontrado na resposta da API');
+    }
+
+    return data;
   } catch (error: any) {
     console.error('Error generating EMIS token:', error);
-    toast.error(`Erro no processamento do pagamento: ${error.message || 'Erro desconhecido'}`);
+    toast.error(`Erro na geração do token: ${error.message || 'Falha na comunicação com EMIS'}`);
     throw error;
   }
 };
 
 /**
  * Update payment record with EMIS token and response
+ * (This would require database access - included for API compatibility)
  */
 export const updatePaymentWithEmisToken = async (reference: string, emisToken: string, emisResponse: any): Promise<void> => {
-  try {
-    const { error } = await supabase
-      .from('multicaixa_express_payments')
-      .update({
-        emis_token: emisToken,
-        emis_response: emisResponse
-      })
-      .eq('reference', reference);
-
-    if (error) {
-      console.error('Error updating payment with EMIS token:', error);
-      throw error;
-    }
-  } catch (error) {
-    console.error('Error updating payment with EMIS token:', error);
-    throw error;
-  }
+  // Since we're not using Supabase directly, this can be a no-op or adapted to local storage
+  console.log('Payment token stored:', { reference, emisToken, responseData: emisResponse });
+  
+  // Store the token in localStorage for reference
+  localStorage.setItem(`payment_token_${reference}`, emisToken);
+  localStorage.setItem(`payment_data_${reference}`, JSON.stringify(emisResponse));
 };
 
 /**

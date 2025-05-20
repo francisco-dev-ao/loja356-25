@@ -208,6 +208,7 @@ export type Database = {
           payment_method: string
           payment_reference: string | null
           payment_status: string
+          reference_mcx: string | null
           status: string
           total: number
           updated_at: string | null
@@ -219,6 +220,7 @@ export type Database = {
           payment_method: string
           payment_reference?: string | null
           payment_status?: string
+          reference_mcx?: string | null
           status?: string
           total: number
           updated_at?: string | null
@@ -230,6 +232,7 @@ export type Database = {
           payment_method?: string
           payment_reference?: string | null
           payment_status?: string
+          reference_mcx?: string | null
           status?: string
           total?: number
           updated_at?: string | null
@@ -368,6 +371,11 @@ export type Database = {
       settings: {
         Row: {
           address: string | null
+          bank_account_holder: string | null
+          bank_account_number: string | null
+          bank_iban: string | null
+          bank_logo_url: string | null
+          bank_name: string | null
           created_at: string | null
           currency_code: string | null
           currency_locale: string | null
@@ -389,12 +397,18 @@ export type Database = {
           smtp_host: string | null
           smtp_password: string | null
           smtp_port: string | null
+          smtp_secure: boolean | null
           smtp_user: string | null
           updated_at: string | null
           website: string | null
         }
         Insert: {
           address?: string | null
+          bank_account_holder?: string | null
+          bank_account_number?: string | null
+          bank_iban?: string | null
+          bank_logo_url?: string | null
+          bank_name?: string | null
           created_at?: string | null
           currency_code?: string | null
           currency_locale?: string | null
@@ -416,12 +430,18 @@ export type Database = {
           smtp_host?: string | null
           smtp_password?: string | null
           smtp_port?: string | null
+          smtp_secure?: boolean | null
           smtp_user?: string | null
           updated_at?: string | null
           website?: string | null
         }
         Update: {
           address?: string | null
+          bank_account_holder?: string | null
+          bank_account_number?: string | null
+          bank_iban?: string | null
+          bank_logo_url?: string | null
+          bank_name?: string | null
           created_at?: string | null
           currency_code?: string | null
           currency_locale?: string | null
@@ -443,6 +463,7 @@ export type Database = {
           smtp_host?: string | null
           smtp_password?: string | null
           smtp_port?: string | null
+          smtp_secure?: boolean | null
           smtp_user?: string | null
           updated_at?: string | null
           website?: string | null

@@ -3,11 +3,10 @@ import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/hooks/use-cart';
-import { OrderStatus, PaymentStatus } from './utils/payment-status';
 
 interface UsePaymentMessageHandlerProps {
   orderId: string;
-  updateOrderStatus: (status: string, paymentStatus: string) => Promise<void>;
+  updateOrderStatus: (orderId: string, status: string, paymentStatus: string) => Promise<void>;
   setPaymentStatus: (status: 'pending' | 'processing' | 'completed' | 'failed') => void;
   setIsModalOpen?: (open: boolean) => void;
   setIsProcessing?: (processing: boolean) => void;
@@ -27,9 +26,7 @@ export const usePaymentMessageHandler = ({
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       // Verify origin for security (EMIS production domain)
-      const allowedOrigins = ['https://pagamentonline.emis.co.ao'];
-      
-      if (!allowedOrigins.includes(event.origin)) {
+      if (event.origin !== 'https://pagamentonline.emis.co.ao') {
         console.log('Received message from unauthorized origin:', event.origin);
         return;
       }
@@ -43,7 +40,7 @@ export const usePaymentMessageHandler = ({
           toast.success('Pagamento efetuado com sucesso!');
           
           // Update order status in the database
-          updateOrderStatus('completed', 'paid');
+          updateOrderStatus(orderId, 'completed', 'paid');
           
           // Close the modal if setIsModalOpen is provided
           if (setIsModalOpen) {
@@ -65,7 +62,7 @@ export const usePaymentMessageHandler = ({
           if (setIsProcessing) setIsProcessing(false);
           if (setIsModalOpen) setIsModalOpen(false);
           
-          updateOrderStatus('failed', 'failed');
+          updateOrderStatus(orderId, 'failed', 'failed');
         }
         
         // Handle payment cancellation
@@ -76,7 +73,7 @@ export const usePaymentMessageHandler = ({
           if (setIsProcessing) setIsProcessing(false);
           if (setIsModalOpen) setIsModalOpen(false);
           
-          updateOrderStatus('cancelled', 'failed');
+          updateOrderStatus(orderId, 'cancelled', 'failed');
         }
       } catch (error) {
         console.error('Error processing message:', error);

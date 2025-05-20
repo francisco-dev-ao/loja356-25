@@ -1,7 +1,10 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import MulticaixaExpressPayment from './MulticaixaExpressPayment';
 import BankTransferPayment from './BankTransferPayment';
+import { Loader2 } from 'lucide-react';
+import { useMulticaixaPayment } from '@/hooks/payment/use-multicaixa-payment';
 
 interface PaymentProcessorProps {
   paymentMethod: string;
@@ -18,10 +21,19 @@ const PaymentProcessor = ({
   total, 
   handleCreateOrder 
 }: PaymentProcessorProps) => {
+  // Use a hook para gerenciar pagamentos Multicaixa Express
+  const { 
+    handlePaymentSuccess: onPaymentSuccess, 
+    handlePaymentError: onPaymentError 
+  } = useMulticaixaPayment({ 
+    amount: total, 
+    orderId: orderId || ''
+  });
+
   if (isProcessing && !orderId) {
     return (
       <div className="flex flex-col items-center justify-center py-8">
-        <div className="animate-spin h-8 w-8 border-4 border-microsoft-blue border-t-transparent rounded-full mb-4"></div>
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
         <p>Criando pedido...</p>
       </div>
     );
@@ -39,22 +51,12 @@ const PaymentProcessor = ({
     );
   }
 
-  const handlePaymentSuccess = (paymentReference: string) => {
-    console.log('Payment successful:', { paymentReference });
-    // TODO: Add logic to handle successful payment, e.g., redirect to a success page or update order status
-  };
-
-  const handlePaymentError = (error: any) => {
-    console.error('Payment error:', error);
-    // TODO: Add logic to handle payment error, e.g., show an error message to the user
-  };
-
   if (paymentMethod === 'multicaixa') {
     return <MulticaixaExpressPayment 
              amount={total} 
              reference={orderId} 
-             onPaymentSuccess={handlePaymentSuccess} 
-             onPaymentError={handlePaymentError} 
+             onPaymentSuccess={onPaymentSuccess} 
+             onPaymentError={onPaymentError} 
            />;
   } 
   if (paymentMethod === 'bank_transfer') {

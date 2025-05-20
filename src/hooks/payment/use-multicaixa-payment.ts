@@ -6,7 +6,6 @@ import { useCart } from '@/hooks/use-cart';
 import { usePaymentVerification } from './use-payment-verification';
 import { generateReference, storePaymentReference } from './utils/payment-reference';
 import { getActiveMulticaixaConfig, getMulticaixaSettings } from './utils/payment-config';
-import { generateEmisToken, updatePaymentWithEmisToken } from './utils/emis-token';
 import { savePaymentTransaction } from './utils/payment-transaction';
 import { updateOrderStatus } from './utils/payment-status';
 import { MulticaixaConfig, Settings } from '@/types/database';
@@ -67,74 +66,15 @@ export const useMulticaixaPayment = ({
         throw new Error(`Erro ao registrar transação: ${paymentError.message}`);
       }
 
-      // Process payment using the appropriate configuration
-      try {
-        // Determine which configuration to use
-        const activeConfig = configData || await getMulticaixaSettings();
-        
-        if (!activeConfig) {
-          throw new Error('Configurações não encontradas');
-        }
-        
-        console.log('Using Multicaixa Express configuration:', activeConfig);
-        
-        // Handle different property names based on config type
-        let frameToken: string | undefined;
-        let callbackUrl: string | undefined;
-        let cssUrl: string | undefined;
-        
-        // Check if it's a MulticaixaConfig or Settings object
-        if ('frame_token' in activeConfig) {
-          // This is a MulticaixaConfig
-          frameToken = (activeConfig as MulticaixaConfig).frame_token;
-          callbackUrl = (activeConfig as MulticaixaConfig).callback_url;
-          cssUrl = (activeConfig as MulticaixaConfig).css_url;
-        } else {
-          // This is a Settings object
-          const settingsObj = activeConfig as Settings;
-          frameToken = settingsObj.multicaixa_frametoken;
-          callbackUrl = settingsObj.multicaixa_callback;
-          cssUrl = settingsObj.multicaixa_cssurl;
-        }
-          
-        if (!frameToken) {
-          throw new Error('Token do Multicaixa Express não configurado');
-        }
-        
-        if (!callbackUrl) {
-          callbackUrl = `${window.location.origin}/api/payment-callback`;
-        }
-          
-        if (!cssUrl) {
-          cssUrl = `${window.location.origin}/multicaixa-express.css`;
-        }
-        
-        // Generate token from edge function
-        const emisTokenData = await generateEmisToken({
-          reference: reference,
-          amount: amount.toString(),
-          token: frameToken,
-          callbackUrl: callbackUrl,
-          cssUrl: cssUrl
-        });
+      // A token não será gerada neste momento, pois usamos implementação direta no componente MulticaixaExpressPayment
+      // Isso permite uma integração mais limpa sem depender de funções Supabase Edge
 
-        // Update payment record with token
-        await updatePaymentWithEmisToken(
-          reference, 
-          emisTokenData.id,
-          emisTokenData
-        );
-        
-        // Store the token for the modal
-        setPaymentToken(emisTokenData.id);
-        
-        // Call the callback if provided
-        if (onTokenGenerated) {
-          onTokenGenerated(emisTokenData.id);
-        }
-      } catch (error: any) {
-        console.error('Error processing EMIS token:', error);
-        throw error;
+      // Store token for modal (this will be null initially and set by the component)
+      setPaymentToken(reference);
+      
+      // Call the callback if provided
+      if (onTokenGenerated) {
+        onTokenGenerated(reference);
       }
     } catch (error: any) {
       console.error('Error initiating payment:', error);
@@ -146,12 +86,45 @@ export const useMulticaixaPayment = ({
     }
   };
 
+  // Handler for when the payment is successful via MulticaixaExpressPayment component
+  const handlePaymentSuccess = async (paymentRef: string) => {
+    try {
+      setPaymentStatus('completed');
+      
+      // Update order status to completed
+      await updateOrderStatus(orderId, 'completed', 'paid');
+      
+      // Clear cart
+      clearCart();
+      
+      // Navigate to success page
+      navigate(`/checkout/success?orderId=${orderId}`);
+    } catch (error: any) {
+      console.error('Error handling successful payment:', error);
+      toast.error('Erro ao processar pagamento bem-sucedido');
+    }
+  };
+  
+  // Handler for when the payment fails via MulticaixaExpressPayment component
+  const handlePaymentError = async (error: string) => {
+    setPaymentStatus('failed');
+    toast.error(`Falha no pagamento: ${error}`);
+    
+    try {
+      await updateOrderStatus(orderId, 'pending', 'failed');
+    } catch (err) {
+      console.error('Error updating order status after payment failure:', err);
+    }
+  };
+
   return {
     isProcessing,
     setIsProcessing,
     paymentToken,
     paymentStatus,
     handlePayment,
+    handlePaymentSuccess,
+    handlePaymentError,
     updateOrderStatus
   };
 };

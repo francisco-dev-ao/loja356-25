@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -112,7 +111,15 @@ const Checkout = () => {
   const handleSelectPaymentMethod = (method: string) => {
     setPaymentMethod(method);
   };
-  
+
+  // Add this function to handle payment verification after Multicaixa Express payment
+  const verifyPayment = async (paymentReference: string) => {
+    // This could be implemented to check payment status
+    console.log("Verificando pagamento com referência:", paymentReference);
+    
+    // In a real implementation, you might poll a server endpoint here
+  };
+
   // Redirect to home page if cart is empty
   if (items.length === 0) {
     return (
