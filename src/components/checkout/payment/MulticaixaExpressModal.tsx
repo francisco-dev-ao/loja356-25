@@ -5,6 +5,7 @@ import { PaymentLoader } from './payment-components/PaymentLoader';
 import { PaymentError } from './payment-components/PaymentError';
 import PaymentFrame from './PaymentFrame';
 import { toast } from 'sonner';
+import { constructEmisIframeUrl } from "@/hooks/payment/utils/multicaixa-service";
 
 interface MulticaixaExpressModalProps {
   isOpen: boolean;
@@ -25,13 +26,18 @@ const MulticaixaExpressModal = ({
   const [error, setError] = useState<string | null>(null);
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
   
-  // A URL da iframe para o pagamento é construída usando o token
+  // Construct the iframe URL for payment using the token
   useEffect(() => {
     if (token) {
-      // Esta é a URL real da EMIS para o portal de pagamento
-      const url = `https://pagamentonline.emis.co.ao/online-payment-gateway/portal/frame?token=${token}`;
-      console.log("Configurando URL do iframe EMIS:", url);
-      setIframeUrl(url);
+      try {
+        const url = constructEmisIframeUrl(token);
+        console.log("Configurando URL do iframe EMIS:", url);
+        setIframeUrl(url);
+      } catch (err: any) {
+        console.error("Error constructing iframe URL:", err);
+        setError(err.message || "Erro ao configurar página de pagamento");
+        setLoading(false);
+      }
     }
   }, [token]);
 
@@ -94,12 +100,6 @@ const MulticaixaExpressModal = ({
 
   const handleIframeLoad = () => {
     console.log('Iframe EMIS carregado com sucesso');
-    setLoading(false);
-  };
-
-  const handleIframeError = () => {
-    console.error('Erro ao carregar iframe EMIS');
-    setError('Erro ao conectar com o serviço de pagamento Multicaixa Express.');
     setLoading(false);
   };
 
