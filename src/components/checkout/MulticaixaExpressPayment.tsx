@@ -1,78 +1,71 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { generateTemporaryReference, generateReference } from '@/hooks/payment/utils/payment-reference';
 
 interface MulticaixaExpressPaymentProps {
   amount: number;
-  reference: string; // Este será o ID do pedido
+  reference: string; // This will be the order ID if available
   onPaymentSuccess: (paymentReference: string) => void;
   onPaymentError: (error: string) => void;
 }
 
-// ATENÇÃO: Esta configuração deve ser feita através das configurações do sistema
-// Considere usar variáveis de ambiente para estes valores
+// Config values from environment or defaults
 const GPO_FRAME_TOKEN = import.meta.env.VITE_GPO_FRAME_TOKEN as string || 'a53787fd-b49e-4469-a6ab-fa6acf19db48';
 const GPO_CSS_URL = import.meta.env.VITE_GPO_CSS_URL as string || window.location.origin + '/multicaixa-express.css';
 const GPO_CALLBACK_URL = import.meta.env.VITE_GPO_CALLBACK_URL as string || window.location.origin + '/api/payment-callback';
 const GPO_IFRAME_BASE_URL = "https://pagamentonline.emis.co.ao/online-payment-gateway/portal/frame?token=";
-
-// Função para formatar a referência como na classe PHP original
-function formatEmisReference(orderId: string): string {
-  try {
-    // Seguindo a mesma lógica do método PHP generateref()
-    return `${orderId}-AH-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
-  } catch (e) {
-    console.error("Error formatting EMIS reference for orderId:", orderId, e);
-    return orderId.replace(/[^a-zA-Z0-9]/g, '').substring(0, 20); // Fallback
-  }
-}
 
 const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({ amount, reference, onPaymentSuccess, onPaymentError }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [emisToken, setEmisToken] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  // Manipular o evento de mensagem do iframe para integração com o sistema de pagamento
-  const setupMessageListener = () => {
+  const [paymentReference, setPaymentReference] = useState<string>('');
+  
+  useEffect(() => {
+    // Generate payment reference when component mounts
+    const generatedReference = reference ? generateReference(reference) : generateTemporaryReference();
+    setPaymentReference(generatedReference);
+    
+    // Setup message listener for EMIS iframe communication
     const handleMessage = (event: MessageEvent) => {
-      // Verificar a origem para segurança
+      // Verify the origin for security
       if (event.origin !== 'https://pagamentonline.emis.co.ao') return;
       
-      console.log('Mensagem recebida do EMIS:', event.data);
+      console.log('Message received from EMIS:', event.data);
       
       try {
-        // Processar a resposta do EMIS
         if (event.data && typeof event.data === 'object') {
           if (event.data.status === 'ACCEPTED') {
-            // Pagamento aceito
+            // Payment successful
             toast.success('Pagamento processado com sucesso!');
-            onPaymentSuccess(reference);
+            onPaymentSuccess(paymentReference);
             setShowModal(false);
           } else if (event.data.status === 'DECLINED') {
-            // Pagamento rejeitado
+            // Payment declined
             toast.error('Pagamento rejeitado. Por favor tente novamente.');
             onPaymentError('Pagamento rejeitado pelo Multicaixa Express');
             setShowModal(false);
           } else if (event.data.status === 'CANCELLED') {
-            // Pagamento cancelado pelo usuário
+            // Payment cancelled by user
             toast.error('Pagamento cancelado pelo usuário.');
             onPaymentError('Pagamento cancelado pelo usuário');
             setShowModal(false);
           }
         }
       } catch (err) {
-        console.error('Erro ao processar mensagem do EMIS:', err);
+        console.error('Error processing message from EMIS:', err);
       }
     };
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  };
+  }, [reference, onPaymentSuccess, onPaymentError]);
 
   const handlePayment = async () => {
     setIsLoading(true);
@@ -80,20 +73,19 @@ const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({ amo
     setErrorMessage(null);
     setShowModal(true);
     
-    console.log("Iniciando pagamento MCX. Valor:", amount, "Referência:", reference);
+    console.log("Iniciando pagamento MCX. Valor:", amount, "Referência:", paymentReference);
     
-    // Verificar configurações
+    // Check configuration
     if (!GPO_FRAME_TOKEN || GPO_FRAME_TOKEN === 'a53787fd-b49e-4469-a6ab-fa6acf19db48') {
       console.warn("AVISO: Token padrão de teste em uso. Configure o token real para ambiente de produção.");
     }
     
     try {
-      const formattedReference = formatEmisReference(reference);
       const formattedAmount = amount.toFixed(2);
 
-      // Parâmetros para a API do EMIS, seguindo o exemplo PHP
+      // Parameters for EMIS API
       const params = {
-        reference: formattedReference,
+        reference: paymentReference,
         amount: formattedAmount,
         token: GPO_FRAME_TOKEN,
         mobile: 'PAYMENT',
@@ -105,7 +97,7 @@ const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({ amo
 
       console.log("Chamada API EMIS com parâmetros:", JSON.stringify(params));
 
-      // Fazer a chamada direta para a API do EMIS para gerar o token
+      // Direct call to EMIS API to generate token
       const emisResponse = await fetch('https://pagamentonline.emis.co.ao/online-payment-gateway/portal/frameToken', {
         method: 'POST',
         headers: {
@@ -115,7 +107,7 @@ const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({ amo
         body: JSON.stringify(params),
       });
 
-      // Processar a resposta da API
+      // Process API response
       const responseText = await emisResponse.text();
       
       if (!emisResponse.ok) {
@@ -123,7 +115,7 @@ const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({ amo
         throw new Error(`Falha na solicitação da API EMIS: ${emisResponse.status}. ${responseText}`);
       }
 
-      // Converter resposta para JSON
+      // Convert response to JSON
       let responseData;
       try {
         responseData = JSON.parse(responseText);
@@ -132,7 +124,7 @@ const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({ amo
         throw new Error(`Resposta inválida da API EMIS: ${responseText}`);
       }
 
-      // Verificar se o token foi gerado corretamente
+      // Check if token was generated correctly
       if (!responseData || typeof responseData.id !== 'string' || !responseData.id.trim()) {
         console.error("Resposta da API EMIS sem token válido:", responseData);
         throw new Error(`Resposta da API EMIS sem token válido: ${JSON.stringify(responseData)}`);
@@ -140,11 +132,8 @@ const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({ amo
       
       console.log("Token EMIS recebido:", responseData.id);
       
-      // Definir o token para exibir o iframe
+      // Set token to display iframe
       setEmisToken(responseData.id);
-      
-      // Configurar listener de mensagens para integração com o iframe
-      setupMessageListener();
 
     } catch (err: any) {
       console.error("Erro ao iniciar pagamento MCX:", err);

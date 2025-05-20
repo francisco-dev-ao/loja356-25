@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -67,7 +68,7 @@ const Checkout = () => {
           user_id: user.id,
           total: total,
           payment_method: paymentMethod,
-          payment_status: paymentMethod === 'bank_transfer' ? 'pending' : 'pending',
+          payment_status: 'pending',
           status: 'pending'
         })
         .select()
@@ -93,6 +94,9 @@ const Checkout = () => {
         throw new Error(`Erro ao adicionar itens ao pedido: ${itemsError.message}`);
       }
 
+      // Store latest order ID in local storage so it can be accessed if needed
+      localStorage.setItem('latest_order_id', orderData.id);
+      
       setOrderId(orderData.id);
       console.log("Pedido criado com sucesso:", orderData.id);
 
@@ -104,20 +108,13 @@ const Checkout = () => {
     } catch (error: any) {
       console.error('Erro ao criar pedido:', error);
       toast.error(error.message || 'Ocorreu um erro ao processar o pedido');
+    } finally {
       setIsProcessing(false);
     }
   };
 
   const handleSelectPaymentMethod = (method: string) => {
     setPaymentMethod(method);
-  };
-
-  // Add this function to handle payment verification after Multicaixa Express payment
-  const verifyPayment = async (paymentReference: string) => {
-    // This could be implemented to check payment status
-    console.log("Verificando pagamento com referência:", paymentReference);
-    
-    // In a real implementation, you might poll a server endpoint here
   };
 
   // Redirect to home page if cart is empty

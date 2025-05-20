@@ -3,14 +3,23 @@ import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { generateReference } from '@/hooks/payment/utils/payment-reference';
 
 interface MulticaixaExpressModalProps {
   isOpen: boolean;
   onClose: () => void;
   token: string;
+  onPaymentSuccess?: (reference: string) => void;
+  onPaymentError?: (error: string) => void;
 }
 
-const MulticaixaExpressModal = ({ isOpen, onClose, token }: MulticaixaExpressModalProps) => {
+const MulticaixaExpressModal = ({ 
+  isOpen, 
+  onClose, 
+  token,
+  onPaymentSuccess,
+  onPaymentError
+}: MulticaixaExpressModalProps) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -42,6 +51,47 @@ const MulticaixaExpressModal = ({ isOpen, onClose, token }: MulticaixaExpressMod
       }
     };
   }, [isOpen, onClose]);
+  
+  // Set up message listener for EMIS iframe
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Verify origin for security
+      if (event.origin !== 'https://pagamentonline.emis.co.ao') return;
+      
+      console.log('Received message from EMIS:', event.data);
+      
+      try {
+        // Process EMIS response
+        if (event.data && typeof event.data === 'object') {
+          if (event.data.status === 'ACCEPTED') {
+            // Payment accepted
+            if (onPaymentSuccess) {
+              const paymentReference = generateReference();
+              onPaymentSuccess(paymentReference);
+            }
+            onClose();
+          } else if (event.data.status === 'DECLINED') {
+            // Payment rejected
+            if (onPaymentError) {
+              onPaymentError('Pagamento rejeitado pelo Multicaixa Express');
+            }
+            onClose();
+          } else if (event.data.status === 'CANCELLED') {
+            // Payment cancelled by user
+            if (onPaymentError) {
+              onPaymentError('Pagamento cancelado pelo usuário');
+            }
+            onClose();
+          }
+        }
+      } catch (err) {
+        console.error('Error processing EMIS message:', err);
+      }
+    };
+    
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [onClose, onPaymentSuccess, onPaymentError]);
 
   // Handle frame load success
   const handleFrameLoad = () => {
@@ -83,6 +133,10 @@ const MulticaixaExpressModal = ({ isOpen, onClose, token }: MulticaixaExpressMod
       // After 3 retries, show error message
       setLoading(false);
       setError("Não foi possível carregar o sistema de pagamento. Por favor, tente novamente mais tarde.");
+      
+      if (onPaymentError) {
+        onPaymentError("Falha ao carregar o iframe de pagamento");
+      }
     }
   };
 
