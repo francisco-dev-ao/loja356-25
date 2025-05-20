@@ -257,21 +257,21 @@ const CheckoutSuccess = () => {
       
       // Fix the jsPDF type issue for lastAutoTable
       // @ts-ignore - using type assertion for jsPDF with autoTable plugin
-      const finalY = (doc as any).lastAutoTable?.finalY || 150;
+      let yPosition = (doc as any).lastAutoTable?.finalY || 150;
       
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text('Total:', 150, finalY + 10);
+      doc.text('Total:', 150, yPosition + 10);
       doc.setFontSize(12);
-      doc.text(formatPrice(order.total), 190, finalY + 10, { align: 'right' });
+      doc.text(formatPrice(order.total), 190, yPosition + 10, { align: 'right' });
       
       // Informações de pagamento
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text('Método de Pagamento:', 15, finalY + 25);
+      doc.text('Método de Pagamento:', 15, yPosition + 25);
       doc.setFont('helvetica', 'normal');
       const paymentMethod = order.payment_method === 'multicaixa' ? 'Multicaixa Express' : 'Transferência Bancária';
-      doc.text(paymentMethod, 60, finalY + 25);
+      doc.text(paymentMethod, 60, yPosition + 25);
 
       // Se for transferência bancária, adicionar detalhes da conta
       if (order.payment_method === 'bank_transfer') {
@@ -281,29 +281,29 @@ const CheckoutSuccess = () => {
           .single();
 
         if (settings) {
-          finalY += 35;
+          yPosition += 35;
           doc.setFontSize(10);
           doc.setFont('helvetica', 'bold');
-          doc.text('Informações Bancárias:', 15, finalY);
+          doc.text('Informações Bancárias:', 15, yPosition);
           doc.setFont('helvetica', 'normal');
           
-          doc.text(`Banco: ${settings.bank_name}`, 15, finalY + 8);
-          doc.text(`Titular: ${settings.bank_account_holder}`, 15, finalY + 16);
-          doc.text(`Conta: ${settings.bank_account_number}`, 15, finalY + 24);
-          doc.text(`IBAN: ${settings.bank_iban}`, 15, finalY + 32);
+          doc.text(`Banco: ${settings.bank_name}`, 15, yPosition + 8);
+          doc.text(`Titular: ${settings.bank_account_holder}`, 15, yPosition + 16);
+          doc.text(`Conta: ${settings.bank_account_number}`, 15, yPosition + 24);
+          doc.text(`IBAN: ${settings.bank_iban}`, 15, yPosition + 32);
           
-          finalY += 42;
+          yPosition += 42;
         }
       }
       
       // Notas e termos
       doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
-      doc.text('Notas:', 15, finalY + 40);
+      doc.text('Notas:', 15, yPosition + 40);
       doc.setFont('helvetica', 'normal');
-      doc.text('1. As licenças são enviadas por email após a confirmação do pagamento.', 15, finalY + 45);
-      doc.text('2. Suporte técnico gratuito por 30 dias após a compra.', 15, finalY + 50);
-      doc.text('3. Para qualquer dúvida, entre em contato com nossa equipe de suporte.', 15, finalY + 55);
+      doc.text('1. As licenças são enviadas por email após a confirmação do pagamento.', 15, yPosition + 45);
+      doc.text('2. Suporte técnico gratuito por 30 dias após a compra.', 15, yPosition + 50);
+      doc.text('3. Para qualquer dúvida, entre em contato com nossa equipe de suporte.', 15, yPosition + 55);
       
       // Rodapé
       doc.setFontSize(8);
