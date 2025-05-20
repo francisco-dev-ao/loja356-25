@@ -1,3 +1,4 @@
+
 /// <reference types="https://deno.land/x/deno/cli/types/dts/index.d.ts" />
 
 // Follow this setup guide to integrate the Deno language server with your editor:
@@ -74,10 +75,10 @@ serve(async (req: Request) => {
       reference: formattedReference,
       amount: formattedAmount,
       token: GPO_FRAME_TOKEN,
-      mobile: 'PAYMENT', // Alterado de AUTHORIZATION para PAYMENT
-      card: 'DISABLED', // Alterado de AUTHORIZATION para DISABLED
+      mobile: 'PAYMENT', 
+      card: 'DISABLED', 
       qrCode: 'PAYMENT',
-      cssUrl: GPO_CSS_URL,
+      cssUrl: GPO_CSS_URL, // Adicionando o CSS URL correto
       callbackUrl: GPO_CALLBACK_URL
     };
 
@@ -154,16 +155,3 @@ serve(async (req: Request) => {
     });
   }
 })
-
-<MulticaixaExpressPayment
-  amount={orderAmount}
-  reference={orderId}
-  onPaymentSuccess={(paymentRef) => {
-    console.log("Pagamento bem-sucedido:", paymentRef);
-    // Lógica de sucesso
-  }}
-  onPaymentError={(errorMessage) => {
-    console.error("Erro no pagamento:", errorMessage);
-    // Lógica de erro
-  }}
-/>

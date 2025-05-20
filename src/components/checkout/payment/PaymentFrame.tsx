@@ -7,6 +7,8 @@ interface PaymentFrameProps {
 }
 
 const PaymentFrame = ({ src, onLoad }: PaymentFrameProps) => {
+  console.log("Renderizando PaymentFrame com URL:", src);
+  
   return (
     <div className="w-full h-full">
       <iframe
@@ -15,6 +17,7 @@ const PaymentFrame = ({ src, onLoad }: PaymentFrameProps) => {
         className="w-full h-full border-0"
         title="Pagamento Multicaixa Express"
         allow="payment"
+        sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
       />
     </div>
   );

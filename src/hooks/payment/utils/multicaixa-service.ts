@@ -7,6 +7,7 @@ interface MulticaixaExpressConfig {
   callback: string;
   success: string;
   error: string;
+  cssurl?: string;
 }
 
 interface MulticaixaResponse {
@@ -44,7 +45,8 @@ export const getMulticaixaExpressConfig = async (): Promise<MulticaixaExpressCon
         frametoken: configData.frame_token,
         callback: configData.callback_url,
         success: configData.success_url,
-        error: configData.error_url
+        error: configData.error_url,
+        cssurl: configData.css_url || "https://pagamentonline.emis.co.ao/gpoconfig/qr_code_mobile_v2.css"
       };
     }
 
@@ -65,7 +67,8 @@ export const getMulticaixaExpressConfig = async (): Promise<MulticaixaExpressCon
         frametoken: data.multicaixa_frametoken || "a53787fd-b49e-4469-a6ab-fa6acf19db48",
         callback: data.multicaixa_callback || `${window.location.origin}/api/payment-callback`,
         success: data.multicaixa_success || `${window.location.origin}/checkout/success`,
-        error: data.multicaixa_error || `${window.location.origin}/checkout/failed`
+        error: data.multicaixa_error || `${window.location.origin}/checkout/failed`,
+        cssurl: data.multicaixa_cssurl || "https://pagamentonline.emis.co.ao/gpoconfig/qr_code_mobile_v2.css"
       };
     }
 
@@ -73,7 +76,8 @@ export const getMulticaixaExpressConfig = async (): Promise<MulticaixaExpressCon
       frametoken: "a53787fd-b49e-4469-a6ab-fa6acf19db48",
       callback: `${window.location.origin}/api/payment-callback`,
       success: `${window.location.origin}/checkout/success`,
-      error: `${window.location.origin}/checkout/failed`
+      error: `${window.location.origin}/checkout/failed`,
+      cssurl: "https://pagamentonline.emis.co.ao/gpoconfig/qr_code_mobile_v2.css"
     };
   } catch (error) {
     console.error("Error in getMulticaixaExpressConfig:", error);
@@ -122,34 +126,30 @@ export const initiateMulticaixaExpressPayment = async (
       mobile: "PAYMENT", 
       card: "DISABLED", // Desabilitar pagamento com cartão, apenas mobile
       qrCode: "PAYMENT",
+      cssUrl: config.cssurl || "https://pagamentonline.emis.co.ao/gpoconfig/qr_code_mobile_v2.css",
       callbackUrl: config.callback
     };
 
     console.log("Enviando requisição para API EMIS:", requestBody);
     
     try {
-      // Fazer a chamada direta para a API da EMIS para obter o token
-      const response = await fetch('https://pagamentonline.emis.co.ao/online-payment-gateway/portal/frameToken', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
-      });
+      // Fazer a chamada para a Edge Function que se conecta à API EMIS
+      const { data, error } = await supabase.functions.invoke(
+        'generate-emis-token',
+        {
+          body: {
+            reference: reference,
+            amount: paymentDetails.amount
+          }
+        }
+      );
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Erro na resposta da API EMIS:', response.status, errorText);
-        throw new Error(`Erro na API EMIS: ${response.status} ${errorText}`);
+      if (error || !data || !data.id) {
+        console.error('Erro na resposta da Edge Function:', error || "Resposta inválida");
+        throw new Error(error?.message || "Resposta inválida da função");
       }
       
-      const emisResponse = await response.json();
-      console.log("Resposta da API EMIS:", emisResponse);
-      
-      if (!emisResponse || !emisResponse.id) {
-        throw new Error("Resposta inválida da API EMIS");
-      }
+      console.log("Resposta da Edge Function (EMIS token):", data);
       
       // Salvando a referência do pagamento no banco de dados
       const { data: paymentRef, error: paymentRefError } = await supabase
@@ -159,7 +159,7 @@ export const initiateMulticaixaExpressPayment = async (
           reference: reference,
           amount: paymentDetails.amount,
           status: "pending",
-          token: emisResponse.id
+          token: data.id
         })
         .select()
         .single();
@@ -171,33 +171,13 @@ export const initiateMulticaixaExpressPayment = async (
       
       return {
         success: true,
-        id: emisResponse.id
+        id: data.id
       };
     } catch (emisError: any) {
-      console.error("Error calling EMIS API:", emisError);
-      
-      // Simulação de resposta em caso de erro na API EMIS
-      console.log("Usando token de fallback devido a erro na API EMIS");
-      
-      // Salvar a referência de pagamento no banco de dados mesmo assim
-      const { data: paymentRef, error: paymentRefError } = await supabase
-        .from("multicaixa_express_payments")
-        .insert({
-          order_id: paymentDetails.orderId,
-          reference: reference,
-          amount: paymentDetails.amount,
-          status: "pending"
-        })
-        .select()
-        .single();
-      
-      if (paymentRefError) {
-        console.error("Error saving payment reference:", paymentRefError);
-      }
-      
+      console.error("Error calling EMIS API via Edge Function:", emisError);
       return {
-        success: true,
-        id: reference
+        success: false,
+        error: emisError.message || "Erro ao comunicar com a API EMIS"
       };
     }
   } catch (error) {

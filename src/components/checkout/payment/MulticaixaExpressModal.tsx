@@ -29,6 +29,7 @@ const MulticaixaExpressModal = ({
     if (token) {
       // Esta é a URL real da EMIS para o portal de pagamento
       const url = `https://pagamentonline.emis.co.ao/online-payment-gateway/portal/frame?token=${token}`;
+      console.log("Configurando URL do iframe EMIS:", url);
       setIframeUrl(url);
     }
   }, [token]);
@@ -48,34 +49,47 @@ const MulticaixaExpressModal = ({
         if (event.data && typeof event.data === 'object') {
           if (event.data.status === 'ACCEPTED') {
             // Payment successful
+            console.log('Pagamento ACEITO pela EMIS');
             if (onPaymentSuccess) {
               onPaymentSuccess(token);
             }
             onClose();
           } else if (event.data.status === 'DECLINED') {
             // Payment declined
+            console.log('Pagamento RECUSADO pela EMIS');
             if (onPaymentError) {
               onPaymentError('Pagamento rejeitado pelo Multicaixa Express');
             }
             onClose();
           } else if (event.data.status === 'CANCELLED') {
             // Payment cancelled by user
+            console.log('Pagamento CANCELADO pelo usuário');
             if (onPaymentError) {
               onPaymentError('Pagamento cancelado pelo usuário');
             }
             onClose();
+          } else {
+            console.log('Status de pagamento desconhecido:', event.data.status);
           }
+        } else {
+          console.log('Formato de mensagem desconhecido:', event.data);
         }
       } catch (err) {
         console.error('Error processing message from EMIS:', err);
       }
     };
 
+    console.log('Registrando event listener para mensagens da EMIS');
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    
+    return () => {
+      console.log('Removendo event listener de mensagens da EMIS');
+      window.removeEventListener('message', handleMessage);
+    }
   }, [onClose, onPaymentSuccess, onPaymentError, token]);
 
   const handleIframeLoad = () => {
+    console.log('Iframe EMIS carregado com sucesso');
     setLoading(false);
   };
 
