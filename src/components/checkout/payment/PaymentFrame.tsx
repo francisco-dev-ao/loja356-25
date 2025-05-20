@@ -8,12 +8,13 @@ interface PaymentFrameProps {
 
 const PaymentFrame = ({ src, onLoad }: PaymentFrameProps) => {
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div className="w-full h-full">
       <iframe
         src={src}
         onLoad={onLoad}
-        className="w-full h-[500px] border-0"
+        className="w-full h-full border-0"
         title="Pagamento Multicaixa Express"
+        allow="payment"
       />
     </div>
   );

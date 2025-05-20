@@ -1,11 +1,10 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Loader2, CreditCard } from 'lucide-react';
-import { generateTemporaryReference } from '@/hooks/payment/utils/payment-reference';
-import MulticaixaExpressModal from './payment/MulticaixaExpressModal';
 import { initiateMulticaixaExpressPayment } from '@/hooks/payment/utils/multicaixa-service';
+import MulticaixaExpressModal from './payment/MulticaixaExpressModal';
 
 interface MulticaixaExpressPaymentProps {
   amount: number;
@@ -22,61 +21,18 @@ const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [paymentReference, setPaymentReference] = useState<string>('');
   const [emisToken, setEmisToken] = useState<string | null>(null);
   
-  useEffect(() => {
-    // Generate payment reference when component mounts
-    const generatedReference = reference ? reference : generateTemporaryReference();
-    setPaymentReference(generatedReference);
-    
-    // Setup message listener for EMIS iframe communication
-    const handleMessage = (event: MessageEvent) => {
-      // Verify the origin for security
-      if (event.origin !== 'https://pagamentonline.emis.co.ao') return;
-      
-      console.log('Message received from EMIS:', event.data);
-      
-      try {
-        if (event.data && typeof event.data === 'object') {
-          if (event.data.status === 'ACCEPTED') {
-            // Payment successful
-            toast.success('Pagamento processado com sucesso!');
-            onPaymentSuccess(paymentReference);
-            setShowModal(false);
-          } else if (event.data.status === 'DECLINED') {
-            // Payment declined
-            toast.error('Pagamento rejeitado. Por favor tente novamente.');
-            onPaymentError('Pagamento rejeitado pelo Multicaixa Express');
-            setShowModal(false);
-          } else if (event.data.status === 'CANCELLED') {
-            // Payment cancelled by user
-            toast.error('Pagamento cancelado pelo usuário.');
-            onPaymentError('Pagamento cancelado pelo usuário');
-            setShowModal(false);
-          }
-        }
-      } catch (err) {
-        console.error('Error processing message from EMIS:', err);
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [reference, onPaymentSuccess, onPaymentError, paymentReference]);
-
   const handlePayment = async () => {
     setIsLoading(true);
     setEmisToken(null);
-    setErrorMessage(null);
     
     try {
-      console.log("Iniciando pagamento MCX. Valor:", amount, "Referência:", paymentReference);
+      console.log("Iniciando pagamento MCX. Valor:", amount, "Referência:", reference);
       
-      // Iniciar pagamento usando nossa nova função
+      // Iniciar pagamento usando nossa função
       const paymentResult = await initiateMulticaixaExpressPayment({
-        orderId: paymentReference,
+        orderId: reference,
         amount: amount
       });
       
@@ -89,7 +45,6 @@ const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({
       setShowModal(true);
     } catch (err: any) {
       console.error("Erro ao iniciar pagamento MCX:", err);
-      setErrorMessage(err.message || "Não foi possível conectar ao serviço de pagamento. Tente novamente mais tarde.");
       toast.error("Erro ao iniciar pagamento: " + (err.message || "Falha na conexão"));
       
       if (typeof onPaymentError === 'function') {
@@ -102,9 +57,19 @@ const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({
 
   const handleModalClose = () => {
     setShowModal(false);
-    setIsLoading(false);
-    setEmisToken(null);
     console.log("Modal de pagamento fechado pelo usuário.");
+  };
+
+  const handlePaymentSuccess = (token: string) => {
+    console.log("Pagamento concluído com sucesso:", token);
+    toast.success("Pagamento processado com sucesso!");
+    onPaymentSuccess(token);
+  };
+
+  const handlePaymentError = (error: string) => {
+    console.error("Erro no pagamento:", error);
+    toast.error("Erro no pagamento: " + error);
+    onPaymentError(error);
   };
 
   return (
@@ -118,14 +83,14 @@ const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({
         Pagar com Multicaixa Express
       </Button>
 
-      {/* Multicaixa Express Payment Modal */}
+      {/* EMIS Payment Modal */}
       {showModal && emisToken && (
         <MulticaixaExpressModal
           isOpen={showModal}
           onClose={handleModalClose}
           token={emisToken}
-          onPaymentSuccess={onPaymentSuccess}
-          onPaymentError={onPaymentError}
+          onPaymentSuccess={handlePaymentSuccess}
+          onPaymentError={handlePaymentError}
         />
       )}
     </div>

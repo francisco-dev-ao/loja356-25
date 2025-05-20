@@ -1,10 +1,9 @@
 
-import { useState, useEffect, useRef } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { generateReference } from '@/hooks/payment/utils/payment-reference';
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PaymentLoader } from './payment-components/PaymentLoader';
 import { PaymentError } from './payment-components/PaymentError';
-import { PaymentMethods } from './payment-components/PaymentMethods';
+import PaymentFrame from './PaymentFrame';
 
 interface MulticaixaExpressModalProps {
   isOpen: boolean;
@@ -23,49 +22,18 @@ const MulticaixaExpressModal = ({
 }: MulticaixaExpressModalProps) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState(120);
+  const [iframeUrl, setIframeUrl] = useState<string | null>(null);
   
-  // Timer for auto-close if no interaction
-  const autoCloseTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Set up timers and cleanup
+  // A URL da iframe para o pagamento é construída usando o token
   useEffect(() => {
-    if (isOpen) {
-      setLoading(true);
-      setError(null);
-      setCountdown(120);
-      
-      // Simulate loading completion after 2 seconds
-      const loadTimer = setTimeout(() => {
-        setLoading(false);
-      }, 2000);
-      
-      // Set up countdown timer
-      const countdownInterval = setInterval(() => {
-        setCountdown(prev => {
-          if (prev <= 1) {
-            clearInterval(countdownInterval);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      
-      // Set up auto-close timer after 2 minutes of inactivity
-      autoCloseTimerRef.current = setTimeout(() => {
-        console.log("Auto-closing Multicaixa Express modal due to inactivity");
-        onClose();
-      }, 120000); // 2 minutes
-      
-      return () => {
-        clearTimeout(loadTimer);
-        clearTimeout(autoCloseTimerRef.current!);
-        clearInterval(countdownInterval);
-      };
+    if (token) {
+      // Esta é a URL real da EMIS para o portal de pagamento
+      const url = `https://pagamentonline.emis.co.ao/online-payment-gateway/portal/frame?token=${token}`;
+      setIframeUrl(url);
     }
-  }, [isOpen, onClose]);
+  }, [token]);
 
-  // Set up message handler to listen for payment events
+  // Set up message handler to listen for payment events from the iframe
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       // Verify origin for security (EMIS production domain)
@@ -80,9 +48,8 @@ const MulticaixaExpressModal = ({
         if (event.data && typeof event.data === 'object') {
           if (event.data.status === 'ACCEPTED') {
             // Payment successful
-            const paymentReference = generateReference();
             if (onPaymentSuccess) {
-              onPaymentSuccess(paymentReference);
+              onPaymentSuccess(token);
             }
             onClose();
           } else if (event.data.status === 'DECLINED') {
@@ -106,31 +73,28 @@ const MulticaixaExpressModal = ({
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [onClose, onPaymentSuccess, onPaymentError]);
+  }, [onClose, onPaymentSuccess, onPaymentError, token]);
 
-  // Efeito para fechar o modal se o countdown chegar a zero
-  useEffect(() => {
-    if (countdown === 0) {
-      if (onPaymentError) {
-        onPaymentError('Tempo para pagamento expirado');
-      }
-      onClose();
-    }
-  }, [countdown, onClose, onPaymentError]);
+  const handleIframeLoad = () => {
+    setLoading(false);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-3xl min-h-[500px] p-6" aria-describedby="payment-description">
-        <div id="payment-description" className="sr-only">
-          Diálogo de pagamento com Multicaixa Express
-        </div>
+      <DialogContent className="max-w-3xl min-h-[500px] p-0">
+        <DialogTitle className="sr-only">Pagamento Multicaixa Express</DialogTitle>
         
         {loading && <PaymentLoader />}
         
         {error && <PaymentError message={error} />}
 
-        {!loading && !error && (
-          <PaymentMethods token={token} countdown={countdown} />
+        {iframeUrl && (
+          <div className={`${loading ? 'hidden' : 'block'} h-[600px]`}>
+            <PaymentFrame 
+              src={iframeUrl} 
+              onLoad={handleIframeLoad} 
+            />
+          </div>
         )}
       </DialogContent>
     </Dialog>
