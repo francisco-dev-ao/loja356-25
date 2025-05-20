@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import MulticaixaExpressPayment from './MulticaixaExpressPayment';
 import BankTransferPayment from './BankTransferPayment';
 import { Loader2 } from 'lucide-react';
-import { useMulticaixaPayment } from '@/hooks/payment/use-multicaixa-payment';
 import { generateTemporaryReference } from '@/hooks/payment/utils/payment-reference';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
