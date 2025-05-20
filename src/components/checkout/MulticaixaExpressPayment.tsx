@@ -2,9 +2,10 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CreditCard } from 'lucide-react';
 import { generateTemporaryReference } from '@/hooks/payment/utils/payment-reference';
 import MulticaixaExpressModal from './payment/MulticaixaExpressModal';
+import { initiateMulticaixaExpressPayment } from '@/hooks/payment/utils/multicaixa-service';
 
 interface MulticaixaExpressPaymentProps {
   amount: number;
@@ -13,11 +14,12 @@ interface MulticaixaExpressPaymentProps {
   onPaymentError: (error: string) => void;
 }
 
-// Config values from environment or defaults
-const GPO_FRAME_TOKEN = import.meta.env.VITE_GPO_FRAME_TOKEN as string || 'a53787fd-b49e-4469-a6ab-fa6acf19db48';
-const GPO_CALLBACK_URL = import.meta.env.VITE_GPO_CALLBACK_URL as string || window.location.origin + '/api/payment-callback';
-
-const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({ amount, reference, onPaymentSuccess, onPaymentError }) => {
+const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({ 
+  amount, 
+  reference, 
+  onPaymentSuccess, 
+  onPaymentError 
+}) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -62,7 +64,7 @@ const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({ amo
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [reference, onPaymentSuccess, onPaymentError]);
+  }, [reference, onPaymentSuccess, onPaymentError, paymentReference]);
 
   const handlePayment = async () => {
     setIsLoading(true);
@@ -72,17 +74,18 @@ const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({ amo
     try {
       console.log("Iniciando pagamento MCX. Valor:", amount, "Referência:", paymentReference);
       
-      // Check configuration
-      if (!GPO_FRAME_TOKEN || GPO_FRAME_TOKEN === 'a53787fd-b49e-4469-a6ab-fa6acf19db48') {
-        console.warn("AVISO: Token padrão de teste em uso. Configure o token real para ambiente de produção.");
+      // Iniciar pagamento usando nossa nova função
+      const paymentResult = await initiateMulticaixaExpressPayment({
+        orderId: paymentReference,
+        amount: amount
+      });
+      
+      if (!paymentResult.success || !paymentResult.id) {
+        throw new Error(paymentResult.error || "Falha ao iniciar pagamento");
       }
       
-      // Generate token for payment
-      // In production, this would be generated via the backend
-      const token = paymentReference;
-      
-      console.log("Token gerado:", token);
-      setEmisToken(token);
+      console.log("Token gerado:", paymentResult.id);
+      setEmisToken(paymentResult.id);
       setShowModal(true);
     } catch (err: any) {
       console.error("Erro ao iniciar pagamento MCX:", err);
@@ -107,7 +110,11 @@ const MulticaixaExpressPayment: React.FC<MulticaixaExpressPaymentProps> = ({ amo
   return (
     <div className="mt-4">
       <Button onClick={handlePayment} disabled={isLoading} className="w-full">
-        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        {isLoading ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <CreditCard className="mr-2 h-4 w-4" />
+        )}
         Pagar com Multicaixa Express
       </Button>
 

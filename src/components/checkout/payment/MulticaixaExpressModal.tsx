@@ -108,6 +108,16 @@ const MulticaixaExpressModal = ({
     return () => window.removeEventListener('message', handleMessage);
   }, [onClose, onPaymentSuccess, onPaymentError]);
 
+  // Efeito para fechar o modal se o countdown chegar a zero
+  useEffect(() => {
+    if (countdown === 0) {
+      if (onPaymentError) {
+        onPaymentError('Tempo para pagamento expirado');
+      }
+      onClose();
+    }
+  }, [countdown, onClose, onPaymentError]);
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-3xl min-h-[500px] p-6" aria-describedby="payment-description">
