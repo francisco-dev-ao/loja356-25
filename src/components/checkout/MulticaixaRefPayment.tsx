@@ -8,6 +8,7 @@ import { createMulticaixaRefPayment, formatAmount } from '@/hooks/payment/utils/
 interface MulticaixaRefPaymentProps {
   amount: number;
   description: string;
+  orderId?: string;
   onPaymentSuccess: (reference: string) => void;
   onPaymentError: (error: string) => void;
 }
@@ -15,6 +16,7 @@ interface MulticaixaRefPaymentProps {
 const MulticaixaRefPayment: React.FC<MulticaixaRefPaymentProps> = ({ 
   amount, 
   description,
+  orderId = 'temp-' + Date.now(), // Generate temporary orderId if not provided
   onPaymentSuccess, 
   onPaymentError 
 }) => {
@@ -27,6 +29,7 @@ const MulticaixaRefPayment: React.FC<MulticaixaRefPaymentProps> = ({
     
     try {
       const result = await createMulticaixaRefPayment({
+        orderId,
         amount,
         description
       });

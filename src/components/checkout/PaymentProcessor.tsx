@@ -107,6 +107,7 @@ const PaymentProcessor = ({
     return <MulticaixaRefPayment 
              amount={total} 
              description="Pagamento do pedido"
+             orderId={tempReference}
              onPaymentSuccess={handlePaymentSuccess} 
              onPaymentError={handlePaymentError} 
            />;
@@ -139,6 +140,7 @@ const PaymentProcessor = ({
       return <MulticaixaRefPayment 
                amount={total} 
                description={`Pedido #${orderId}`}
+               orderId={orderId}
                onPaymentSuccess={handlePaymentSuccess} 
                onPaymentError={handlePaymentError} 
              />;
