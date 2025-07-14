@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import MulticaixaExpressPayment from './MulticaixaExpressPayment';
+import MulticaixaRefPayment from './MulticaixaRefPayment';
 import BankTransferPayment from './BankTransferPayment';
 import { Loader2 } from 'lucide-react';
 import { generateTemporaryReference } from '@/hooks/payment/utils/payment-reference';
@@ -102,6 +103,15 @@ const PaymentProcessor = ({
            />;
   }
 
+  if (!orderId && paymentMethod === 'multicaixa_ref') {
+    return <MulticaixaRefPayment 
+             amount={total} 
+             description="Pagamento do pedido"
+             onPaymentSuccess={handlePaymentSuccess} 
+             onPaymentError={handlePaymentError} 
+           />;
+  }
+
   // Normal flow - create order first
   if (!paymentMethod) {
     return (
@@ -124,7 +134,15 @@ const PaymentProcessor = ({
                onPaymentSuccess={handlePaymentSuccess} 
                onPaymentError={handlePaymentError} 
              />;
-    } 
+    }
+    if (paymentMethod === 'multicaixa_ref') {
+      return <MulticaixaRefPayment 
+               amount={total} 
+               description={`Pedido #${orderId}`}
+               onPaymentSuccess={handlePaymentSuccess} 
+               onPaymentError={handlePaymentError} 
+             />;
+    }
     if (paymentMethod === 'bank_transfer') {
       return <BankTransferPayment total={total} orderId={orderId} />;
     }
