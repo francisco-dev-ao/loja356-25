@@ -14,9 +14,9 @@ import { supabase } from '@/integrations/supabase/client';
 // Import refactored components
 import CheckoutSteps from '@/components/checkout/CheckoutSteps';
 import CheckoutSummary from '@/components/checkout/CheckoutSummary';
-import CheckoutPaymentMethods from '@/components/checkout/CheckoutPaymentMethods';
+import PaymentMethods from '@/components/checkout/PaymentMethods';
 import AccountTabs from '@/components/checkout/AccountTabs';
-import PaymentProcessor from '@/components/checkout/PaymentProcessor';
+import MulticaixaRefPayment from '@/components/checkout/MulticaixaRefPayment';
 
 const Checkout = () => {
   const { items, total, clearCart } = useCart();
@@ -100,10 +100,12 @@ const Checkout = () => {
       setOrderId(orderData.id);
       console.log("Pedido criado com sucesso:", orderData.id);
 
-      // If the payment method is bank transfer, redirect immediately to the success page
-      if (paymentMethod === 'bank_transfer') {
-        navigate(`/checkout/success?orderId=${orderData.id}`);
-        clearCart();
+      // Set order ID for payment processing
+      setOrderId(orderData.id);
+      
+      // Update order with payment reference after payment
+      if (paymentMethod === 'multicaixa_ref') {
+        // Payment will be processed in the MulticaixaRefPayment component
       }
     } catch (error: any) {
       console.error('Erro ao criar pedido:', error);
@@ -172,18 +174,39 @@ const Checkout = () => {
                   <div className="p-6">
                     <h3 className="text-lg font-medium mb-4">Método de Pagamento</h3>
                     
-                    <CheckoutPaymentMethods 
+                    <PaymentMethods 
                       paymentMethod={paymentMethod} 
-                      handleSelectPaymentMethod={handleSelectPaymentMethod} 
+                      onSelectPaymentMethod={handleSelectPaymentMethod} 
                     />
 
-                    <PaymentProcessor
-                      paymentMethod={paymentMethod}
-                      isProcessing={isProcessing}
-                      orderId={orderId}
-                      total={total}
-                      handleCreateOrder={handleCreateOrder}
-                    />
+                    {paymentMethod === 'multicaixa_ref' && (
+                      <MulticaixaRefPayment
+                        amount={total}
+                        description={`Pedido ${orderId || 'checkout'}`}
+                        orderId={orderId}
+                        onSuccess={() => {
+                          if (orderId) {
+                            navigate(`/checkout/success?orderId=${orderId}`);
+                            clearCart();
+                          } else {
+                            handleCreateOrder();
+                          }
+                        }}
+                        onError={(error) => {
+                          toast.error(`Erro no pagamento: ${error}`);
+                        }}
+                      />
+                    )}
+
+                    {!paymentMethod && (
+                      <Button 
+                        onClick={handleCreateOrder}
+                        className="w-full"
+                        disabled={isProcessing}
+                      >
+                        {isProcessing ? 'Criando pedido...' : 'Finalizar Pedido'}
+                      </Button>
+                    )}
                   </div>
                 </TabsContent>
               </Tabs>
