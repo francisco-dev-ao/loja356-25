@@ -19,7 +19,7 @@ import AccountTabs from '@/components/checkout/AccountTabs';
 import MulticaixaRefPayment from '@/components/checkout/MulticaixaRefPayment';
 
 const Checkout = () => {
-  const { items, total, finalTotal, clearCart } = useCart();
+  const { items, total, finalTotal, clearCart, appliedCoupon } = useCart();
   const { isAuthenticated, user, profile } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('account');
@@ -67,6 +67,9 @@ const Checkout = () => {
         .insert({
           user_id: user.id,
           total: finalTotal,
+          subtotal: total,
+          discount_amount: appliedCoupon ? (total - finalTotal) : 0,
+          coupon_code: appliedCoupon ? appliedCoupon.code : null,
           payment_method: paymentMethod,
           payment_status: 'pending',
           status: 'pending'

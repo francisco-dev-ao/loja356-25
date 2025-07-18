@@ -22,11 +22,12 @@ const PaymentMethods = ({ paymentMethod, onSelectPaymentMethod }: PaymentMethods
         <CardContent className="p-6">
           <div className="flex items-center">
             <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mr-4">
-              <CreditCard size={24} className="text-primary" />
+              {/* Substituir o ícone de cartão pela imagem REFNew.png */}
+              <img src="/images/REFNew.png" alt="Multicaixa" className="w-10 h-10 object-contain" />
             </div>
             <div>
-              <h4 className="font-medium text-lg">Multicaixa Referência</h4>
-              <p className="text-sm text-muted-foreground">Pagamento por referência ATM/Multicaixa</p>
+              <h4 className="font-medium text-lg">Pagamentos por Referência</h4>
+              <p className="text-sm text-muted-foreground">Pague em um ATM ou Multicaixa Express ou qualquer internet banking</p>
             </div>
           </div>
         </CardContent>

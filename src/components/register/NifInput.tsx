@@ -9,6 +9,7 @@ interface NifInputProps {
   setNif: (value: string) => void;
   setCompanyName: (value: string) => void;
   setAddress: (value: string) => void;
+  setPhone: (value: string) => void;
   setNifError: (value: string) => void;
   nifError: string;
 }
@@ -18,6 +19,7 @@ export const NifInput: React.FC<NifInputProps> = ({
   setNif, 
   setCompanyName, 
   setAddress, 
+  setPhone,
   setNifError,
   nifError
 }) => {
@@ -42,26 +44,23 @@ export const NifInput: React.FC<NifInputProps> = ({
 
   const handleNifBlur = async () => {
     if (!nif) return;
-    
     setIsCheckingNif(true);
     setNifError('');
-    
     try {
-      // Call the API to check the NIF/BI
-      const response = await fetch(`https://consulta.edgarsingui.ao/public/consultar-por-nif/${nif}`);
+      // Nova API para consultar NIF
+      const response = await fetch(`https://api-nif.angohost.ao/consultar/${nif}`);
       const data = await response.json();
-      
-      if (data.data && data.data.success) {
-        // Auto-fill fields with data from API
+      if (response.ok && data.data) {
         setCompanyName(data.data.nome || '');
         setAddress(data.data.endereco || '');
+        setPhone(data.data.numero_contacto || '');
         toast.success('Dados encontrados e preenchidos automaticamente!');
       } else {
-        setNifError('NIF ou BI não encontrado. Verifique se está correto.');
+        setNifError('NIF não encontrado ou inválido.');
       }
     } catch (error) {
-      console.error('Error fetching NIF data:', error);
-      setNifError('Erro ao consultar o NIF ou BI. Por favor, tente novamente.');
+      console.error('Erro ao consultar NIF:', error);
+      setNifError('Erro ao consultar o NIF. Por favor, tente novamente.');
     } finally {
       setIsCheckingNif(false);
     }

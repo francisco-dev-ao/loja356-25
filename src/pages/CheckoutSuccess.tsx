@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
 import { InvoicePDFGenerator } from '@/lib/invoice-pdf-generator';
 import { formatCurrency, formatPrice } from '@/lib/formatters';
+import { sendEmail } from '@/services/email';
 
 interface OrderItem {
   id: string;
@@ -58,6 +59,9 @@ const CheckoutSuccess = () => {
     email: "financeiro@office365.ao",
     website: "www.office365.ao"
   };
+
+  // Adicionar estado para referência de pagamento
+  const [paymentReference, setPaymentReference] = useState<any>(null);
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -130,6 +134,14 @@ const CheckoutSuccess = () => {
     if (orderId && orderId !== 'N/A') {
       fetchOrderDetails();
     }
+
+    // Buscar referência de pagamento do localStorage
+    if (orderId) {
+      const paymentRefData = localStorage.getItem(`payment_ref_${orderId}`);
+      if (paymentRefData) {
+        setPaymentReference(JSON.parse(paymentRefData));
+      }
+    }
   }, [orderId, emailSent]);
 
   const sendOrderConfirmationEmail = async (orderId: string) => {
@@ -159,7 +171,6 @@ const CheckoutSuccess = () => {
       // Get payment reference data if exists
       const paymentRefData = orderId ? localStorage.getItem(`payment_ref_${orderId}`) : null;
       let paymentReference = null;
-      
       if (paymentRefData) {
         paymentReference = JSON.parse(paymentRefData);
       }
@@ -175,10 +186,24 @@ const CheckoutSuccess = () => {
 
       // Save the PDF
       pdfGenerator.save(`FATURA-${orderId.substring(0, 8)}.pdf`);
-      toast.success('Fatura profissional gerada com sucesso!');
+
+      // Enviar por e-mail
+      const pdfBase64 = pdfGenerator.output().split(',')[1];
+      await sendEmail({
+        to: profile.email,
+        subject: 'Sua Proforma/Confirmação de Pedido',
+        html: `<p>Olá, ${profile.name || 'cliente'}!<br>Sua Proforma está em anexo.<br>Qualquer dúvida, estamos à disposição.</p>`,
+        attachments: [
+          {
+            filename: `PROFORMA-${orderId.substring(0, 8)}.pdf`,
+            content: pdfBase64
+          }
+        ]
+      });
+      toast.success('Proforma enviada para seu e-mail!');
     } catch (error) {
-      console.error('Erro ao gerar PDF:', error);
-      toast.error('Erro ao gerar PDF da fatura');
+      console.error('Erro ao gerar/enviar PDF:', error);
+      toast.error('Erro ao gerar ou enviar a Proforma por e-mail');
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -229,6 +254,43 @@ const CheckoutSuccess = () => {
                       </span>
                     </div>
                   </div>
+
+                  {/* Exibir dados da referência Multicaixa se houver */}
+                  {order?.payment_method === 'multicaixa_ref' && paymentReference && (
+                    <div className="mt-6 border rounded-md p-4 bg-blue-50">
+                      <h3 className="font-medium mb-2 text-blue-900 flex items-center gap-2">
+                        <span>Referência Multicaixa</span>
+                      </h3>
+                      <div className="grid grid-cols-1 gap-2 mb-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Entidade:</span>
+                          <span className="font-mono font-bold">{paymentReference.entity}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Referência:</span>
+                          <span className="font-mono font-bold">{paymentReference.reference}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Valor:</span>
+                          <span className="font-mono font-bold">{formatPrice(paymentReference.amount)}</span>
+                        </div>
+                      </div>
+                      <div className="mt-3">
+                        <h4 className="font-medium mb-1">Como pagar:</h4>
+                        <ol className="list-decimal list-inside space-y-1 text-sm">
+                          <li>Vá a um ATM ou Multicaixa Express</li>
+                          <li>Selecione "Pagamentos" → "Outros Serviços"</li>
+                          <li>Digite a Entidade: <span className="font-mono font-bold">{paymentReference.entity}</span></li>
+                          <li>Digite a Referência: <span className="font-mono font-bold">{paymentReference.reference}</span></li>
+                          <li>Confirme o valor: <span className="font-mono font-bold">{formatPrice(paymentReference.amount)}</span></li>
+                          <li>Confirme o pagamento</li>
+                        </ol>
+                      </div>
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        Esta referência é válida por 3 dias. O pagamento será processado automaticamente após a confirmação.
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
                 <div>

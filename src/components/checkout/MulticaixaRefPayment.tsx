@@ -6,6 +6,18 @@ import { createMulticaixaReference, MulticaixaRefResponse } from '@/services/pay
 import { Loader2, Copy, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatPrice } from '@/lib/formatters';
+import { InvoicePDFGenerator } from '@/lib/invoice-pdf-generator';
+import { useAuth } from '@/hooks/use-auth';
+import { supabase } from '@/integrations/supabase/client';
+
+const companyInfo = {
+  name: "Office365, Lda",
+  address: "Rua Comandante Gika, n.º 100, Luanda, Angola",
+  nif: "5417124080",
+  phone: "+244 923 456 789",
+  email: "financeiro@office365.ao",
+  website: "www.office365.ao"
+};
 
 interface MulticaixaRefPaymentProps {
   amount: number;
@@ -24,6 +36,8 @@ const MulticaixaRefPayment = ({
 }: MulticaixaRefPaymentProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [referenceData, setReferenceData] = useState<MulticaixaRefResponse | null>(null);
+  const { profile } = useAuth();
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const handleGenerateReference = async () => {
     setIsLoading(true);
@@ -65,6 +79,61 @@ const MulticaixaRefPayment = ({
   };
 
   if (referenceData) {
+    const handleGenerateInvoice = async () => {
+      if (!orderId || !profile) {
+        toast.error('Dados insuficientes para gerar a fatura');
+        return;
+      }
+      setIsGeneratingPdf(true);
+      try {
+        // Buscar detalhes do pedido
+        const { data: orderData, error: orderError } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('id', orderId)
+          .single();
+        if (orderError) throw orderError;
+        // Buscar itens do pedido
+        const { data: orderItems, error: itemsError } = await supabase
+          .from('order_items')
+          .select('*')
+          .eq('order_id', orderId);
+        if (itemsError) throw itemsError;
+        // Buscar nomes dos produtos
+        const productIds = orderItems.map(item => item.product_id);
+        const { data: products, error: productsError } = await supabase
+          .from('products')
+          .select('id, name')
+          .in('id', productIds);
+        if (productsError) throw productsError;
+        // Associar nomes aos itens
+        const itemsWithProductNames = orderItems.map(item => {
+          const product = products.find(p => p.id === item.product_id);
+          return {
+            ...item,
+            productName: product?.name || 'Produto não encontrado'
+          };
+        });
+        const orderWithItems = {
+          ...orderData,
+          items: itemsWithProductNames
+        };
+        // Gerar PDF
+        const pdfGenerator = new InvoicePDFGenerator();
+        pdfGenerator.generateProfessionalInvoice({
+          order: orderWithItems,
+          profile,
+          companyInfo,
+          paymentReference: referenceData
+        });
+        pdfGenerator.save(`FATURA-${orderId.substring(0, 8)}.pdf`);
+        toast.success('Fatura gerada com sucesso!');
+      } catch (error) {
+        toast.error('Erro ao gerar a fatura PDF');
+      } finally {
+        setIsGeneratingPdf(false);
+      }
+    };
     return (
       <Card className="w-full">
         <CardHeader>
@@ -141,6 +210,12 @@ const MulticaixaRefPayment = ({
               Esta referência é válida por 3 dias. O pagamento será processado automaticamente após a confirmação.
             </AlertDescription>
           </Alert>
+
+          {orderId && (
+            <Button onClick={handleGenerateInvoice} className="w-full" disabled={isGeneratingPdf}>
+              {isGeneratingPdf ? 'Gerando Fatura...' : 'Gerar Fatura PDF'}
+            </Button>
+          )}
         </CardContent>
       </Card>
     );

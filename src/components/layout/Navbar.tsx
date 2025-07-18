@@ -24,9 +24,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-microsoft-blue rounded-md flex items-center justify-center">
-              <span className="text-white font-bold text-lg sm:text-xl">O</span>
-            </div>
+            <img src="/images/Icone-02.png" alt="Logo" className="w-10 h-10 sm:w-12 sm:h-12 object-contain" />
             <span className="font-heading font-semibold text-base sm:text-xl hidden sm:inline-block">Office365</span>
           </Link>
 

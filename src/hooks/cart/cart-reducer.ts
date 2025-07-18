@@ -7,6 +7,32 @@ export const initialState: CartState = {
   appliedCoupon: null
 };
 
+function recalculateCoupon(state: CartState, items: CartItem[]): CartState {
+  const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  if (state.appliedCoupon) {
+    const { code, discountType, discountValue } = state.appliedCoupon;
+    let discountedTotal = total;
+    if (discountType === 'percentage') {
+      const percentage = Math.min(Math.max(discountValue, 0), 100);
+      discountedTotal = total * (1 - percentage / 100);
+    } else if (discountType === 'fixed') {
+      discountedTotal = Math.max(total - discountValue, 0);
+    }
+    return {
+      ...state,
+      items,
+      total,
+      appliedCoupon: {
+        code,
+        discountType,
+        discountValue,
+        discountedTotal
+      }
+    };
+  }
+  return { ...state, items, total };
+}
+
 export const cartReducer = (state: CartState, action: CartAction): CartState => {
   switch (action.type) {
     case 'ADD_ITEM': {
@@ -24,20 +50,12 @@ export const cartReducer = (state: CartState, action: CartAction): CartState => 
           quantity: newQuantity,
         };
 
-        return {
-          ...state,
-          items: updatedItems,
-          total: updatedItems.reduce((acc, item) => acc + item.price * item.quantity, 0),
-        };
+        return recalculateCoupon(state, updatedItems);
       } else {
         // Add new item with the specified quantity (or default to 1)
         const quantity = action.payload.quantity || 1;
         const newItem = { ...action.payload, quantity };
-        return {
-          ...state,
-          items: [...state.items, newItem],
-          total: state.total + newItem.price * quantity,
-        };
+        return recalculateCoupon(state, [...state.items, newItem]);
       }
     }
 
@@ -52,20 +70,12 @@ export const cartReducer = (state: CartState, action: CartAction): CartState => 
           : item
       );
 
-      return {
-        ...state,
-        items: updatedItems,
-        total: updatedItems.reduce((acc, item) => acc + item.price * item.quantity, 0),
-      };
+      return recalculateCoupon(state, updatedItems);
     }
 
     case 'REMOVE_ITEM': {
       const filteredItems = state.items.filter((item) => item.id !== action.payload.id);
-      return {
-        ...state,
-        items: filteredItems,
-        total: filteredItems.reduce((acc, item) => acc + item.price * item.quantity, 0),
-      };
+      return recalculateCoupon(state, filteredItems);
     }
 
     case 'CLEAR_CART':

@@ -188,25 +188,24 @@ const Cart = () => {
 
             {/* Authentication Section (Only shown when needed) */}
             {showAuth && !isAuthenticated && (
-              <div className="mt-8 bg-white rounded-lg border border-gray-200 overflow-hidden">
-                <div className="p-6">
-                  <div className="flex items-center mb-4">
-                    <User size={20} className="text-microsoft-blue mr-2" />
-                    <h2 className="text-xl font-semibold">Autenticação</h2>
+              <div className="mt-8 bg-gradient-to-br from-microsoft-blue/10 to-white rounded-2xl border-2 border-microsoft-blue/30 shadow-2xl overflow-hidden">
+                <div className="p-8">
+                  <div className="flex items-center mb-6">
+                    <User size={28} className="text-microsoft-blue mr-3 drop-shadow" />
+                    <h2 className="text-2xl font-extrabold text-microsoft-blue tracking-tight drop-shadow">Acesso à Conta</h2>
                   </div>
-                  
                   <Tabs defaultValue="login" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
+                    <TabsList className="grid w-full grid-cols-2 mb-4 bg-microsoft-blue/5 border border-microsoft-blue/10 rounded-lg">
                       <TabsTrigger value="login">Login</TabsTrigger>
                       <TabsTrigger value="register">Cadastrar</TabsTrigger>
                     </TabsList>
                     <TabsContent value="login" className="mt-4">
-                      <Card className="pt-4 px-4">
+                      <Card className="pt-4 px-4 bg-white/90 shadow-none border-none">
                         <LoginForm redirectAfter={false} />
                       </Card>
                     </TabsContent>
                     <TabsContent value="register" className="mt-4">
-                      <Card className="pt-4 px-4">
+                      <Card className="pt-4 px-4 bg-white/90 shadow-none border-none">
                         <RegisterForm redirectAfter={false} />
                       </Card>
                     </TabsContent>
