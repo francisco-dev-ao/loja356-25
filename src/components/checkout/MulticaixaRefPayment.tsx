@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { createMulticaixaReference, MulticaixaRefResponse } from '@/services/payment/multicaixa-ref';
 import { Loader2, Copy, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatPrice } from '@/lib/formatters';
 
 interface MulticaixaRefPaymentProps {
   amount: number;
@@ -111,7 +112,7 @@ const MulticaixaRefPayment = ({
             <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
               <div>
                 <p className="text-sm text-muted-foreground">Valor</p>
-                <p className="font-mono text-lg font-bold">KZ {referenceData.amount.toLocaleString('pt-AO')}</p>
+                <p className="font-mono text-lg font-bold">{formatPrice(referenceData.amount)}</p>
               </div>
               <Button
                 variant="outline"
@@ -130,7 +131,7 @@ const MulticaixaRefPayment = ({
               <li>Selecione "Pagamentos" → "Outros Serviços"</li>
               <li>Digite a Entidade: <span className="font-mono font-bold">{referenceData.entity}</span></li>
               <li>Digite a Referência: <span className="font-mono font-bold">{referenceData.reference}</span></li>
-              <li>Confirme o valor: <span className="font-mono font-bold">KZ {referenceData.amount.toLocaleString('pt-AO')}</span></li>
+              <li>Confirme o valor: <span className="font-mono font-bold">{formatPrice(referenceData.amount)}</span></li>
               <li>Confirme o pagamento</li>
             </ol>
           </div>
@@ -152,7 +153,7 @@ const MulticaixaRefPayment = ({
           <div>
             <h3 className="text-lg font-medium">Pagamento por Referência Multicaixa</h3>
             <p className="text-muted-foreground">
-              Valor: <span className="font-bold">KZ {amount.toLocaleString('pt-AO')}</span>
+              Valor: <span className="font-bold">{formatPrice(amount)}</span>
             </p>
           </div>
 

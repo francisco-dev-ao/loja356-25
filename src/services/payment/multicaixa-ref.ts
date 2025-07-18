@@ -42,8 +42,8 @@ export const createMulticaixaReference = async (
 
       const referenceData = {
         success: true,
-        entity: '11333',
-        reference: data.reference || data.referenceNumber || Math.floor(100000000 + Math.random() * 900000000).toString(),
+        entity: data.responseStatus?.reference?.entity || '11333',
+        reference: data.responseStatus?.reference?.referenceNumber || data.reference || data.referenceNumber || Math.floor(100000000 + Math.random() * 900000000).toString(),
         amount: request.amount,
         description: request.description,
         message: 'Referência criada com sucesso'
