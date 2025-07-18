@@ -18,27 +18,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from '@/components/ui/card';
 
 const Cart = () => {
-  const { items, total, clearCart } = useCart();
+  const { items, total, finalTotal, appliedCoupon, applyCoupon, removeCoupon, clearCart } = useCart();
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [couponCode, setCouponCode] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
-  const { data: couponData, isLoading: isLoadingCoupon } = useCoupon(appliedCoupon);
+  const [appliedCouponCode, setAppliedCouponCode] = useState<string | null>(appliedCoupon?.code || null);
+  const { data: couponData, isLoading: isLoadingCoupon } = useCoupon(appliedCouponCode);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
 
-  const discountedTotal = React.useMemo(() => {
-    if (couponData && !('error' in couponData)) {
-      return applyCouponDiscount(
-        total,
-        couponData.discount_type,
-        couponData.discount_value
-      );
-    }
-    return total;
-  }, [total, couponData]);
-
-  const discount = total - discountedTotal;
+  const discount = total - finalTotal;
   const discountPercentage = discount > 0 ? Math.round((discount / total) * 100) : 0;
 
   if (items?.length === 0) {
@@ -117,7 +106,8 @@ const Cart = () => {
       }
 
       // Apply the coupon
-      setAppliedCoupon(couponCode.trim());
+      applyCoupon(couponCode.trim(), data.discount_type as 'percentage' | 'fixed', data.discount_value);
+      setAppliedCouponCode(couponCode.trim());
       toast.success('Cupom aplicado com sucesso!');
       setCouponCode('');
 
@@ -130,12 +120,13 @@ const Cart = () => {
   };
 
   const handleRemoveCoupon = () => {
-    setAppliedCoupon(null);
+    removeCoupon();
+    setAppliedCouponCode(null);
     toast.info('Cupom removido');
   };
 
   const incrementCouponUses = async () => {
-    if (!appliedCoupon || !couponData || 'error' in couponData) return;
+    if (!appliedCouponCode || !couponData || 'error' in couponData) return;
     
     try {
       await supabase
@@ -186,7 +177,7 @@ const Cart = () => {
                   onClick={() => {
                     if (confirm('Tem certeza que deseja esvaziar o carrinho?')) {
                       clearCart();
-                      setAppliedCoupon(null);
+                      setAppliedCouponCode(null);
                     }
                   }}
                 >
@@ -239,15 +230,13 @@ const Cart = () => {
                       <div className="flex-1">
                         <div className="flex items-center">
                           <Tag size={16} className="text-green-600 mr-2" />
-                          <span className="font-medium text-green-800">{appliedCoupon}</span>
+                          <span className="font-medium text-green-800">{appliedCoupon.code}</span>
                         </div>
-                        {couponData && !('error' in couponData) && (
-                          <span className="text-xs text-green-700 block mt-1">
-                            {couponData.discount_type === 'percentage'
-                              ? `${couponData.discount_value}% de desconto`
-                              : `${formatPrice(couponData.discount_value)} de desconto`}
-                          </span>
-                        )}
+                        <span className="text-xs text-green-700 block mt-1">
+                          {appliedCoupon.discountType === 'percentage'
+                            ? `${appliedCoupon.discountValue}% de desconto`
+                            : `${formatPrice(appliedCoupon.discountValue)} de desconto`}
+                        </span>
                       </div>
                       <Button 
                         variant="ghost" 
@@ -308,7 +297,7 @@ const Cart = () => {
                   <div className="border-t border-gray-200 pt-4 flex justify-between font-medium">
                     <span>Total</span>
                     <span className="text-xl text-microsoft-blue">
-                      {formatPrice(discountedTotal)}
+                      {formatPrice(finalTotal)}
                     </span>
                   </div>
                 </div>
@@ -320,7 +309,7 @@ const Cart = () => {
                     className="w-full bg-microsoft-blue hover:bg-microsoft-blue/90 text-lg py-6"
                     onClick={() => {
                       // Register coupon use when proceeding to checkout
-                      if (appliedCoupon && couponData && !('error' in couponData)) {
+                      if (appliedCouponCode && couponData && !('error' in couponData)) {
                         incrementCouponUses();
                       }
                       navigate('/checkout');
@@ -355,24 +344,5 @@ const Cart = () => {
   );
 };
 
-// Function to apply coupon discount to total
-const applyCouponDiscount = (
-  total: number,
-  discountType: string,
-  discountValue: number
-): number => {
-  if (discountType === 'percentage') {
-    // Ensure percentage is between 0 and 100
-    const percentage = Math.min(Math.max(discountValue, 0), 100);
-    return total * (1 - percentage / 100);
-  } 
-  
-  if (discountType === 'fixed') {
-    // Ensure discount doesn't make total negative
-    return Math.max(total - discountValue, 0);
-  }
-
-  return total;
-};
 
 export default Cart;

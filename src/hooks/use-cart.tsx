@@ -16,10 +16,19 @@ export type { Product, CartItem };
 interface CartContextType {
   items: CartItem[];
   total: number;
+  appliedCoupon: {
+    code: string;
+    discountType: 'percentage' | 'fixed';
+    discountValue: number;
+    discountedTotal: number;
+  } | null;
+  finalTotal: number;
   addItem: (product: Product) => void;
   updateQuantity: (id: string, quantity: number) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
+  applyCoupon: (code: string, discountType: 'percentage' | 'fixed', discountValue: number) => void;
+  removeCoupon: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -96,15 +105,29 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     dispatch({ type: 'CLEAR_CART' });
   };
 
+  const applyCoupon = (code: string, discountType: 'percentage' | 'fixed', discountValue: number) => {
+    dispatch({ type: 'APPLY_COUPON', payload: { code, discountType, discountValue } });
+  };
+
+  const removeCoupon = () => {
+    dispatch({ type: 'REMOVE_COUPON' });
+  };
+
+  const finalTotal = state.appliedCoupon ? state.appliedCoupon.discountedTotal : state.total;
+
   return (
     <CartContext.Provider
       value={{
         items: state.items || [],
         total: state.total,
+        appliedCoupon: state.appliedCoupon,
+        finalTotal,
         addItem,
         updateQuantity,
         removeItem,
         clearCart,
+        applyCoupon,
+        removeCoupon,
       }}
     >
       {children}

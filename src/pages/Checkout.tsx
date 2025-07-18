@@ -19,7 +19,7 @@ import AccountTabs from '@/components/checkout/AccountTabs';
 import MulticaixaRefPayment from '@/components/checkout/MulticaixaRefPayment';
 
 const Checkout = () => {
-  const { items, total, clearCart } = useCart();
+  const { items, total, finalTotal, clearCart } = useCart();
   const { isAuthenticated, user, profile } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('account');
@@ -66,7 +66,7 @@ const Checkout = () => {
         .from('orders')
         .insert({
           user_id: user.id,
-          total: total,
+          total: finalTotal,
           payment_method: paymentMethod,
           payment_status: 'pending',
           status: 'pending'
@@ -181,7 +181,7 @@ const Checkout = () => {
 
                     {paymentMethod === 'multicaixa_ref' && (
                       <MulticaixaRefPayment
-                        amount={total}
+                        amount={finalTotal}
                         description={`Pedido ${orderId || 'checkout'}`}
                         orderId={orderId}
                         onSuccess={() => {
@@ -215,7 +215,7 @@ const Checkout = () => {
           
           {/* Order summary */}
           <div className="lg:col-span-1">
-            <CheckoutSummary items={items} total={total} />
+            <CheckoutSummary items={items} total={finalTotal} />
           </div>
         </div>
       </div>

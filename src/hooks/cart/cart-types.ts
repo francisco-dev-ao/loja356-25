@@ -21,6 +21,12 @@ export interface CartItem extends Product {
 export interface CartState {
   items: CartItem[];
   total: number;
+  appliedCoupon?: {
+    code: string;
+    discountType: 'percentage' | 'fixed';
+    discountValue: number;
+    discountedTotal: number;
+  } | null;
 }
 
 export type CartAction =
@@ -28,4 +34,6 @@ export type CartAction =
   | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number } }
   | { type: 'REMOVE_ITEM'; payload: { id: string } }
   | { type: 'CLEAR_CART' }
-  | { type: 'LOAD_CART'; payload: CartState };
+  | { type: 'LOAD_CART'; payload: CartState }
+  | { type: 'APPLY_COUPON'; payload: { code: string; discountType: 'percentage' | 'fixed'; discountValue: number } }
+  | { type: 'REMOVE_COUPON' };

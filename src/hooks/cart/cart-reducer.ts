@@ -3,7 +3,8 @@ import { CartState, CartAction, CartItem } from './cart-types';
 
 export const initialState: CartState = {
   items: [],
-  total: 0
+  total: 0,
+  appliedCoupon: null
 };
 
 export const cartReducer = (state: CartState, action: CartAction): CartState => {
@@ -74,6 +75,34 @@ export const cartReducer = (state: CartState, action: CartAction): CartState => 
       return {
         ...action.payload,
         items: action.payload.items || []
+      };
+
+    case 'APPLY_COUPON': {
+      const { code, discountType, discountValue } = action.payload;
+      let discountedTotal = state.total;
+      
+      if (discountType === 'percentage') {
+        const percentage = Math.min(Math.max(discountValue, 0), 100);
+        discountedTotal = state.total * (1 - percentage / 100);
+      } else if (discountType === 'fixed') {
+        discountedTotal = Math.max(state.total - discountValue, 0);
+      }
+      
+      return {
+        ...state,
+        appliedCoupon: {
+          code,
+          discountType,
+          discountValue,
+          discountedTotal
+        }
+      };
+    }
+
+    case 'REMOVE_COUPON':
+      return {
+        ...state,
+        appliedCoupon: null
       };
 
     default:
