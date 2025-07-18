@@ -6,18 +6,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, FileText, Download, Eye, Save } from 'lucide-react';
+import { Search, Download, Eye, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/formatters';
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import { InvoicePDFGenerator } from '@/lib/invoice-pdf-generator';
 
 const Dashboard = () => {
   const { user, profile, isLoading, isAuthenticated, updateProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('orders');
   const [orderFilter, setOrderFilter] = useState('all');
-  const [invoiceFilter, setInvoiceFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [orders, setOrders] = useState<any[]>([]);
   const [fetchingOrders, setFetchingOrders] = useState(false);
@@ -40,8 +38,8 @@ const Dashboard = () => {
     address: "Rua Comandante Gika, n.º 100, Luanda, Angola",
     nif: "5417124080",
     phone: "+244 923 456 789",
-    email: "financeiro@licencaspro.ao",
-    website: "www.licencaspro.ao"
+    email: "financeiro@office365.ao",
+    website: "www.office365.ao"
   };
   
   // Fetch user's orders
@@ -149,7 +147,7 @@ const Dashboard = () => {
     }
   };
 
-  // Generate Invoice PDF
+  // Generate Invoice PDF with Multicaixa Reference data
   const generateInvoicePDF = async (order: any) => {
     if (!order || !profile) {
       toast.error('Dados insuficientes para gerar a fatura');
@@ -159,140 +157,26 @@ const Dashboard = () => {
     setIsGeneratingPdf(true);
 
     try {
-      // Criar um novo documento PDF
-      const doc = new jsPDF();
+      // Get payment reference data if exists
+      const paymentRefData = localStorage.getItem(`payment_ref_${order.id}`);
+      let paymentReference = null;
       
-      // Adicionar cabeçalho com o logo (pode adicionar um logo real posteriormente)
-      doc.setFillColor(0, 114, 206);
-      doc.rect(0, 0, doc.internal.pageSize.width, 40, 'F');
-      
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(24);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Office365', 15, 25);
-      
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Licenças Microsoft Originais', 105, 25, { align: 'center' });
-      
-      // Adicionar informações da fatura
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(20);
-      doc.setFont('helvetica', 'bold');
-      doc.text('FATURA', 105, 50, { align: 'center' });
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Número da Fatura:', 15, 60);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`FATURA-${order.id.substring(0, 8).toUpperCase()}`, 55, 60);
-      
-      doc.setFont('helvetica', 'bold');
-      doc.text('Data:', 15, 65);
-      doc.setFont('helvetica', 'normal');
-      doc.text(new Date(order.created_at).toLocaleDateString('pt-BR'), 55, 65);
-      
-      doc.setFont('helvetica', 'bold');
-      doc.text('Status de Pagamento:', 15, 70);
-      doc.setFont('helvetica', 'normal');
-      doc.text(order.payment_status === 'paid' ? 'Pago' : 'Pendente', 55, 70);
-      
-      // Informações da empresa
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Emitido por:', 15, 85);
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(companyInfo.name, 15, 92);
-      doc.text(companyInfo.address, 15, 97);
-      doc.text(`NIF: ${companyInfo.nif}`, 15, 102);
-      doc.text(`Tel: ${companyInfo.phone}`, 15, 107);
-      doc.text(`Email: ${companyInfo.email}`, 15, 112);
-      doc.text(`Website: ${companyInfo.website}`, 15, 117);
-      
-      // Informações do cliente
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Faturado a:', 140, 85);
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(profile.name || 'Cliente', 140, 92);
-      doc.text(profile.address || 'Endereço não informado', 140, 97);
-      doc.text(`NIF: ${profile.nif || 'Não informado'}`, 140, 102);
-      doc.text(`Tel: ${profile.phone || 'Não informado'}`, 140, 107);
-      doc.text(`Email: ${profile.email || 'Não informado'}`, 140, 112);
-      
-      // Tabela de itens
-      if (order.items && order.items.length > 0) {
-        const tableColumn = ["Produto", "Qtd", "Preço Unit.", "Total"];
-        const tableRows = order.items.map((item: any) => [
-          item.product?.name || 'Produto',
-          item.quantity,
-          `${formatCurrency(item.price)} kz`,
-          `${formatCurrency(item.price * item.quantity)} kz`
-        ]);
-        
-        // @ts-ignore
-        doc.autoTable({
-          head: [tableColumn],
-          body: tableRows,
-          startY: 130,
-          theme: 'grid',
-          headStyles: {
-            fillColor: [0, 114, 206],
-            textColor: [255, 255, 255],
-            fontStyle: 'bold'
-          },
-          styles: {
-            lineColor: [222, 226, 230]
-          },
-          columnStyles: {
-            0: { cellWidth: 90 },
-            1: { cellWidth: 20, halign: 'center' },
-            2: { cellWidth: 40, halign: 'right' },
-            3: { cellWidth: 40, halign: 'right' }
-          }
-        });
+      if (paymentRefData) {
+        paymentReference = JSON.parse(paymentRefData);
       }
-      
-      // Adicionar total
-      // @ts-ignore
-      const finalY = doc.lastAutoTable.finalY || 150;
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Total:', 150, finalY + 10);
-      doc.setFontSize(12);
-      doc.text(`${formatCurrency(order.total)} kz`, 190, finalY + 10, { align: 'right' });
-      
-      // Informações de pagamento
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Método de Pagamento:', 15, finalY + 25);
-      doc.setFont('helvetica', 'normal');
-      const paymentMethod = order.payment_method === 'multicaixa' ? 'Multicaixa Express' : 'Transferência Bancária';
-      doc.text(paymentMethod, 60, finalY + 25);
-      
-      // Notas e termos
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Notas:', 15, finalY + 40);
-      doc.setFont('helvetica', 'normal');
-      doc.text('1. As licenças são enviadas por email após a confirmação do pagamento.', 15, finalY + 45);
-      doc.text('2. Suporte técnico gratuito por 30 dias após a compra.', 15, finalY + 50);
-      doc.text('3. Para qualquer dúvida, entre em contato com nossa equipe de suporte.', 15, finalY + 55);
-      
-      // Rodapé
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      doc.text('Obrigado por escolher a Office365!', 105, 280, { align: 'center' });
-      doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, 105, 285, { align: 'center' });
-      
-      // Salvar o PDF
-      doc.save(`FATURA-${order.id.substring(0, 8)}.pdf`);
-      toast.success('Fatura baixada com sucesso!');
+
+      // Create professional PDF
+      const pdfGenerator = new InvoicePDFGenerator();
+      pdfGenerator.generateProfessionalInvoice({
+        order,
+        profile,
+        companyInfo,
+        paymentReference
+      });
+
+      // Save the PDF
+      pdfGenerator.save(`FATURA-${order.id.substring(0, 8)}.pdf`);
+      toast.success('Fatura profissional gerada com sucesso!');
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
       toast.error('Erro ao gerar PDF da fatura');
@@ -382,13 +266,13 @@ const Dashboard = () => {
               <TabsList className="h-12">
                 <TabsTrigger 
                   value="orders" 
-                  className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-microsoft-blue data-[state=active]:shadow-none rounded-none h-12 px-6"
+                  className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none h-12 px-6"
                 >
                   Meus Pedidos
                 </TabsTrigger>
                 <TabsTrigger 
                   value="account" 
-                  className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-microsoft-blue data-[state=active]:shadow-none rounded-none h-12 px-6"
+                  className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none h-12 px-6"
                 >
                   Meus Dados
                 </TabsTrigger>
@@ -463,7 +347,7 @@ const Dashboard = () => {
                             {order.id.substring(0, 8)}...
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {new Date(order.created_at).toLocaleDateString('pt-BR')}
+                            {new Date(order.created_at).toLocaleDateString('pt-AO')}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             {getStatusBadge(order.status)}
@@ -472,7 +356,7 @@ const Dashboard = () => {
                             {getStatusBadge(order.payment_status)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
-                            {formatCurrency(order.total)} kz
+                            KZ {formatCurrency(order.total)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                             <div className="flex justify-end space-x-2">
@@ -592,7 +476,7 @@ const Dashboard = () => {
                   </div>
                   
                   <div>
-                    <Button type="submit" className="bg-microsoft-blue hover:bg-microsoft-blue/90">
+                    <Button type="submit" className="bg-primary hover:bg-primary/90">
                       <Save size={16} className="mr-2" />
                       Salvar Alterações
                     </Button>

@@ -35,6 +35,12 @@ const MulticaixaRefPayment = ({
       });
 
       setReferenceData(response);
+      
+      // Store reference data locally for PDF generation
+      if (orderId) {
+        localStorage.setItem(`payment_ref_${orderId}`, JSON.stringify(response));
+      }
+      
       toast.success('Referência gerada com sucesso!');
       
       if (onSuccess) {

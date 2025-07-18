@@ -6,8 +6,7 @@ import { Check, ArrowRight, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import { InvoicePDFGenerator } from '@/lib/invoice-pdf-generator';
 import { formatCurrency, formatPrice } from '@/lib/formatters';
 
 interface OrderItem {
@@ -157,163 +156,26 @@ const CheckoutSuccess = () => {
     setIsGeneratingPdf(true);
 
     try {
-      // Criar um novo documento PDF
-      const doc = new jsPDF();
+      // Get payment reference data if exists
+      const paymentRefData = orderId ? localStorage.getItem(`payment_ref_${orderId}`) : null;
+      let paymentReference = null;
       
-      // Adicionar cabeçalho com o logo (pode adicionar um logo real posteriormente)
-      doc.setFillColor(0, 114, 206);
-      doc.rect(0, 0, doc.internal.pageSize.width, 40, 'F');
-      
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(24);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Office365', 15, 25);
-      
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Licenças Microsoft Originais', 105, 25, { align: 'center' });
-      
-      // Adicionar informações da fatura
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(20);
-      doc.setFont('helvetica', 'bold');
-      doc.text('FATURA', 105, 50, { align: 'center' });
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Número da Fatura:', 15, 60);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`FATURA-${orderId.substring(0, 8).toUpperCase()}`, 55, 60);
-      
-      doc.setFont('helvetica', 'bold');
-      doc.text('Data:', 15, 65);
-      doc.setFont('helvetica', 'normal');
-      doc.text(new Date(order.created_at).toLocaleDateString('pt-BR'), 55, 65);
-      
-      doc.setFont('helvetica', 'bold');
-      doc.text('Status de Pagamento:', 15, 70);
-      doc.setFont('helvetica', 'normal');
-      doc.text(order.payment_status === 'paid' ? 'Pago' : 'Pendente', 55, 70);
-      
-      // Informações da empresa
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Emitido por:', 15, 85);
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(companyInfo.name, 15, 92);
-      doc.text(companyInfo.address, 15, 97);
-      doc.text(`NIF: ${companyInfo.nif}`, 15, 102);
-      doc.text(`Tel: ${companyInfo.phone}`, 15, 107);
-      doc.text(`Email: ${companyInfo.email}`, 15, 112);
-      doc.text(`Website: ${companyInfo.website}`, 15, 117);
-      
-      // Informações do cliente
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Faturado a:', 140, 85);
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(profile.name || 'Cliente', 140, 92);
-      doc.text(profile.address || 'Endereço não informado', 140, 97);
-      doc.text(`NIF: ${profile.nif || 'Não informado'}`, 140, 102);
-      doc.text(`Tel: ${profile.phone || 'Não informado'}`, 140, 107);
-      doc.text(`Email: ${profile.email || 'Não informado'}`, 140, 112);
-      
-      // Tabela de itens
-      if (order.items && order.items.length > 0) {
-        const tableColumn = ["Produto", "Qtd", "Preço Unit.", "Total"];
-        const tableRows = order.items.map(item => [
-          item.productName || 'Produto',
-          item.quantity,
-          formatPrice(item.price),
-          formatPrice(item.price * item.quantity)
-        ]);
-        
-        // @ts-ignore
-        doc.autoTable({
-          head: [tableColumn],
-          body: tableRows,
-          startY: 130,
-          theme: 'grid',
-          headStyles: {
-            fillColor: [0, 114, 206],
-            textColor: [255, 255, 255],
-            fontStyle: 'bold'
-          },
-          styles: {
-            lineColor: [222, 226, 230]
-          },
-          columnStyles: {
-            0: { cellWidth: 90 },
-            1: { cellWidth: 20, halign: 'center' },
-            2: { cellWidth: 40, halign: 'right' },
-            3: { cellWidth: 40, halign: 'right' }
-          }
-        });
+      if (paymentRefData) {
+        paymentReference = JSON.parse(paymentRefData);
       }
-      
-      // Fix the jsPDF type issue for lastAutoTable
-      // @ts-ignore - using type assertion for jsPDF with autoTable plugin
-      let yPosition = (doc as any).lastAutoTable?.finalY || 150;
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Total:', 150, yPosition + 10);
-      doc.setFontSize(12);
-      doc.text(formatPrice(order.total), 190, yPosition + 10, { align: 'right' });
-      
-      // Informações de pagamento
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Método de Pagamento:', 15, yPosition + 25);
-      doc.setFont('helvetica', 'normal');
-      const paymentMethod = order.payment_method === 'multicaixa' ? 'Multicaixa Express' : 'Transferência Bancária';
-      doc.text(paymentMethod, 60, yPosition + 25);
 
-      // Se for transferência bancária, adicionar detalhes da conta
-      if (order.payment_method === 'bank_transfer') {
-        const { data: settings } = await supabase
-          .from('settings')
-          .select('bank_name, bank_account_holder, bank_account_number, bank_iban')
-          .single();
+      // Create professional PDF
+      const pdfGenerator = new InvoicePDFGenerator();
+      pdfGenerator.generateProfessionalInvoice({
+        order,
+        profile,
+        companyInfo,
+        paymentReference
+      });
 
-        if (settings) {
-          yPosition += 35;
-          doc.setFontSize(10);
-          doc.setFont('helvetica', 'bold');
-          doc.text('Informações Bancárias:', 15, yPosition);
-          doc.setFont('helvetica', 'normal');
-          
-          doc.text(`Banco: ${settings.bank_name}`, 15, yPosition + 8);
-          doc.text(`Titular: ${settings.bank_account_holder}`, 15, yPosition + 16);
-          doc.text(`Conta: ${settings.bank_account_number}`, 15, yPosition + 24);
-          doc.text(`IBAN: ${settings.bank_iban}`, 15, yPosition + 32);
-          
-          yPosition += 42;
-        }
-      }
-      
-      // Notas e termos
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Notas:', 15, yPosition + 40);
-      doc.setFont('helvetica', 'normal');
-      doc.text('1. As licenças são enviadas por email após a confirmação do pagamento.', 15, yPosition + 45);
-      doc.text('2. Suporte técnico gratuito por 30 dias após a compra.', 15, yPosition + 50);
-      doc.text('3. Para qualquer dúvida, entre em contato com nossa equipe de suporte.', 15, yPosition + 55);
-      
-      // Rodapé
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      doc.text('Obrigado por escolher a Office365!', 105, 280, { align: 'center' });
-      doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, 105, 285, { align: 'center' });
-      
-      // Salvar o PDF
-      doc.save(`FATURA-${orderId.substring(0, 8)}.pdf`);
-      toast.success('Fatura baixada com sucesso!');
+      // Save the PDF
+      pdfGenerator.save(`FATURA-${orderId.substring(0, 8)}.pdf`);
+      toast.success('Fatura profissional gerada com sucesso!');
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
       toast.error('Erro ao gerar PDF da fatura');
@@ -348,7 +210,7 @@ const CheckoutSuccess = () => {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Data:</span>
-                      <span className="font-medium">{order ? new Date(order.created_at).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR')}</span>
+                      <span className="font-medium">{order ? new Date(order.created_at).toLocaleDateString('pt-AO') : new Date().toLocaleDateString('pt-AO')}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Status:</span>
@@ -361,7 +223,7 @@ const CheckoutSuccess = () => {
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Método de Pagamento:</span>
                       <span className="font-medium">
-                        {order?.payment_method === 'multicaixa' ? 'Multicaixa Express' : 
+                        {order?.payment_method === 'multicaixa_ref' ? 'Multicaixa Referência' : 
                          order?.payment_method === 'bank_transfer' ? 'Transferência Bancária' : 
                          'Não especificado'}
                       </span>
@@ -370,7 +232,7 @@ const CheckoutSuccess = () => {
                 </div>
                 
                 <div>
-                  <h2 className="text-lg font-medium mb-3">Fatura</h2>
+                  <h2 className="text-lg font-medium mb-3">Fatura Profissional</h2>
                   <div className="border rounded-md p-4 text-center">
                     {isGenerating ? (
                       <div className="p-4">
@@ -380,14 +242,14 @@ const CheckoutSuccess = () => {
                           <div className="h-3 w-32 rounded bg-gray-200"></div>
                         </div>
                         <p className="text-sm text-muted-foreground mt-4">
-                          Gerando fatura... {seconds}s
+                          Preparando fatura... {seconds}s
                         </p>
                       </div>
                     ) : (
                       <div>
-                        <p className="mb-4 text-sm">Sua fatura está pronta para download</p>
+                        <p className="mb-4 text-sm">Sua fatura profissional está pronta para download</p>
                         <Button 
-                          className="bg-microsoft-blue hover:bg-microsoft-blue/90"
+                          className="bg-primary hover:bg-primary/90"
                           onClick={generateInvoicePDF}
                           disabled={isGeneratingPdf}
                         >
@@ -458,7 +320,7 @@ const CheckoutSuccess = () => {
                   Área do Cliente
                 </Button>
                 <Button 
-                  className="bg-microsoft-blue hover:bg-microsoft-blue/90"
+                  className="bg-primary hover:bg-primary/90"
                   onClick={() => navigate('/')}
                 >
                   Voltar à Página Inicial
