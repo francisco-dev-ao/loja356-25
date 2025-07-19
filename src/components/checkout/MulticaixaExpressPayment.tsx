@@ -37,10 +37,6 @@ const MulticaixaExpressPayment = ({
   const { items } = useCart();
   const { user, profile } = useAuth();
 
-  // Automatically create payment when component mounts
-  useEffect(() => {
-    handleCreatePayment();
-  }, []);
 
   const handleCreatePayment = async () => {
     if (!user || !profile) {
@@ -273,9 +269,9 @@ const MulticaixaExpressPayment = ({
     );
   }
 
-  // Loading state - automatic payment processing
+  // Initial state - manual payment generation
   return (
-    <Card className="mt-6">
+    <Card className="mt-6 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
       <CardContent className="p-6 text-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
@@ -285,22 +281,33 @@ const MulticaixaExpressPayment = ({
           <div>
             <h3 className="font-semibold text-lg mb-2">Multicaixa Express</h3>
             <p className="text-muted-foreground mb-4">
-              Gerando token de pagamento...
+              Clique para gerar o token de pagamento
             </p>
             <p className="text-2xl font-bold text-primary mb-6">
               {amount.toLocaleString('pt-AO')} AOA
             </p>
           </div>
 
-          <div className="w-full max-w-sm h-12 bg-gradient-to-r from-primary to-primary/80 rounded-lg flex items-center justify-center">
-            <Loader2 className="w-4 h-4 mr-2 animate-spin text-white" />
-            <span className="text-white font-medium">
-              {isLoading ? 'Gerando token...' : 'Preparando pagamento...'}
-            </span>
-          </div>
+          <Button 
+            onClick={handleCreatePayment}
+            disabled={isLoading}
+            className="w-full max-w-sm h-12 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-300"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Gerando token...
+              </>
+            ) : (
+              <>
+                <img src="/lovable-uploads/bf079303-1331-494d-ada2-21403d198ef6.png" alt="Multicaixa Express" className="w-4 h-4 mr-2" />
+                Gerar Token de Pagamento
+              </>
+            )}
+          </Button>
           
           <p className="text-xs text-muted-foreground text-center max-w-sm">
-            Após a geração do token, clique no botão para abrir a página de pagamento
+            Após gerar o token, você poderá abrir a página de pagamento
           </p>
         </div>
       </CardContent>
