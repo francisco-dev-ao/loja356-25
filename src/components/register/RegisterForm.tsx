@@ -105,15 +105,21 @@ export const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
   const isValidNif = nif.length > 0 && !nifError;
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-xl mx-auto bg-white rounded-2xl shadow-2xl p-10 space-y-10 border border-microsoft-blue/20 relative overflow-hidden">
+    <form onSubmit={handleSubmit} className="space-y-8">
       <TooltipProvider>
-      <div className="absolute -top-16 -right-16 w-64 h-64 bg-microsoft-blue/10 rounded-full blur-2xl z-0" />
-      <h2 className="text-3xl font-extrabold text-microsoft-blue mb-2 tracking-tight drop-shadow">Criar Conta</h2>
-      <p className="text-muted-foreground mb-6">Preencha seus dados para acessar a plataforma.</p>
+      
+      {/* Header elegante */}
+      <div className="text-center mb-6">
+        <div className="bg-gradient-to-r from-microsoft-blue to-blue-600 w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
+          <User className="h-8 w-8 text-white" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Criar Nova Conta</h2>
+        <p className="text-gray-600">Preencha seus dados para acessar a plataforma</p>
+      </div>
 
       {/* Bloco: Dados Fiscais */}
-      <fieldset className="space-y-2 border-b pb-6">
-        <legend className="font-semibold text-lg text-microsoft-blue">Dados Fiscais</legend>
+      <fieldset className="space-y-4 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 border border-blue-200/50 rounded-2xl p-6">
+        <legend className="font-semibold text-lg text-microsoft-blue px-3">📋 Dados Fiscais</legend>
         <NifInput 
           nif={nif}
           setNif={(v) => {
@@ -138,33 +144,33 @@ export const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
           setNifError={setNifError}
           nifError={nifError}
         />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <Label htmlFor="companyName">Nome Fiscal</Label>
+            <Label htmlFor="companyName" className="text-sm font-semibold text-gray-700">Nome Fiscal</Label>
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                   <Input
-                     id="companyName"
-                     type="text"
-                     value={companyName}
-                     onChange={(e) => {
-                       // Nome Fiscal nunca pode ser editado manualmente
-                       // Apenas preenchimento automático via NIF
-                     }}
-                     placeholder="Nome Fiscal (preenchido automaticamente)"
-                     className="pl-10 bg-gray-100 cursor-not-allowed border-dashed border-microsoft-blue/40"
-                     required
-                     readOnly={true}
-                   />
-                 </div>
-               </TooltipTrigger>
-               <TooltipContent side="top">Nome fiscal obtido automaticamente via consulta de NIF</TooltipContent>
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Input
+                    id="companyName"
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => {
+                      // Nome Fiscal nunca pode ser editado manualmente
+                      // Apenas preenchimento automático via NIF
+                    }}
+                    placeholder="Nome Fiscal (preenchido automaticamente)"
+                    className="pl-10 h-12 bg-gray-100 cursor-not-allowed border-dashed border-microsoft-blue/40 rounded-xl"
+                    required
+                    readOnly={true}
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top">Nome fiscal obtido automaticamente via consulta de NIF</TooltipContent>
             </Tooltip>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="address">Endereço</Label>
+            <Label htmlFor="address" className="text-sm font-semibold text-gray-700">Endereço</Label>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Input
@@ -173,7 +179,7 @@ export const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
                   value={address}
                   onChange={(e) => { setAddress(e.target.value); setIsAutoFilledAddress(false); }}
                   placeholder="Endereço (preenchido automaticamente)"
-                  className="bg-gray-100 cursor-not-allowed border-dashed border-microsoft-blue/40"
+                  className="h-12 bg-gray-100 cursor-not-allowed border-dashed border-microsoft-blue/40 rounded-xl"
                   required
                   readOnly={true}
                 />
@@ -185,31 +191,31 @@ export const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
       </fieldset>
 
       {/* Bloco: Contato */}
-      <fieldset className="space-y-2 border-b pb-4">
-        <legend className="font-semibold text-lg text-microsoft-blue">Contato</legend>
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-           <div className="space-y-2">
-             <Label htmlFor="phone">Telefone</Label>
-             <PhoneInput 
-               phone={phone} 
-               setPhone={setPhone}
-               isAutoFilled={false}
-             />
-             {!isValidPhone && phone && (
-               <div className="flex items-center text-red-500 text-xs mt-1"><AlertCircle size={14} className="mr-1" />Telefone inválido</div>
-             )}
-           </div>
+      <fieldset className="space-y-4 bg-gradient-to-r from-green-50/50 to-emerald-50/50 border border-green-200/50 rounded-2xl p-6">
+        <legend className="font-semibold text-lg text-microsoft-blue px-3">📞 Contato</legend>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="phone" className="text-sm font-semibold text-gray-700">Telefone</Label>
+            <PhoneInput 
+              phone={phone} 
+              setPhone={setPhone}
+              isAutoFilled={false}
+            />
+            {!isValidPhone && phone && (
+              <div className="flex items-center text-red-500 text-xs mt-1"><AlertCircle size={14} className="mr-1" />Telefone inválido</div>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-sm font-semibold text-gray-700">Email</Label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="nome@exemplo.com"
-                className="pl-10"
+                className="pl-10 h-12 border-gray-300 focus:border-microsoft-blue focus:ring-microsoft-blue/20 rounded-xl transition-all duration-300"
                 required
               />
             </div>
@@ -221,8 +227,8 @@ export const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
       </fieldset>
 
       {/* Bloco: Segurança */}
-      <fieldset className="space-y-2">
-        <legend className="font-semibold text-lg text-microsoft-blue">Segurança</legend>
+      <fieldset className="space-y-4 bg-gradient-to-r from-purple-50/50 to-pink-50/50 border border-purple-200/50 rounded-2xl p-6">
+        <legend className="font-semibold text-lg text-microsoft-blue px-3">🔒 Segurança</legend>
         <PasswordInput password={password} setPassword={setPassword} />
         <div className="flex items-center text-xs mt-1">
           {isStrongPassword ? (
@@ -233,22 +239,38 @@ export const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
         </div>
       </fieldset>
 
-      <Button
-        type="submit"
-        className="w-full bg-microsoft-blue hover:bg-microsoft-blue/90 text-lg py-3 mt-4 flex items-center justify-center"
-        disabled={isLoading || !isValidNif || !isValidPhone || !isValidEmail || !isStrongPassword}
-      >
-        {isLoading ? (
-          <>
-            <Loader2 className="animate-spin h-5 w-5 mr-2" />
-            Criando conta...
-          </>
-        ) : (
-          <>
-            <User className="mr-2" /> Criar nova conta
-          </>
-        )}
-      </Button>
+      <div className="pt-6">
+        <Button
+          type="submit"
+          className="w-full h-12 bg-gradient-to-r from-microsoft-blue to-blue-600 hover:from-microsoft-blue/90 hover:to-blue-600/90 text-white font-semibold text-lg rounded-xl shadow-lg hover-scale transition-all duration-300 disabled:opacity-50"
+          disabled={isLoading || !isValidNif || !isValidPhone || !isValidEmail || !isStrongPassword}
+        >
+          {isLoading ? (
+            <div className="flex items-center justify-center">
+              <Loader2 className="animate-spin h-5 w-5 mr-2" />
+              Criando conta...
+            </div>
+          ) : (
+            <div className="flex items-center justify-center">
+              <User className="mr-2 h-5 w-5" />
+              Criar Nova Conta
+            </div>
+          )}
+        </Button>
+        
+        {/* Link para login */}
+        <div className="text-center pt-6">
+          <p className="text-sm text-gray-600">
+            Já possui uma conta?{' '}
+            <Link 
+              to="/cliente/login" 
+              className="text-microsoft-blue hover:text-blue-600 font-semibold transition-colors duration-300 hover:underline"
+            >
+              Faça login aqui
+            </Link>
+          </p>
+        </div>
+      </div>
       </TooltipProvider>
     </form>
   );
