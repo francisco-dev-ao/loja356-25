@@ -78,17 +78,18 @@ const MulticaixaExpressPayment = ({
           setPaymentUrl(paymentResponse.data.payment_url);
           toast.success('Checkout criado com sucesso! Clique para pagar.');
         } else {
-          // Fallback to form URL
+          // Fallback para URL do formulário da EMIS mesmo se o processamento falhar
           const formUrl = getMulticaixaExpressPaymentUrl(response.checkout.id);
           setPaymentUrl(formUrl);
-          toast.success('Checkout criado! Clique para pagar.');
+          console.warn('Processamento falhou, usando formulário da EMIS:', paymentResponse.error);
+          toast.success('Checkout criado! Clique para pagar via formulário EMIS.');
         }
         
         // Store checkout data locally
         if (orderId) {
           localStorage.setItem(`multicaixa_express_${orderId}`, JSON.stringify({
             checkout: response.checkout,
-            paymentUrl: paymentResponse.data?.payment_url || getMulticaixaExpressPaymentUrl(response.checkout.id)
+            paymentUrl: paymentUrl || getMulticaixaExpressPaymentUrl(response.checkout.id)
           }));
         }
       } else {
@@ -105,11 +106,30 @@ const MulticaixaExpressPayment = ({
 
   const handleOpenPayment = () => {
     if (paymentUrl) {
-      window.open(paymentUrl, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+      // Abrir em nova janela/modal
+      const popup = window.open(
+        paymentUrl, 
+        'MulticaixaExpressPayment', 
+        'width=900,height=700,scrollbars=yes,resizable=yes,toolbar=no,location=no,menubar=no'
+      );
       
-      // Start verification polling
-      if (checkout) {
-        startPaymentVerification(checkout.id);
+      if (popup) {
+        toast.success('Modal da EMIS aberto! Complete o pagamento na nova janela.');
+        
+        // Start verification polling
+        if (checkout) {
+          startPaymentVerification(checkout.id);
+        }
+        
+        // Monitor se a janela foi fechada
+        const checkClosed = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(checkClosed);
+            console.log('Janela de pagamento foi fechada');
+          }
+        }, 1000);
+      } else {
+        toast.error('Não foi possível abrir a janela de pagamento. Verifique se o popup não foi bloqueado.');
       }
     }
   };
@@ -211,7 +231,7 @@ const MulticaixaExpressPayment = ({
               ) : (
                 <>
                   <ExternalLink className="w-4 h-4 mr-2" />
-                  Pagar com Multicaixa Express
+                  Abrir Modal EMIS para Pagamento
                 </>
               )}
             </Button>
@@ -237,10 +257,11 @@ const MulticaixaExpressPayment = ({
               <div className="text-sm text-muted-foreground">
                 <p className="font-medium mb-1">Como pagar:</p>
                 <ol className="list-decimal list-inside space-y-1 text-xs">
-                  <li>Clique no botão "Pagar com Multicaixa Express"</li>
-                  <li>Uma nova janela será aberta com o formulário de pagamento</li>
+                  <li>Clique no botão "Abrir Modal EMIS para Pagamento"</li>
+                  <li>Uma nova janela será aberta com o formulário da EMIS</li>
                   <li>Preencha os dados solicitados e confirme o pagamento</li>
                   <li>Aguarde a confirmação automática do pagamento</li>
+                  <li>Pode fechar a janela após completar o pagamento</li>
                 </ol>
               </div>
             </div>
