@@ -5,11 +5,11 @@ import { Badge } from '@/components/ui/badge';
 import { Smartphone, Globe, Copy, CheckCircle, Loader2, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
-  createMulticaixaExpressCheckout,
-  processMulticaixaExpressPayment,
+  createMulticaixaExpressPayment,
   verifyMulticaixaExpressPayment,
   getMulticaixaExpressPaymentUrl,
-  type MulticaixaExpressCheckout
+  type MulticaixaExpressRequest,
+  type MulticaixaExpressResponse
 } from '@/services/payment/multicaixa-express';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
@@ -30,14 +30,14 @@ const MulticaixaExpressPayment = ({
   onError 
 }: MulticaixaExpressPaymentProps) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [checkout, setCheckout] = useState<MulticaixaExpressCheckout | null>(null);
+  const [paymentData, setPaymentData] = useState<MulticaixaExpressResponse | null>(null);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   
   const { items } = useCart();
   const { user, profile } = useAuth();
 
-  const handleCreateCheckout = async () => {
+  const handleCreatePayment = async () => {
     if (!user || !profile) {
       onError('Dados do usuário não encontrados');
       return;
@@ -46,66 +46,50 @@ const MulticaixaExpressPayment = ({
     setIsLoading(true);
 
     try {
-      const names = profile.name?.split(' ') || ['Cliente'];
-      const firstName = names[0];
-      const lastName = names.slice(1).join(' ') || '';
+      const customerName = profile.name || 'Cliente';
 
-      const checkoutData = {
-        total: amount,
-        user_data: {
-          name: firstName,
-          surname: lastName,
+      const paymentRequest: MulticaixaExpressRequest = {
+        valor: amount * 100, // Convert to centavos
+        tipo: 'fatura',
+        descricao: description || 'Pagamento de produtos',
+        cliente: {
+          nome: customerName,
           email: user.email || '',
-          gsm: profile.phone || undefined,
         },
-        items: items.map(item => ({
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity
-        }))
       };
 
-      const response = await createMulticaixaExpressCheckout(checkoutData);
+      console.log('🔄 Criando pagamento:', paymentRequest);
       
-      if (response.success && response.checkout) {
-        setCheckout(response.checkout);
+      const response = await createMulticaixaExpressPayment(paymentRequest);
+      
+      if (response.success && response.token) {
+        setPaymentData(response);
+        const url = getMulticaixaExpressPaymentUrl(response.token);
+        setPaymentUrl(url);
+        toast.success('Token de pagamento criado com sucesso!');
         
-        // Process payment to get payment URL
-        const orderRef = orderId || `ORDER-${Date.now()}`;
-        const paymentResponse = await processMulticaixaExpressPayment(response.checkout, orderRef);
-        
-        if (paymentResponse.success && paymentResponse.data?.payment_url) {
-          setPaymentUrl(paymentResponse.data.payment_url);
-          toast.success('Checkout criado com sucesso! Clique para pagar.');
-        } else {
-          // Fallback para URL do formulário da EMIS mesmo se o processamento falhar
-          const formUrl = getMulticaixaExpressPaymentUrl(response.checkout.id);
-          setPaymentUrl(formUrl);
-          console.warn('Processamento falhou, usando formulário da EMIS:', paymentResponse.error);
-          toast.success('Checkout criado! Clique para pagar via formulário EMIS.');
-        }
-        
-        // Store checkout data locally
-        if (orderId) {
+        // Store payment data locally
+        if (orderId && response.servicoId) {
           localStorage.setItem(`multicaixa_express_${orderId}`, JSON.stringify({
-            checkout: response.checkout,
-            paymentUrl: paymentUrl || getMulticaixaExpressPaymentUrl(response.checkout.id)
+            servicoId: response.servicoId,
+            token: response.token,
+            redirectUrl: response.redirectUrl
           }));
         }
       } else {
-        throw new Error(response.error || 'Erro ao criar checkout');
+        throw new Error(response.error || 'Erro ao criar pagamento');
       }
     } catch (error: any) {
-      console.error('Erro ao criar checkout:', error);
-      onError(error.message || 'Erro ao criar checkout');
-      toast.error('Erro ao criar checkout');
+      console.error('Erro ao criar pagamento:', error);
+      onError(error.message || 'Erro ao criar pagamento');
+      toast.error('Erro ao criar pagamento');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleOpenPayment = () => {
-    if (paymentUrl) {
+    if (paymentUrl && paymentData?.servicoId) {
       // Abrir em nova janela/modal
       const popup = window.open(
         paymentUrl, 
@@ -114,12 +98,10 @@ const MulticaixaExpressPayment = ({
       );
       
       if (popup) {
-        toast.success('Modal da EMIS aberto! Complete o pagamento na nova janela.');
+        toast.success('Página de pagamento aberta! Complete o pagamento na nova janela.');
         
         // Start verification polling
-        if (checkout) {
-          startPaymentVerification(checkout.id);
-        }
+        startPaymentVerification(paymentData.servicoId);
         
         // Monitor se a janela foi fechada
         const checkClosed = setInterval(() => {
@@ -134,7 +116,7 @@ const MulticaixaExpressPayment = ({
     }
   };
 
-  const startPaymentVerification = async (checkoutId: string) => {
+  const startPaymentVerification = async (servicoId: string) => {
     setIsVerifying(true);
     
     const maxAttempts = 30; // 5 minutes
@@ -142,19 +124,26 @@ const MulticaixaExpressPayment = ({
     
     const verifyPayment = async () => {
       try {
-        const result = await verifyMulticaixaExpressPayment(checkoutId);
+        const result = await verifyMulticaixaExpressPayment(servicoId);
         
-        if (result.confirmed && result.checkout.status === 'paid') {
+        if (result.status === 'aprovado' || result.status === 'pago') {
           setIsVerifying(false);
           toast.success('Pagamento confirmado!');
           onSuccess();
           return;
         }
         
+        if (result.status === 'erro' || result.status === 'cancelado') {
+          setIsVerifying(false);
+          toast.error('Pagamento não foi aprovado. Tente novamente.');
+          return;
+        }
+        
+        // Continue polling if still pending
         attempts++;
-        if (attempts < maxAttempts) {
+        if (attempts < maxAttempts && result.status === 'pendente') {
           setTimeout(verifyPayment, 10000); // Check every 10 seconds
-        } else {
+        } else if (attempts >= maxAttempts) {
           setIsVerifying(false);
           toast.info('Verificação de pagamento interrompida. Por favor, verifique manualmente.');
         }
@@ -165,6 +154,7 @@ const MulticaixaExpressPayment = ({
           setTimeout(verifyPayment, 10000);
         } else {
           setIsVerifying(false);
+          toast.error('Erro ao verificar status do pagamento.');
         }
       }
     };
@@ -177,8 +167,8 @@ const MulticaixaExpressPayment = ({
     toast.success('Copiado para a área de transferência!');
   };
 
-  // If checkout is created, show payment interface
-  if (checkout && paymentUrl) {
+  // If payment is created, show payment interface
+  if (paymentData && paymentUrl) {
     return (
       <Card className="mt-6 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
         <CardHeader>
@@ -192,20 +182,22 @@ const MulticaixaExpressPayment = ({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-4">
-            <div className="p-4 bg-white/50 rounded-lg border">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-muted-foreground">Checkout ID</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => copyToClipboard(checkout.id)}
-                  className="h-auto p-1"
-                >
-                  <Copy className="w-4 h-4" />
-                </Button>
+            {paymentData.servicoId && (
+              <div className="p-4 bg-white/50 rounded-lg border">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-muted-foreground">ID do Serviço</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyToClipboard(paymentData.servicoId!)}
+                    className="h-auto p-1"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+                <p className="font-mono text-sm break-all">{paymentData.servicoId}</p>
               </div>
-              <p className="font-mono text-sm break-all">{checkout.id}</p>
-            </div>
+            )}
 
             <div className="p-4 bg-white/50 rounded-lg border">
               <div className="flex justify-between items-center mb-2">
@@ -231,7 +223,7 @@ const MulticaixaExpressPayment = ({
               ) : (
                 <>
                   <ExternalLink className="w-4 h-4 mr-2" />
-                  Abrir Modal EMIS para Pagamento
+                  Abrir Página de Pagamento
                 </>
               )}
             </Button>
@@ -257,8 +249,8 @@ const MulticaixaExpressPayment = ({
               <div className="text-sm text-muted-foreground">
                 <p className="font-medium mb-1">Como pagar:</p>
                 <ol className="list-decimal list-inside space-y-1 text-xs">
-                  <li>Clique no botão "Abrir Modal EMIS para Pagamento"</li>
-                  <li>Uma nova janela será aberta com o formulário da EMIS</li>
+                  <li>Clique no botão "Abrir Página de Pagamento"</li>
+                  <li>Uma nova janela será aberta com o formulário de pagamento</li>
                   <li>Preencha os dados solicitados e confirme o pagamento</li>
                   <li>Aguarde a confirmação automática do pagamento</li>
                   <li>Pode fechar a janela após completar o pagamento</li>
@@ -291,14 +283,14 @@ const MulticaixaExpressPayment = ({
           </div>
 
           <Button 
-            onClick={handleCreateCheckout}
+            onClick={handleCreatePayment}
             disabled={isLoading}
             className="w-full max-w-sm h-12 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-300"
           >
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Criando checkout...
+                Gerando token...
               </>
             ) : (
               <>

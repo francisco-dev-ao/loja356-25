@@ -1,70 +1,41 @@
 export interface MulticaixaExpressRequest {
-  total: number;
-  user_data: {
-    name: string;
-    surname: string;
+  valor: number;
+  tipo: string;
+  descricao: string;
+  cliente: {
+    nome: string;
     email: string;
-    gsm?: string;
   };
-  items: Array<{
-    name: string;
-    price: number;
-    quantity: number;
-  }>;
-}
-
-export interface MulticaixaExpressCheckout {
-  id: string;
-  data: {
-    total: number;
-    user_data: {
-      name: string;
-      surname: string;
-      email: string;
-      gsm?: string;
-    };
-  };
-  status: string;
-  created_at: string;
-  items: Array<{
-    name: string;
-    price: number;
-    quantity: number;
-  }>;
 }
 
 export interface MulticaixaExpressResponse {
   success: boolean;
-  checkout?: MulticaixaExpressCheckout;
-  data?: {
-    payment_url: string;
-    transaction_id: string;
-  };
-  reference?: string;
+  token?: string;
+  redirectUrl?: string;
+  servicoId?: string;
   error?: string;
   message?: string;
 }
 
-export interface MulticaixaExpressVerifyResponse {
-  confirmed: boolean;
-  checkout: {
-    id: string;
-    status: string;
-  };
+export interface MulticaixaExpressStatusResponse {
+  id: string;
+  status: string;
+  valor: number;
+  dataAprovacao?: string;
 }
 
 const MULTICAIXA_EXPRESS_API = 'https://gpo-express.angohost.ao';
 
 /**
- * Create Multicaixa Express Checkout
+ * Create Multicaixa Express Payment Token
  */
-export const createMulticaixaExpressCheckout = async (
+export const createMulticaixaExpressPayment = async (
   request: MulticaixaExpressRequest
 ): Promise<MulticaixaExpressResponse> => {
   try {
-    console.log('🔄 Criando checkout Multicaixa Express:', request);
+    console.log('🔄 Criando token de pagamento Multicaixa Express:', request);
 
-    const response = await fetch(`${MULTICAIXA_EXPRESS_API}/api/checkout/create`, {
+    const response = await fetch(`${MULTICAIXA_EXPRESS_API}/api/gerar-token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -74,54 +45,16 @@ export const createMulticaixaExpressCheckout = async (
 
     if (response.ok) {
       const data = await response.json();
-      console.log('✅ Checkout criado com sucesso:', data);
+      console.log('✅ Token criado com sucesso:', data);
       return data;
     } else {
       throw new Error(`Erro HTTP: ${response.status}`);
     }
   } catch (error: any) {
-    console.error('❌ Erro ao criar checkout:', error);
+    console.error('❌ Erro ao criar token:', error);
     return {
       success: false,
-      error: error.message || 'Erro ao criar checkout',
-      message: 'Erro na comunicação com o serviço Multicaixa Express'
-    };
-  }
-};
-
-/**
- * Process Multicaixa Express Payment
- */
-export const processMulticaixaExpressPayment = async (
-  checkout: MulticaixaExpressCheckout,
-  orderReference: string
-): Promise<MulticaixaExpressResponse> => {
-  try {
-    console.log('🔄 Processando pagamento Multicaixa Express:', checkout.id);
-
-    const response = await fetch(`${MULTICAIXA_EXPRESS_API}/api/payment/process`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        checkout_data: checkout,
-        order_reference: orderReference,
-      }),
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log('✅ Pagamento processado com sucesso:', data);
-      return data;
-    } else {
-      throw new Error(`Erro HTTP: ${response.status}`);
-    }
-  } catch (error: any) {
-    console.error('❌ Erro ao processar pagamento:', error);
-    return {
-      success: false,
-      error: error.message || 'Erro ao processar pagamento',
+      error: error.message || 'Erro ao criar token',
       message: 'Erro na comunicação com o serviço Multicaixa Express'
     };
   }
@@ -131,20 +64,16 @@ export const processMulticaixaExpressPayment = async (
  * Verify Multicaixa Express Payment Status
  */
 export const verifyMulticaixaExpressPayment = async (
-  checkoutId: string
-): Promise<MulticaixaExpressVerifyResponse> => {
+  servicoId: string
+): Promise<MulticaixaExpressStatusResponse> => {
   try {
-    console.log('🔄 Verificando status do pagamento:', checkoutId);
+    console.log('🔄 Verificando status do pagamento:', servicoId);
 
-    const response = await fetch(`${MULTICAIXA_EXPRESS_API}/api/payment/verify`, {
-      method: 'POST',
+    const response = await fetch(`${MULTICAIXA_EXPRESS_API}/api/servicos/${servicoId}`, {
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        verificando: true,
-        id: checkoutId,
-      }),
     });
 
     if (response.ok) {
@@ -157,18 +86,16 @@ export const verifyMulticaixaExpressPayment = async (
   } catch (error: any) {
     console.error('❌ Erro ao verificar pagamento:', error);
     return {
-      confirmed: false,
-      checkout: {
-        id: checkoutId,
-        status: 'error'
-      }
+      id: servicoId,
+      status: 'erro',
+      valor: 0
     };
   }
 };
 
 /**
- * Get Payment Form URL
+ * Get Payment URL
  */
-export const getMulticaixaExpressPaymentUrl = (checkoutId: string): string => {
-  return `${MULTICAIXA_EXPRESS_API}/payform/${checkoutId}`;
+export const getMulticaixaExpressPaymentUrl = (token: string): string => {
+  return `${MULTICAIXA_EXPRESS_API}/pagar?token=${token}`;
 };
