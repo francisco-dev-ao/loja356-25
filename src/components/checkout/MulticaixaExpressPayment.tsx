@@ -48,6 +48,9 @@ const MulticaixaExpressPayment = ({
     try {
       const customerName = profile.name || 'Cliente';
 
+      console.log('💰 Valor recebido (amount):', amount);
+      console.log('💰 Valor que será enviado (centavos):', amount * 100);
+
       const paymentRequest: MulticaixaExpressRequest = {
         valor: amount * 100, // Convert to centavos
         tipo: 'fatura',
