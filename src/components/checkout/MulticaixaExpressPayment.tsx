@@ -87,8 +87,16 @@ const MulticaixaExpressPayment = ({
       }
     } catch (error: any) {
       console.error('Erro ao criar pagamento:', error);
-      onError(error.message || 'Erro ao criar pagamento');
-      toast.error('Erro ao criar pagamento');
+      const errorMessage = error.message || 'Erro ao criar pagamento';
+      
+      // Mostrar erro mais específico para problemas do servidor
+      if (errorMessage.includes('500') || errorMessage.includes('Erro interno do servidor')) {
+        onError('O serviço Multicaixa Express está temporariamente indisponível. Tente novamente em alguns minutos ou use outro método de pagamento.');
+        toast.error('Serviço temporariamente indisponível');
+      } else {
+        onError(errorMessage);
+        toast.error('Erro ao criar pagamento');
+      }
     } finally {
       setIsLoading(false);
     }

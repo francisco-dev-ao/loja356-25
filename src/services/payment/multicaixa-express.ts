@@ -47,28 +47,45 @@ export const createMulticaixaExpressPayment = async (
     console.log('🔄 Criando token de pagamento Multicaixa Express:', request);
     console.log('🔄 Valor enviado para API:', request.valor);
 
+    const requestBody = {
+      valor: request.valor,  // Valor exato como será processado
+      tipo: request.tipo,
+      descricao: request.descricao,
+      cliente: {
+        nome: request.cliente.nome,
+        email: request.cliente.email
+      }
+    };
+
+    console.log('🔄 Request body:', JSON.stringify(requestBody, null, 2));
+
     const response = await fetch(`${MULTICAIXA_EXPRESS_API}/api/gerar-token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        valor: request.valor,  // Valor exato como será processado
-        tipo: request.tipo,
-        descricao: request.descricao,
-        cliente: {
-          nome: request.cliente.nome,
-          email: request.cliente.email
-        }
-      }),
+      body: JSON.stringify(requestBody),
     });
+
+    console.log('🔄 Response status:', response.status);
+    console.log('🔄 Response headers:', Object.fromEntries(response.headers.entries()));
 
     if (response.ok) {
       const data = await response.json();
       console.log('✅ Token criado com sucesso:', data);
       return data;
     } else {
-      throw new Error(`Erro HTTP: ${response.status}`);
+      // Tentar ler a resposta de erro
+      let errorData;
+      try {
+        errorData = await response.json();
+        console.log('❌ Resposta de erro completa:', errorData);
+      } catch {
+        console.log('❌ Não foi possível ler a resposta de erro como JSON');
+      }
+      
+      const errorMessage = errorData?.error || errorData?.message || `Erro HTTP: ${response.status}`;
+      throw new Error(errorMessage);
     }
   } catch (error: any) {
     console.error('❌ Erro ao criar token:', error);
