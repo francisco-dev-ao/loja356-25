@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Download, Eye, Save } from 'lucide-react';
+import { Search, Download, Eye, Save, Lock, CheckCircle, X, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/formatters';
@@ -118,28 +118,68 @@ const Dashboard = () => {
     if (!user) return;
     
     try {
-      // Update profile information
-      await updateProfile({
-        name: formData.name,
-        phone: formData.phone
-      });
-      
-      // Handle password update if provided
+      // Validações específicas para senha
       if (formData.newPassword) {
+        // Validar se as senhas coincidem
         if (formData.newPassword !== formData.confirmPassword) {
           toast.error('As senhas não coincidem');
           return;
         }
         
+        // Validar força da senha
+        if (formData.newPassword.length < 8) {
+          toast.error('A senha deve ter pelo menos 8 caracteres');
+          return;
+        }
+        
+        if (!/[A-Z]/.test(formData.newPassword)) {
+          toast.error('A senha deve conter pelo menos uma letra maiúscula');
+          return;
+        }
+        
+        if (!/[0-9]/.test(formData.newPassword)) {
+          toast.error('A senha deve conter pelo menos um número');
+          return;
+        }
+        
+        if (!/[!@#$%^&*(),.?":{}|<>]/.test(formData.newPassword)) {
+          toast.error('A senha deve conter pelo menos um caractere especial');
+          return;
+        }
+      }
+      
+      // Update profile information first
+      if (formData.name !== profile?.name || formData.phone !== profile?.phone) {
+        await updateProfile({
+          name: formData.name,
+          phone: formData.phone
+        });
+        toast.success('Dados do perfil atualizados com sucesso');
+      }
+      
+      // Handle password update if provided
+      if (formData.newPassword) {
         const { error } = await supabase.auth.updateUser({
           password: formData.newPassword
         });
         
         if (error) throw error;
-        toast.success('Senha atualizada com sucesso');
+        
+        // Limpar campos de senha após sucesso
+        setFormData(prev => ({
+          ...prev,
+          newPassword: '',
+          confirmPassword: ''
+        }));
+        
+        toast.success('Senha alterada com sucesso! Por segurança, faça login novamente.');
+        
+        // Logout automático após alterar senha
+        setTimeout(() => {
+          supabase.auth.signOut();
+          navigate('/cliente/login');
+        }, 2000);
       }
-      
-      toast.success('Dados atualizados com sucesso');
       
     } catch (error: any) {
       toast.error(error.message || 'Erro ao atualizar perfil');
@@ -440,46 +480,103 @@ const Dashboard = () => {
                     </div>
                   </div>
                   
-                  <div>
-                    <h3 className="text-lg font-medium mb-3">Alterar senha</h3>
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold mb-4 text-blue-800 flex items-center">
+                      <Lock className="mr-2" size={20} />
+                      Alterar Senha
+                    </h3>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                           <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-1">
-                            Nova senha
+                            Nova senha *
                           </label>
                           <Input
                             id="new-password"
                             name="newPassword"
                             type="password"
-                            placeholder="••••••••"
+                            placeholder="Mínimo 8 caracteres"
                             value={formData.newPassword}
                             onChange={handleChange}
+                            className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                           />
+                          {formData.newPassword && (
+                            <div className="mt-2 space-y-1">
+                              <div className={`flex items-center text-xs ${formData.newPassword.length >= 8 ? 'text-green-600' : 'text-red-600'}`}>
+                                {formData.newPassword.length >= 8 ? <CheckCircle size={12} className="mr-1" /> : <X size={12} className="mr-1" />}
+                                Pelo menos 8 caracteres
+                              </div>
+                              <div className={`flex items-center text-xs ${/[A-Z]/.test(formData.newPassword) ? 'text-green-600' : 'text-red-600'}`}>
+                                {/[A-Z]/.test(formData.newPassword) ? <CheckCircle size={12} className="mr-1" /> : <X size={12} className="mr-1" />}
+                                Uma letra maiúscula
+                              </div>
+                              <div className={`flex items-center text-xs ${/[0-9]/.test(formData.newPassword) ? 'text-green-600' : 'text-red-600'}`}>
+                                {/[0-9]/.test(formData.newPassword) ? <CheckCircle size={12} className="mr-1" /> : <X size={12} className="mr-1" />}
+                                Um número
+                              </div>
+                              <div className={`flex items-center text-xs ${/[!@#$%^&*(),.?":{}|<>]/.test(formData.newPassword) ? 'text-green-600' : 'text-red-600'}`}>
+                                {/[!@#$%^&*(),.?":{}|<>]/.test(formData.newPassword) ? <CheckCircle size={12} className="mr-1" /> : <X size={12} className="mr-1" />}
+                                Um caractere especial
+                              </div>
+                            </div>
+                          )}
                         </div>
                         <div>
                           <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-1">
-                            Confirmar nova senha
+                            Confirmar nova senha *
                           </label>
                           <Input
                             id="confirm-password"
                             name="confirmPassword"
                             type="password"
-                            placeholder="••••••••"
+                            placeholder="Repita a senha"
                             value={formData.confirmPassword}
                             onChange={handleChange}
+                            className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                           />
+                          {formData.confirmPassword && (
+                            <div className="mt-2">
+                              <div className={`flex items-center text-xs ${formData.newPassword === formData.confirmPassword ? 'text-green-600' : 'text-red-600'}`}>
+                                {formData.newPassword === formData.confirmPassword ? <CheckCircle size={12} className="mr-1" /> : <X size={12} className="mr-1" />}
+                                {formData.newPassword === formData.confirmPassword ? 'Senhas coincidem' : 'Senhas não coincidem'}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
+                    
+                    {(formData.newPassword || formData.confirmPassword) && (
+                      <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                        <div className="flex items-center text-amber-800 text-sm">
+                          <AlertTriangle size={16} className="mr-2" />
+                          <span>Por segurança, você será desconectado após alterar a senha e precisará fazer login novamente.</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
-                  <div>
-                    <Button type="submit" className="bg-primary hover:bg-primary/90">
+                  <div className="flex gap-4">
+                    <Button 
+                      type="submit" 
+                      className="bg-microsoft-blue hover:bg-microsoft-blue/90 flex items-center"
+                      disabled={formData.newPassword && (!formData.newPassword || !formData.confirmPassword || formData.newPassword !== formData.confirmPassword)}
+                    >
                       <Save size={16} className="mr-2" />
                       Salvar Alterações
                     </Button>
+                    
+                    {(formData.newPassword || formData.confirmPassword) && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setFormData(prev => ({ ...prev, newPassword: '', confirmPassword: '' }))}
+                        className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                      >
+                        Limpar Senha
+                      </Button>
+                    )}
                   </div>
                 </form>
               </div>
