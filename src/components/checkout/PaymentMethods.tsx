@@ -44,7 +44,7 @@ const PaymentMethods = ({ paymentMethod, onSelectPaymentMethod }: PaymentMethods
         <CardContent className="p-6">
           <div className="flex items-center">
             <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mr-4">
-              <CreditCard className="w-6 h-6 text-primary" />
+              <img src="/lovable-uploads/bf079303-1331-494d-ada2-21403d198ef6.png" alt="Multicaixa Express" className="w-6 h-6" />
             </div>
             <div>
               <h4 className="font-medium text-lg">Multicaixa Express</h4>
