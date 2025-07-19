@@ -15,19 +15,24 @@ serve(async (req: Request) => {
   }
 
   try {
+    console.log("🔄 Função send-order-confirmation iniciada");
     const { orderId } = await req.json();
+    console.log("📋 Order ID recebido:", orderId);
     
     if (!orderId) {
+      console.error("❌ Order ID não fornecido");
       throw new Error("Order ID is required");
     }
     
     // Initialize Supabase client with Admin key to bypass RLS policies
+    console.log("🔄 Inicializando cliente Supabase...");
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") || "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
     );
     
     // Get company settings
+    console.log("🔄 Buscando configurações da empresa...");
     const { data: settingsData, error: settingsError } = await supabaseAdmin
       .from("settings")
       .select("*")
@@ -35,12 +40,15 @@ serve(async (req: Request) => {
       .single();
     
     if (settingsError) {
+      console.error("❌ Erro ao buscar configurações:", settingsError);
       throw new Error(`Error fetching settings: ${settingsError.message}`);
     }
     
     if (!settingsData) {
+      console.error("❌ Configurações da empresa não encontradas");
       throw new Error("Company settings not found");
     }
+    console.log("✅ Configurações encontradas:", settingsData.name);
     
     // Get order details including customer info
     const { data: order, error: orderError } = await supabaseAdmin
@@ -322,27 +330,36 @@ serve(async (req: Request) => {
     }
     
     // Send email using mail3.angohost.ao API
-    console.log(`Sending email to ${customerEmail} with order confirmation`);
+    console.log(`📧 Enviando email para: ${customerEmail}`);
+    console.log(`📧 Assunto: Confirmação de Pedido - ${settingsData.name}`);
     
     try {
+      console.log("🔄 Fazendo requisição para API de email...");
+      const emailPayload = {
+        to: customerEmail,
+        subject: `Confirmação de Pedido - ${settingsData.name}`,
+        html: emailHtml
+      };
+      console.log("📋 Payload do email:", JSON.stringify(emailPayload, null, 2));
+      
       const emailResponse = await fetch('https://mail3.angohost.ao/email/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: customerEmail,
-          subject: `Confirmação de Pedido - ${settingsData.name}`,
-          html: emailHtml
-        })
+        body: JSON.stringify(emailPayload)
       });
 
+      console.log(`📧 Resposta da API de email - Status: ${emailResponse.status}`);
+      
       if (!emailResponse.ok) {
-        throw new Error(`Email API error: ${emailResponse.status}`);
+        const errorText = await emailResponse.text();
+        console.error(`❌ Erro na API de email: ${errorText}`);
+        throw new Error(`Email API error: ${emailResponse.status} - ${errorText}`);
       }
 
       const emailResult = await emailResponse.json();
-      console.log('Email sent successfully:', emailResult);
+      console.log('✅ Email enviado com sucesso:', emailResult);
     } catch (emailError) {
-      console.error('Error sending email:', emailError);
+      console.error('❌ Erro ao enviar email:', emailError);
       // Don't throw error to prevent order confirmation failure
     }
     

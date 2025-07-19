@@ -102,21 +102,22 @@ const Checkout = () => {
       localStorage.setItem('latest_order_id', orderData.id);
       
       setOrderId(orderData.id);
-      console.log("Pedido criado com sucesso:", orderData.id);
+      console.log("✅ Pedido criado com sucesso:", orderData.id);
 
       // Enviar email de confirmação automaticamente
+      console.log("🔄 Tentando enviar email de confirmação...");
       try {
         const { data, error } = await supabase.functions.invoke('send-order-confirmation', {
           body: { orderId: orderData.id }
         });
         
         if (error) {
-          console.error('Erro ao enviar email:', error);
+          console.error('❌ Erro na função de email:', error);
         } else {
-          console.log('Email de confirmação enviado com sucesso');
+          console.log('✅ Resposta da função de email:', data);
         }
       } catch (emailError) {
-        console.error('Erro ao invocar função de email:', emailError);
+        console.error('❌ Erro ao invocar função de email:', emailError);
       }
 
       // Set order ID for payment processing
