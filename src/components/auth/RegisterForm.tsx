@@ -98,7 +98,10 @@ const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
           setNif={(v) => {
             setNif(v);
             if (!v) {
+              // Limpar todos os dados quando NIF é apagado
               setCompanyName('');
+              setAddress('');
+              setPhone('');
               setIsNomeFiscalBloqueado(false);
               setIsAutoFilledPhone(false);
               setIsAutoFilledAddress(false);

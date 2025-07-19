@@ -119,14 +119,13 @@ export const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
           setNif={(v) => {
             setNif(v);
             if (!v) {
+              // Limpar todos os dados quando NIF é apagado
               setCompanyName('');
+              setAddress('');
+              setPhone('');
               setIsNomeFiscalBloqueado(false);
-              setIsNifBloqueado(false);
               setIsAutoFilledPhone(false);
               setIsAutoFilledAddress(false);
-            } else {
-              setIsNomeFiscalBloqueado(false);
-              setIsNifBloqueado(false);
             }
           }}
           setCompanyName={(v) => {
