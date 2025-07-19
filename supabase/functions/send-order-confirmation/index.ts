@@ -223,7 +223,15 @@ serve(async (req: Request) => {
     }
     
     // Check if SMTP settings are configured
-    if (settingsData.smtp_host && settingsData.smtp_user && settingsData.smtp_password) {
+    console.log('SMTP Settings check:', {
+      smtp_host: settingsData.smtp_host,
+      smtp_user: settingsData.smtp_user,
+      smtp_pass: settingsData.smtp_pass,
+      smtp_password: settingsData.smtp_password,
+      settings: Object.keys(settingsData)
+    });
+    
+    if (settingsData.smtp_host && settingsData.smtp_user && (settingsData.smtp_pass || settingsData.smtp_password)) {
       // Create SMTP client
       const client = new SMTPClient({
         connection: {
@@ -232,14 +240,14 @@ serve(async (req: Request) => {
           tls: true,
           auth: {
             username: settingsData.smtp_user,
-            password: settingsData.smtp_password,
+            password: settingsData.smtp_pass || settingsData.smtp_password,
           },
         },
       });
 
       // Send email
       await client.send({
-        from: `${settingsData.smtp_from_name || settingsData.name} <${settingsData.smtp_from_email || 'noreply@example.com'}>`,
+        from: `${settingsData.smtp_from_name || settingsData.name} <${settingsData.smtp_from || settingsData.smtp_from_email || 'noreply@example.com'}>`,
         to: customerEmail,
         subject: `Confirmação de Pedido - ${settingsData.name}`,
         html: emailHtml,
