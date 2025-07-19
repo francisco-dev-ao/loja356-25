@@ -369,7 +369,7 @@ serve(async (req: Request) => {
         message: error.message || "Erro ao enviar email de confirmação." 
       }),
       { 
-        status: 400, 
+        status: 200, // Use 200 to avoid HTTP error handling
         headers: { 
           "Content-Type": "application/json",
           ...corsHeaders 
