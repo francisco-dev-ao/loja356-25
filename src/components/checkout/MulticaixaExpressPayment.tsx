@@ -203,7 +203,7 @@ const MulticaixaExpressPayment = ({
                 <span className="text-sm font-medium text-muted-foreground">Valor</span>
               </div>
               <p className="text-2xl font-bold text-primary">
-                {amount.toLocaleString('pt-AO')} AOA
+                {(amount).toLocaleString('pt-AO')} AOA
               </p>
             </div>
           </div>
