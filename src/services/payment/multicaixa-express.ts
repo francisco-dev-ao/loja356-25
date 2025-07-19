@@ -35,6 +35,8 @@ export interface MulticaixaExpressStatusResponse {
   };
 }
 
+import { supabase } from '@/integrations/supabase/client';
+
 const MULTICAIXA_EXPRESS_API = 'https://gpo-express.angohost.ao';
 
 /**
@@ -47,45 +49,30 @@ export const createMulticaixaExpressPayment = async (
     console.log('🔄 Criando token de pagamento Multicaixa Express:', request);
     console.log('🔄 Valor enviado para API:', request.valor);
 
-    const requestBody = {
-      valor: request.valor,  // Valor exato como será processado
-      tipo: request.tipo,
-      descricao: request.descricao,
-      cliente: {
-        nome: request.cliente.nome,
-        email: request.cliente.email
+    const { data, error } = await supabase.functions.invoke('multicaixa-express-proxy', {
+      body: {
+        action: 'create-payment',
+        valor: request.valor,
+        tipo: request.tipo,
+        descricao: request.descricao,
+        cliente: {
+          nome: request.cliente.nome,
+          email: request.cliente.email
+        }
       }
-    };
-
-    console.log('🔄 Request body:', JSON.stringify(requestBody, null, 2));
-
-    const response = await fetch(`${MULTICAIXA_EXPRESS_API}/api/gerar-token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
     });
 
-    console.log('🔄 Response status:', response.status);
-    console.log('🔄 Response headers:', Object.fromEntries(response.headers.entries()));
+    if (error) {
+      console.error('❌ Erro na Edge Function:', error);
+      throw new Error(error.message || 'Erro na comunicação com o proxy');
+    }
 
-    if (response.ok) {
-      const data = await response.json();
-      console.log('✅ Token criado com sucesso:', data);
+    console.log('✅ Resposta da Edge Function:', data);
+    
+    if (data.success) {
       return data;
     } else {
-      // Tentar ler a resposta de erro
-      let errorData;
-      try {
-        errorData = await response.json();
-        console.log('❌ Resposta de erro completa:', errorData);
-      } catch {
-        console.log('❌ Não foi possível ler a resposta de erro como JSON');
-      }
-      
-      const errorMessage = errorData?.error || errorData?.message || `Erro HTTP: ${response.status}`;
-      throw new Error(errorMessage);
+      throw new Error(data.error || 'Erro ao criar pagamento');
     }
   } catch (error: any) {
     console.error('❌ Erro ao criar token:', error);
@@ -106,19 +93,24 @@ export const verifyMulticaixaExpressPayment = async (
   try {
     console.log('🔄 Verificando status do pagamento:', servicoId);
 
-    const response = await fetch(`${MULTICAIXA_EXPRESS_API}/api/servicos/${servicoId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+    const { data, error } = await supabase.functions.invoke('multicaixa-express-proxy', {
+      body: {
+        action: 'verify-payment',
+        servicoId: servicoId
+      }
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      console.log('✅ Status verificado:', data);
+    if (error) {
+      console.error('❌ Erro na Edge Function:', error);
+      throw new Error(error.message || 'Erro na comunicação com o proxy');
+    }
+
+    console.log('✅ Status verificado via proxy:', data);
+    
+    if (data.success) {
       return data;
     } else {
-      throw new Error(`Erro HTTP: ${response.status}`);
+      throw new Error(data.error || 'Erro ao verificar pagamento');
     }
   } catch (error: any) {
     console.error('❌ Erro ao verificar pagamento:', error);
