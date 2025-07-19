@@ -137,15 +137,25 @@ export class InvoicePDFGenerator {
   }
 
   private addItemsTable(items: any[]): void {
-    if (!items || items.length === 0) return;
+    console.log('🔄 Adicionando tabela de itens:', items);
+    
+    if (!items || items.length === 0) {
+      console.warn('⚠️ Nenhum item encontrado para a tabela');
+      return;
+    }
 
     const tableColumn = ['Descrição', 'Qtd', 'Preço Unitário', 'Total'];
-    const tableRows = items.map((item: any) => [
-      item.product?.name || item.productName || 'Produto',
-      item.quantity.toString(),
-      `${this.formatCurrency(item.price)} AOA`,
-      `${this.formatCurrency(item.price * item.quantity)} AOA`
-    ]);
+    const tableRows = items.map((item: any) => {
+      console.log('🔄 Processando item:', item);
+      return [
+        item.product?.name || item.productName || 'Produto',
+        item.quantity.toString(),
+        `${this.formatCurrency(item.price)} AOA`,
+        `${this.formatCurrency(item.price * item.quantity)} AOA`
+      ];
+    });
+    
+    console.log('✅ Linhas da tabela geradas:', tableRows);
 
     // @ts-ignore
     this.doc.autoTable({

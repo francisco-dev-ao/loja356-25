@@ -86,26 +86,47 @@ const MulticaixaRefPayment = ({
       }
       setIsGeneratingPdf(true);
       try {
+        console.log('🔄 Iniciando geração de PDF para pedido:', orderId);
+        console.log('🔄 Profile disponível:', profile);
+        console.log('🔄 Dados da referência:', referenceData);
+        
         // Buscar detalhes do pedido
         const { data: orderData, error: orderError } = await supabase
           .from('orders')
           .select('*')
           .eq('id', orderId)
           .single();
-        if (orderError) throw orderError;
+        if (orderError) {
+          console.error('❌ Erro ao buscar dados do pedido:', orderError);
+          throw orderError;
+        }
+        console.log('✅ Dados do pedido encontrados:', orderData);
+        
         // Buscar itens do pedido
         const { data: orderItems, error: itemsError } = await supabase
           .from('order_items')
           .select('*')
           .eq('order_id', orderId);
-        if (itemsError) throw itemsError;
+        if (itemsError) {
+          console.error('❌ Erro ao buscar itens do pedido:', itemsError);
+          throw itemsError;
+        }
+        console.log('✅ Itens do pedido encontrados:', orderItems);
+        
         // Buscar nomes dos produtos
         const productIds = orderItems.map(item => item.product_id);
+        console.log('🔄 IDs dos produtos:', productIds);
+        
         const { data: products, error: productsError } = await supabase
           .from('products')
           .select('id, name')
           .in('id', productIds);
-        if (productsError) throw productsError;
+        if (productsError) {
+          console.error('❌ Erro ao buscar produtos:', productsError);
+          throw productsError;
+        }
+        console.log('✅ Produtos encontrados:', products);
+        
         // Associar nomes aos itens
         const itemsWithProductNames = orderItems.map(item => {
           const product = products.find(p => p.id === item.product_id);
@@ -114,21 +135,29 @@ const MulticaixaRefPayment = ({
             productName: product?.name || 'Produto não encontrado'
           };
         });
+        console.log('✅ Itens com nomes dos produtos:', itemsWithProductNames);
+        
         const orderWithItems = {
           ...orderData,
           items: itemsWithProductNames
         };
+        console.log('✅ Pedido completo para PDF:', orderWithItems);
+        
         // Gerar PDF
+        console.log('🔄 Iniciando geração do PDF...');
         const pdfGenerator = new InvoicePDFGenerator();
-        pdfGenerator.generateProfessionalInvoice({
+        await pdfGenerator.generateProfessionalInvoice({
           order: orderWithItems,
           profile,
           companyInfo,
           paymentReference: referenceData
         });
+        console.log('✅ PDF gerado com sucesso');
+        
         pdfGenerator.save(`FATURA-${orderId.substring(0, 8)}.pdf`);
         toast.success('Fatura gerada com sucesso!');
       } catch (error) {
+        console.error('❌ Erro completo ao gerar PDF:', error);
         toast.error('Erro ao gerar a fatura PDF');
       } finally {
         setIsGeneratingPdf(false);
