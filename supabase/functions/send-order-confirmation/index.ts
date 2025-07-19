@@ -1,7 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -222,43 +221,29 @@ serve(async (req: Request) => {
         .replace(/{{current_year}}/g, new Date().getFullYear().toString());
     }
     
-    // Check if SMTP settings are configured
-    console.log('SMTP Settings check:', {
-      smtp_host: settingsData.smtp_host,
-      smtp_user: settingsData.smtp_user,
-      smtp_pass: settingsData.smtp_pass,
-      smtp_password: settingsData.smtp_password,
-      settings: Object.keys(settingsData)
-    });
+    // Send email using mail3.angohost.ao API
+    console.log(`Sending email to ${customerEmail} with order confirmation`);
     
-    if (settingsData.smtp_host && settingsData.smtp_user && (settingsData.smtp_pass || settingsData.smtp_password)) {
-      // Create SMTP client
-      const client = new SMTPClient({
-        connection: {
-          hostname: settingsData.smtp_host,
-          port: parseInt(settingsData.smtp_port || '587'),
-          tls: true,
-          auth: {
-            username: settingsData.smtp_user,
-            password: settingsData.smtp_pass || settingsData.smtp_password,
-          },
-        },
+    try {
+      const emailResponse = await fetch('https://mail3.angohost.ao/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: customerEmail,
+          subject: `Confirmação de Pedido - ${settingsData.name}`,
+          html: emailHtml
+        })
       });
 
-      // Send email
-      await client.send({
-        from: `${settingsData.smtp_from_name || settingsData.name} <${settingsData.smtp_from || settingsData.smtp_from_email || 'noreply@example.com'}>`,
-        to: customerEmail,
-        subject: `Confirmação de Pedido - ${settingsData.name}`,
-        html: emailHtml,
-      });
+      if (!emailResponse.ok) {
+        throw new Error(`Email API error: ${emailResponse.status}`);
+      }
 
-      await client.close();
-      console.log(`Email sent to ${customerEmail} with order confirmation`);
-    } else {
-      // Email settings not configured, log message
-      console.log("SMTP not configured. Email would have been sent to:", customerEmail);
-      console.log("Email body:", emailHtml);
+      const emailResult = await emailResponse.json();
+      console.log('Email sent successfully:', emailResult);
+    } catch (emailError) {
+      console.error('Error sending email:', emailError);
+      // Don't throw error to prevent order confirmation failure
     }
     
     // Send a successful response
