@@ -95,6 +95,7 @@ const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
           setNif={setNif}
           setCompanyName={setCompanyName}
           setAddress={setAddress}
+          setPhone={setPhone}
           setNifError={setNifError}
           nifError={nifError}
         />

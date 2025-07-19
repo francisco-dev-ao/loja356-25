@@ -31,6 +31,7 @@ export const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
   const nameRef = useRef<HTMLInputElement>(null);
   const nifRef = useRef<HTMLInputElement>(null);
   const [isAutoFilledAddress, setIsAutoFilledAddress] = useState(false);
+  const [isAutoFilledPhone, setIsAutoFilledPhone] = useState(false);
   const [isNomeFiscalBloqueado, setIsNomeFiscalBloqueado] = useState(false);
   const [isNifBloqueado, setIsNifBloqueado] = useState(false);
 
@@ -121,6 +122,8 @@ export const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
               setCompanyName('');
               setIsNomeFiscalBloqueado(false);
               setIsNifBloqueado(false);
+              setIsAutoFilledPhone(false);
+              setIsAutoFilledAddress(false);
             } else {
               setIsNomeFiscalBloqueado(false);
               setIsNifBloqueado(false);
@@ -132,7 +135,7 @@ export const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
             setIsNifBloqueado(true);
           }}
           setAddress={(v) => { setAddress(v); setIsAutoFilledAddress(true); }}
-          setPhone={setPhone}
+          setPhone={(v) => { setPhone(v); setIsAutoFilledPhone(true); }}
           setNifError={setNifError}
           nifError={nifError}
         />
@@ -181,28 +184,6 @@ export const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
             </Tooltip>
           </div>
         </div>
-        {/* NIF/BI Field */}
-        <div className="space-y-2">
-          <Label htmlFor="nif">Nº de Contribuinte (NIF)</Label>
-          <Input
-            id="nif"
-            type="text"
-            value={nif}
-            onChange={(e) => {
-              setNif(e.target.value);
-              setIsNifBloqueado(false);
-              setIsNomeFiscalBloqueado(false);
-              if (!e.target.value) {
-                setCompanyName('');
-              }
-            }}
-            placeholder="Nº de Contribuinte (NIF)"
-            className={isNifBloqueado ? 'bg-gray-100 cursor-not-allowed border-dashed border-microsoft-blue/40' : ''}
-            required
-            readOnly={isNifBloqueado}
-          />
-          {nifError && <p className="text-red-500 text-sm">{nifError}</p>}
-        </div>
       </fieldset>
 
       {/* Bloco: Contato */}
@@ -211,7 +192,18 @@ export const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="phone">Telefone</Label>
-            <PhoneInput phone={phone} setPhone={setPhone} />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PhoneInput 
+                  phone={phone} 
+                  setPhone={(v) => { setPhone(v); setIsAutoFilledPhone(false); }}
+                  isAutoFilled={isAutoFilledPhone}
+                />
+              </TooltipTrigger>
+              {isAutoFilledPhone && (
+                <TooltipContent side="top">Campo preenchido automaticamente e não pode ser editado</TooltipContent>
+              )}
+            </Tooltip>
             {!isValidPhone && phone && (
               <div className="flex items-center text-red-500 text-xs mt-1"><AlertCircle size={14} className="mr-1" />Telefone inválido</div>
             )}
