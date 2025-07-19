@@ -20,6 +20,8 @@ import CheckoutSuccess from "./pages/CheckoutSuccess";
 import Contact from "./pages/Contact";
 import Register from "./pages/Register";
 import Login from "./pages/customer/Login";
+import ForgotPassword from "./pages/customer/ForgotPassword";
+import ResetPassword from "./pages/customer/ResetPassword";
 import CustomerDashboard from "./pages/customer/Dashboard";
 import AdminDashboard from "./pages/admin/Dashboard";
 import NotFound from "./pages/NotFound";
@@ -47,6 +49,8 @@ const AppWithProviders = () => {
                 <Route path="/cadastro" element={<Register />} />
                   {/* Customer Routes */}
                 <Route path="/cliente/login" element={<Login />} />
+                <Route path="/cliente/esqueci-senha" element={<ForgotPassword />} />
+                <Route path="/cliente/redefinir-senha" element={<ResetPassword />} />
                 <Route path="/cliente/dashboard" element={
                   <CustomerRoute>
                     <CustomerDashboard />
