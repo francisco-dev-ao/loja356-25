@@ -42,16 +42,6 @@ const MulticaixaExpressPayment = ({
     handleCreatePayment();
   }, []);
 
-  // Automatically open payment page when token is created
-  useEffect(() => {
-    if (paymentData && paymentUrl && !isVerifying) {
-      // Small delay to ensure UI is ready
-      setTimeout(() => {
-        handleOpenPayment();
-      }, 1000);
-    }
-  }, [paymentData, paymentUrl]);
-
   const handleCreatePayment = async () => {
     if (!user || !profile) {
       onError('Dados do usuário não encontrados');
@@ -295,7 +285,7 @@ const MulticaixaExpressPayment = ({
           <div>
             <h3 className="font-semibold text-lg mb-2">Multicaixa Express</h3>
             <p className="text-muted-foreground mb-4">
-              Processando pagamento automaticamente...
+              Gerando token de pagamento...
             </p>
             <p className="text-2xl font-bold text-primary mb-6">
               {amount.toLocaleString('pt-AO')} AOA
@@ -305,12 +295,12 @@ const MulticaixaExpressPayment = ({
           <div className="w-full max-w-sm h-12 bg-gradient-to-r from-primary to-primary/80 rounded-lg flex items-center justify-center">
             <Loader2 className="w-4 h-4 mr-2 animate-spin text-white" />
             <span className="text-white font-medium">
-              {isLoading ? 'Gerando token...' : 'Iniciando pagamento...'}
+              {isLoading ? 'Gerando token...' : 'Preparando pagamento...'}
             </span>
           </div>
           
           <p className="text-xs text-muted-foreground text-center max-w-sm">
-            O pagamento será processado automaticamente e a página de pagamento será aberta em uma nova janela
+            Após a geração do token, clique no botão para abrir a página de pagamento
           </p>
         </div>
       </CardContent>
