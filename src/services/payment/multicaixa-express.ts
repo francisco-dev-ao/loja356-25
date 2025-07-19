@@ -45,13 +45,22 @@ export const createMulticaixaExpressPayment = async (
 ): Promise<MulticaixaExpressResponse> => {
   try {
     console.log('🔄 Criando token de pagamento Multicaixa Express:', request);
+    console.log('🔄 Valor enviado para API:', request.valor);
 
     const response = await fetch(`${MULTICAIXA_EXPRESS_API}/api/gerar-token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(request),
+      body: JSON.stringify({
+        valor: request.valor,  // Valor exato como será processado
+        tipo: request.tipo,
+        descricao: request.descricao,
+        cliente: {
+          nome: request.cliente.nome,
+          email: request.cliente.email
+        }
+      }),
     });
 
     if (response.ok) {
