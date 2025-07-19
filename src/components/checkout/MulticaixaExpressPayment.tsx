@@ -48,11 +48,14 @@ const MulticaixaExpressPayment = ({
     try {
       const customerName = profile.name || 'Cliente';
 
-      console.log('💰 Valor recebido (amount):', amount);
-      console.log('💰 Valor que será enviado (centavos):', amount * 100);
+      // Convert finalTotal from AOA to centavos
+      const valorEmCentavos = Math.round(amount * 100);
+      
+      console.log('💰 Valor recebido (amount):', amount, 'AOA');
+      console.log('💰 Valor que será enviado (centavos):', valorEmCentavos);
 
       const paymentRequest: MulticaixaExpressRequest = {
-        valor: amount * 100, // Convert to centavos
+        valor: valorEmCentavos, // Convert AOA to centavos
         tipo: 'fatura',
         descricao: description || 'Pagamento de produtos',
         cliente: {
