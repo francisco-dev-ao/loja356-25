@@ -17,6 +17,7 @@ import CheckoutSummary from '@/components/checkout/CheckoutSummary';
 import PaymentMethods from '@/components/checkout/PaymentMethods';
 import AccountTabs from '@/components/checkout/AccountTabs';
 import MulticaixaRefPayment from '@/components/checkout/MulticaixaRefPayment';
+import MulticaixaExpressPayment from '@/components/checkout/MulticaixaExpressPayment';
 
 const Checkout = () => {
   const { items, total, finalTotal, clearCart, appliedCoupon } = useCart();
@@ -109,6 +110,8 @@ const Checkout = () => {
       // Update order with payment reference after payment
       if (paymentMethod === 'multicaixa_ref') {
         // Payment will be processed in the MulticaixaRefPayment component
+      } else if (paymentMethod === 'multicaixa_express') {
+        // Payment will be processed in the MulticaixaExpressPayment component
       }
     } catch (error: any) {
       console.error('Erro ao criar pedido:', error);
@@ -184,6 +187,25 @@ const Checkout = () => {
 
                     {paymentMethod === 'multicaixa_ref' && (
                       <MulticaixaRefPayment
+                        amount={finalTotal}
+                        description={`Pedido ${orderId || 'checkout'}`}
+                        orderId={orderId}
+                        onSuccess={() => {
+                          if (orderId) {
+                            navigate(`/checkout/success?orderId=${orderId}`);
+                            clearCart();
+                          } else {
+                            handleCreateOrder();
+                          }
+                        }}
+                        onError={(error) => {
+                          toast.error(`Erro no pagamento: ${error}`);
+                        }}
+                      />
+                    )}
+
+                    {paymentMethod === 'multicaixa_express' && (
+                      <MulticaixaExpressPayment
                         amount={finalTotal}
                         description={`Pedido ${orderId || 'checkout'}`}
                         orderId={orderId}
