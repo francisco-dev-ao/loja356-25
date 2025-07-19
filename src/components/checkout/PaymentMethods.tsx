@@ -32,27 +32,6 @@ const PaymentMethods = ({ paymentMethod, onSelectPaymentMethod }: PaymentMethods
         </CardContent>
       </Card>
 
-      <Card 
-        className={`border cursor-pointer transition-all duration-200 ease-in-out
-          ${
-            paymentMethod === 'multicaixa_express' 
-              ? 'border-primary bg-primary/10 shadow-md' 
-              : 'hover:border-primary/50 hover:bg-primary/5 hover:shadow-md'
-          }`}
-        onClick={() => onSelectPaymentMethod('multicaixa_express')}
-      >
-        <CardContent className="p-6">
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mr-4">
-              <img src="/lovable-uploads/bf079303-1331-494d-ada2-21403d198ef6.png" alt="Multicaixa Express" className="w-6 h-6" />
-            </div>
-            <div>
-              <h4 className="font-medium text-lg">Multicaixa Express</h4>
-              <p className="text-sm text-muted-foreground">Pague de forma rápida e segura através do Multicaixa Express</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
