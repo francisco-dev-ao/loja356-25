@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -36,6 +36,21 @@ const MulticaixaExpressPayment = ({
   
   const { items } = useCart();
   const { user, profile } = useAuth();
+
+  // Automatically create payment when component mounts
+  useEffect(() => {
+    handleCreatePayment();
+  }, []);
+
+  // Automatically open payment page when token is created
+  useEffect(() => {
+    if (paymentData && paymentUrl && !isVerifying) {
+      // Small delay to ensure UI is ready
+      setTimeout(() => {
+        handleOpenPayment();
+      }, 1000);
+    }
+  }, [paymentData, paymentUrl]);
 
   const handleCreatePayment = async () => {
     if (!user || !profile) {
@@ -268,7 +283,7 @@ const MulticaixaExpressPayment = ({
     );
   }
 
-  // Initial state - show create checkout button
+  // Loading state - automatic payment processing
   return (
     <Card className="mt-6">
       <CardContent className="p-6 text-center">
@@ -280,30 +295,23 @@ const MulticaixaExpressPayment = ({
           <div>
             <h3 className="font-semibold text-lg mb-2">Multicaixa Express</h3>
             <p className="text-muted-foreground mb-4">
-              Pague de forma rápida e segura através do Multicaixa Express
+              Processando pagamento automaticamente...
             </p>
             <p className="text-2xl font-bold text-primary mb-6">
               {amount.toLocaleString('pt-AO')} AOA
             </p>
           </div>
 
-          <Button 
-            onClick={handleCreatePayment}
-            disabled={isLoading}
-            className="w-full max-w-sm h-12 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-300"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Gerando token...
-              </>
-            ) : (
-              <>
-                <Smartphone className="w-4 h-4 mr-2" />
-                Pagar com Multicaixa Express
-              </>
-            )}
-          </Button>
+          <div className="w-full max-w-sm h-12 bg-gradient-to-r from-primary to-primary/80 rounded-lg flex items-center justify-center">
+            <Loader2 className="w-4 h-4 mr-2 animate-spin text-white" />
+            <span className="text-white font-medium">
+              {isLoading ? 'Gerando token...' : 'Iniciando pagamento...'}
+            </span>
+          </div>
+          
+          <p className="text-xs text-muted-foreground text-center max-w-sm">
+            O pagamento será processado automaticamente e a página de pagamento será aberta em uma nova janela
+          </p>
         </div>
       </CardContent>
     </Card>
