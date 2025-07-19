@@ -39,6 +39,68 @@ const MulticaixaRefPayment = ({
   const { profile } = useAuth();
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
+  const generateAndSendInvoicePDF = async () => {
+    if (!orderId || !profile) return;
+    
+    setIsGeneratingPdf(true);
+    try {
+      // Buscar detalhes do pedido
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', orderId)
+        .single();
+      if (orderError) throw orderError;
+      
+      // Buscar itens do pedido
+      const { data: orderItems, error: itemsError } = await supabase
+        .from('order_items')
+        .select('*')
+        .eq('order_id', orderId);
+      if (itemsError) throw itemsError;
+      
+      // Buscar nomes dos produtos
+      const productIds = orderItems.map(item => item.product_id);
+      const { data: products, error: productsError } = await supabase
+        .from('products')
+        .select('id, name')
+        .in('id', productIds);
+      if (productsError) throw productsError;
+      
+      // Associar nomes aos itens
+      const itemsWithProductNames = orderItems.map(item => {
+        const product = products.find(p => p.id === item.product_id);
+        return {
+          ...item,
+          productName: product?.name || 'Produto não encontrado'
+        };
+      });
+      
+      const orderWithItems = {
+        ...orderData,
+        items: itemsWithProductNames
+      };
+      
+      // Gerar PDF
+      const pdfGenerator = new InvoicePDFGenerator();
+      await pdfGenerator.generateProfessionalInvoice({
+        order: orderWithItems,
+        profile,
+        companyInfo,
+        paymentReference: referenceData
+      });
+      
+      // Baixar automaticamente
+      pdfGenerator.save(`PROFORMA-${orderId.substring(0, 8)}.pdf`);
+      toast.success('Proforma/Fatura PDF gerada e baixada automaticamente!');
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      toast.error('Erro ao gerar a fatura PDF');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   const handleGenerateReference = async () => {
     setIsLoading(true);
     
@@ -57,6 +119,11 @@ const MulticaixaRefPayment = ({
       }
       
       toast.success('Referência gerada com sucesso!');
+      
+      // Gerar e enviar fatura PDF automaticamente
+      if (orderId && profile) {
+        await generateAndSendInvoicePDF();
+      }
       
       if (onSuccess) {
         onSuccess(response);

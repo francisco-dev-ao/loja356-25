@@ -104,6 +104,21 @@ const Checkout = () => {
       setOrderId(orderData.id);
       console.log("Pedido criado com sucesso:", orderData.id);
 
+      // Enviar email de confirmação automaticamente
+      try {
+        const { data, error } = await supabase.functions.invoke('send-order-confirmation', {
+          body: { orderId: orderData.id }
+        });
+        
+        if (error) {
+          console.error('Erro ao enviar email:', error);
+        } else {
+          console.log('Email de confirmação enviado com sucesso');
+        }
+      } catch (emailError) {
+        console.error('Erro ao invocar função de email:', emailError);
+      }
+
       // Set order ID for payment processing
       setOrderId(orderData.id);
       
