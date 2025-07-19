@@ -28,6 +28,9 @@ const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
   const [address, setAddress] = useState('');
   const [nifError, setNifError] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isNomeFiscalBloqueado, setIsNomeFiscalBloqueado] = useState(false);
+  const [isAutoFilledPhone, setIsAutoFilledPhone] = useState(false);
+  const [isAutoFilledAddress, setIsAutoFilledAddress] = useState(false);
   const isCartPage = location.pathname === '/carrinho';
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,10 +95,21 @@ const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
         {/* NIF/BI Field */}
         <NifInput 
           nif={nif}
-          setNif={setNif}
-          setCompanyName={setCompanyName}
-          setAddress={setAddress}
-          setPhone={setPhone}
+          setNif={(v) => {
+            setNif(v);
+            if (!v) {
+              setCompanyName('');
+              setIsNomeFiscalBloqueado(false);
+              setIsAutoFilledPhone(false);
+              setIsAutoFilledAddress(false);
+            }
+          }}
+          setCompanyName={(v) => {
+            setCompanyName(v);
+            setIsNomeFiscalBloqueado(true);
+          }}
+          setAddress={(v) => { setAddress(v); setIsAutoFilledAddress(true); }}
+          setPhone={(v) => { setPhone(v); setIsAutoFilledPhone(true); }}
           setNifError={setNifError}
           nifError={nifError}
         />
@@ -129,8 +143,15 @@ const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
               id="companyName"
               type="text"
               value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
+              onChange={(e) => {
+                // Não permite edição se foi preenchido automaticamente
+                if (!isNomeFiscalBloqueado) {
+                  setCompanyName(e.target.value);
+                }
+              }}
               placeholder="Nome Fiscal"
+              className={isNomeFiscalBloqueado ? 'bg-gray-100 cursor-not-allowed border-dashed border-microsoft-blue/40' : ''}
+              readOnly={isNomeFiscalBloqueado}
               required
             />
           </div>
@@ -138,7 +159,8 @@ const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
           {/* Phone Field */}
           <PhoneInput
             phone={phone}
-            setPhone={setPhone}
+            setPhone={(v) => { setPhone(v); setIsAutoFilledPhone(false); }}
+            isAutoFilled={isAutoFilledPhone}
           />
         </div>
         
@@ -149,8 +171,10 @@ const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
             id="address"
             type="text"
             value={address}
-            onChange={(e) => setAddress(e.target.value)}
+            onChange={(e) => { setAddress(e.target.value); setIsAutoFilledAddress(false); }}
             placeholder="Seu endereço completo"
+            className={isAutoFilledAddress ? 'bg-gray-100 cursor-not-allowed border-dashed border-microsoft-blue/40' : ''}
+            readOnly={isAutoFilledAddress}
             required
           />
         </div>

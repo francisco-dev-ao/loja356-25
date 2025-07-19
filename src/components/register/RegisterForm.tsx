@@ -150,7 +150,12 @@ export const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
                     id="companyName"
                     type="text"
                     value={companyName}
-                    onChange={(e) => { setCompanyName(e.target.value); setIsNomeFiscalBloqueado(false); }}
+                    onChange={(e) => {
+                      // Não permite edição se foi preenchido automaticamente
+                      if (!isNomeFiscalBloqueado) {
+                        setCompanyName(e.target.value);
+                      }
+                    }}
                     placeholder="Nome Fiscal"
                     className={`pl-10 ${isNomeFiscalBloqueado ? 'bg-gray-100 cursor-not-allowed border-dashed border-microsoft-blue/40' : ''}`}
                     required
@@ -159,7 +164,7 @@ export const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
                 </div>
               </TooltipTrigger>
               {isNomeFiscalBloqueado && (
-                <TooltipContent side="top">Campo preenchido automaticamente e não pode ser editado</TooltipContent>
+                <TooltipContent side="top">Nome fiscal obtido automaticamente e não pode ser alterado</TooltipContent>
               )}
             </Tooltip>
           </div>
