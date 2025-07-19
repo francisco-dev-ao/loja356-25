@@ -193,7 +193,7 @@ const MulticaixaExpressPayment = ({
       <Card className="mt-6 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Smartphone className="w-5 h-5 text-primary" />
+            <img src="/lovable-uploads/bf079303-1331-494d-ada2-21403d198ef6.png" alt="Multicaixa Express" className="w-6 h-6" />
             Multicaixa Express
             <Badge variant="secondary" className="ml-auto">
               {isVerifying ? 'Verificando...' : 'Pronto'}
@@ -289,7 +289,7 @@ const MulticaixaExpressPayment = ({
       <CardContent className="p-6 text-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-            <Smartphone className="w-8 h-8 text-primary" />
+            <img src="/lovable-uploads/bf079303-1331-494d-ada2-21403d198ef6.png" alt="Multicaixa Express" className="w-8 h-8" />
           </div>
           
           <div>
