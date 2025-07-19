@@ -11,8 +11,14 @@ export interface MulticaixaExpressRequest {
 export interface MulticaixaExpressResponse {
   success: boolean;
   token?: string;
-  redirectUrl?: string;
   servicoId?: string;
+  paymentUrl?: string;
+  iframeUrl?: string;
+  integration?: {
+    iframe: string;
+    redirect: string;
+    newWindow: string;
+  };
   error?: string;
   message?: string;
 }
@@ -21,7 +27,12 @@ export interface MulticaixaExpressStatusResponse {
   id: string;
   status: string;
   valor: number;
+  tipo: string;
   dataAprovacao?: string;
+  cliente?: {
+    nome: string;
+    email: string;
+  };
 }
 
 const MULTICAIXA_EXPRESS_API = 'https://gpo-express.angohost.ao';
@@ -88,7 +99,8 @@ export const verifyMulticaixaExpressPayment = async (
     return {
       id: servicoId,
       status: 'erro',
-      valor: 0
+      valor: 0,
+      tipo: 'fatura'
     };
   }
 };

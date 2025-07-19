@@ -62,10 +62,9 @@ const MulticaixaExpressPayment = ({
       
       const response = await createMulticaixaExpressPayment(paymentRequest);
       
-      if (response.success && response.token) {
+      if (response.success && response.paymentUrl) {
         setPaymentData(response);
-        const url = getMulticaixaExpressPaymentUrl(response.token);
-        setPaymentUrl(url);
+        setPaymentUrl(response.paymentUrl);
         toast.success('Token de pagamento criado com sucesso!');
         
         // Store payment data locally
@@ -73,7 +72,7 @@ const MulticaixaExpressPayment = ({
           localStorage.setItem(`multicaixa_express_${orderId}`, JSON.stringify({
             servicoId: response.servicoId,
             token: response.token,
-            redirectUrl: response.redirectUrl
+            paymentUrl: response.paymentUrl
           }));
         }
       } else {
