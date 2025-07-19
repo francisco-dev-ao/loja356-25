@@ -144,14 +144,12 @@ const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
               type="text"
               value={companyName}
               onChange={(e) => {
-                // Não permite edição se foi preenchido automaticamente
-                if (!isNomeFiscalBloqueado) {
-                  setCompanyName(e.target.value);
-                }
+                // Nome Fiscal nunca pode ser editado manualmente
+                // Apenas preenchimento automático via NIF
               }}
-              placeholder="Nome Fiscal"
-              className={isNomeFiscalBloqueado ? 'bg-gray-100 cursor-not-allowed border-dashed border-microsoft-blue/40' : ''}
-              readOnly={isNomeFiscalBloqueado}
+              placeholder="Nome Fiscal (preenchido automaticamente)"
+              className="bg-gray-100 cursor-not-allowed border-dashed border-microsoft-blue/40"
+              readOnly={true}
               required
             />
           </div>
@@ -159,8 +157,8 @@ const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
           {/* Phone Field */}
           <PhoneInput
             phone={phone}
-            setPhone={(v) => { setPhone(v); setIsAutoFilledPhone(false); }}
-            isAutoFilled={isAutoFilledPhone}
+            setPhone={setPhone}
+            isAutoFilled={false}
           />
         </div>
         
@@ -172,9 +170,9 @@ const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
             type="text"
             value={address}
             onChange={(e) => { setAddress(e.target.value); setIsAutoFilledAddress(false); }}
-            placeholder="Seu endereço completo"
-            className={isAutoFilledAddress ? 'bg-gray-100 cursor-not-allowed border-dashed border-microsoft-blue/40' : ''}
-            readOnly={isAutoFilledAddress}
+            placeholder="Endereço (preenchido automaticamente)"
+            className="bg-gray-100 cursor-not-allowed border-dashed border-microsoft-blue/40"
+            readOnly={true}
             required
           />
         </div>

@@ -146,26 +146,22 @@ export const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
               <TooltipTrigger asChild>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="companyName"
-                    type="text"
-                    value={companyName}
-                    onChange={(e) => {
-                      // Não permite edição se foi preenchido automaticamente
-                      if (!isNomeFiscalBloqueado) {
-                        setCompanyName(e.target.value);
-                      }
-                    }}
-                    placeholder="Nome Fiscal"
-                    className={`pl-10 ${isNomeFiscalBloqueado ? 'bg-gray-100 cursor-not-allowed border-dashed border-microsoft-blue/40' : ''}`}
-                    required
-                    readOnly={isNomeFiscalBloqueado}
-                  />
-                </div>
-              </TooltipTrigger>
-              {isNomeFiscalBloqueado && (
-                <TooltipContent side="top">Nome fiscal obtido automaticamente e não pode ser alterado</TooltipContent>
-              )}
+                   <Input
+                     id="companyName"
+                     type="text"
+                     value={companyName}
+                     onChange={(e) => {
+                       // Nome Fiscal nunca pode ser editado manualmente
+                       // Apenas preenchimento automático via NIF
+                     }}
+                     placeholder="Nome Fiscal (preenchido automaticamente)"
+                     className="pl-10 bg-gray-100 cursor-not-allowed border-dashed border-microsoft-blue/40"
+                     required
+                     readOnly={true}
+                   />
+                 </div>
+               </TooltipTrigger>
+               <TooltipContent side="top">Nome fiscal obtido automaticamente via consulta de NIF</TooltipContent>
             </Tooltip>
           </div>
           <div className="space-y-2">
@@ -177,15 +173,13 @@ export const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
                   type="text"
                   value={address}
                   onChange={(e) => { setAddress(e.target.value); setIsAutoFilledAddress(false); }}
-                  placeholder="Seu endereço completo"
-                  className={isAutoFilledAddress ? 'bg-gray-100 cursor-not-allowed border-dashed border-microsoft-blue/40' : ''}
+                  placeholder="Endereço (preenchido automaticamente)"
+                  className="bg-gray-100 cursor-not-allowed border-dashed border-microsoft-blue/40"
                   required
-                  readOnly={isAutoFilledAddress}
+                  readOnly={true}
                 />
               </TooltipTrigger>
-              {isAutoFilledAddress && (
-                <TooltipContent side="top">Campo preenchido automaticamente e não pode ser editado</TooltipContent>
-              )}
+              <TooltipContent side="top">Endereço obtido automaticamente via consulta de NIF</TooltipContent>
             </Tooltip>
           </div>
         </div>
@@ -194,25 +188,18 @@ export const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
       {/* Bloco: Contato */}
       <fieldset className="space-y-2 border-b pb-4">
         <legend className="font-semibold text-lg text-microsoft-blue">Contato</legend>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="phone">Telefone</Label>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <PhoneInput 
-                  phone={phone} 
-                  setPhone={(v) => { setPhone(v); setIsAutoFilledPhone(false); }}
-                  isAutoFilled={isAutoFilledPhone}
-                />
-              </TooltipTrigger>
-              {isAutoFilledPhone && (
-                <TooltipContent side="top">Campo preenchido automaticamente e não pode ser editado</TooltipContent>
-              )}
-            </Tooltip>
-            {!isValidPhone && phone && (
-              <div className="flex items-center text-red-500 text-xs mt-1"><AlertCircle size={14} className="mr-1" />Telefone inválido</div>
-            )}
-          </div>
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+           <div className="space-y-2">
+             <Label htmlFor="phone">Telefone</Label>
+             <PhoneInput 
+               phone={phone} 
+               setPhone={setPhone}
+               isAutoFilled={false}
+             />
+             {!isValidPhone && phone && (
+               <div className="flex items-center text-red-500 text-xs mt-1"><AlertCircle size={14} className="mr-1" />Telefone inválido</div>
+             )}
+           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <div className="relative">
