@@ -106,144 +106,6 @@ const Checkout = () => {
       setOrderId(orderData.id);
       console.log("✅ Pedido criado com sucesso:", orderData.id);
 
-      // Enviar email de confirmação automaticamente
-      console.log("🔄 Tentando enviar email de confirmação...");
-      
-      // Buscar dados do perfil do usuário para nome completo
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      
-      const customerName = profile?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Cliente';
-      
-      try {
-        // Buscar dados do pedido e empresa para o email
-        const { data: orderDetails, error: orderError } = await supabase
-          .from('orders')
-          .select(`
-            *,
-            order_items (
-              quantity,
-              price,
-              products (name, description)
-            )
-          `)
-          .eq('id', orderData.id)
-          .single();
-
-        if (orderError) {
-          console.error('❌ Erro ao buscar detalhes do pedido:', orderError);
-          throw new Error(`Erro ao buscar pedido: ${orderError.message}`);
-        }
-
-        const { data: settings } = await supabase
-          .from('settings')
-          .select('*')
-          .limit(1)
-          .single();
-
-        if (orderDetails && settings) {
-          // A referência será gerada no componente de pagamento
-          const multicaixaRef = 'Será exibida após selecionar pagamento';
-          
-          const emailHtml = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>Confirmação de Pedido</title>
-              <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
-                .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; }
-                .header { background: #0072CE; color: white; padding: 24px; text-align: center; }
-                .content { padding: 32px; }
-                .payment-info { background: #f8fafc; border: 2px solid #0072CE; border-radius: 8px; padding: 24px; margin: 24px 0; }
-                .payment-data { font-family: monospace; font-size: 18px; font-weight: bold; color: #0072CE; }
-                .instructions { background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 20px; margin: 20px 0; }
-                .footer { background: #f8f9fa; color: #6c757d; padding: 20px; text-align: center; border-top: 1px solid #dee2e6; }
-                .order-summary { margin: 20px 0; }
-                .total { font-size: 20px; font-weight: bold; color: #0072CE; text-align: right; margin-top: 10px; }
-              </style>
-            </head>
-            <body>
-              <div class="container">
-                <div class="header">
-                  <h1>${settings.name || 'Nossa Empresa'}</h1>
-                  <p>Confirmação de Pedido #${orderData.id.slice(0, 8)}</p>
-                </div>
-                
-                <div class="content">
-                  <h2>Olá ${customerName},</h2>
-                  <p>Obrigado pelo seu pedido! Para efetuar o pagamento, utilize os dados abaixo:</p>
-                  
-                  <div class="payment-info">
-                    <h3 style="margin-top: 0; color: #0072CE;">📱 Dados para Pagamento Multicaixa</h3>
-                    <p style="margin: 12px 0;"><strong>Nome:</strong> <span class="payment-data">${customerName}</span></p>
-                    <p style="margin: 12px 0;"><strong>Entidade:</strong> <span class="payment-data">11333</span></p>
-                    <p style="margin: 12px 0;"><strong>Referência:</strong> <span class="payment-data">${multicaixaRef}</span></p>
-                    <p style="margin: 12px 0;"><strong>Valor:</strong> <span class="payment-data">${orderDetails.total.toLocaleString('pt-AO')} AOA</span></p>
-                  </div>
-                  
-                  <div class="instructions">
-                    <h3 style="margin-top: 0; color: #856404;">📋 Instruções de Pagamento</h3>
-                    <ol style="margin: 0; padding-left: 20px;">
-                      <li><strong>Via Multicaixa Express (ATM):</strong> Selecione "Pagamentos" → "Entidade" → Digite 11333 → Insira a referência → Confirme o valor</li>
-                      <li><strong>Via Multicaixa Express Mobile:</strong> Abra o app → "Pagamentos" → "Por Referência" → Entidade 11333 → Insira a referência</li>
-                      <li><strong>Via Internet Banking:</strong> Acesse seu banco online → Pagamentos → Entidade 11333 → Referência fornecida</li>
-                    </ol>
-                    <p style="margin: 15px 0 0 0; font-weight: bold; color: #856404;">⚠️ Importante: O pagamento deve ser efetuado no prazo de 24 horas.</p>
-                  </div>
-                  
-                  <div class="order-summary">
-                    <h3>Resumo do Pedido</h3>
-                    ${orderDetails.order_items.map(item => `
-                      <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
-                        <span>${item.products?.name || 'Produto'} (${item.quantity}x)</span>
-                        <span>${(item.quantity * item.price).toLocaleString('pt-AO')} AOA</span>
-                      </div>
-                    `).join('')}
-                    <div class="total">Total: ${orderDetails.total.toLocaleString('pt-AO')} AOA</div>
-                  </div>
-                  
-                  <p><strong>Status:</strong> Aguardando Pagamento</p>
-                  <p><strong>Método:</strong> Referência Multicaixa</p>
-                </div>
-                
-                <div class="footer">
-                  <p><strong>Suporte ao Cliente</strong></p>
-                  <p>Email: ${settings.email || 'contato@empresa.com'} | Telefone: ${settings.phone || '(+244) 000 000 000'}</p>
-                  <p>© 2025 ${settings.name || 'Nossa Empresa'}. Todos os direitos reservados.</p>
-                </div>
-              </div>
-            </body>
-            </html>
-          `;
-
-          const emailResponse = await fetch('https://mail3.angohost.ao/email/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              to: user.email,
-              subject: `Confirmação de Pedido #${orderData.id.slice(0, 8)} - ${settings.name || 'Nossa Empresa'}`,
-              html: emailHtml
-            })
-          });
-
-          if (emailResponse.ok) {
-            const emailResult = await emailResponse.json();
-            console.log('✅ Email enviado com sucesso:', emailResult);
-            toast.success('Email de confirmação enviado!');
-          } else {
-            console.error('❌ Erro na API de email:', await emailResponse.text());
-          }
-        }
-      } catch (emailError) {
-        console.error('❌ Erro ao enviar email:', emailError);
-      }
-
       // Set order ID for payment processing
       setOrderId(orderData.id);
       
@@ -256,6 +118,143 @@ const Checkout = () => {
       toast.error(error.message || 'Ocorreu um erro ao processar o pedido');
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  // Função para enviar email de confirmação com referência real
+  const sendOrderConfirmationWithReference = async (orderId: string, referenceData: any) => {
+    console.log("🔄 Enviando email com referência real:", referenceData);
+    
+    try {
+      // Buscar dados do perfil do usuário para nome completo
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      const customerName = profile?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Cliente';
+      
+      // Buscar dados do pedido e empresa para o email
+      const { data: orderDetails, error: orderError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            quantity,
+            price,
+            products (name, description)
+          )
+        `)
+        .eq('id', orderId)
+        .single();
+
+      if (orderError) {
+        console.error('❌ Erro ao buscar detalhes do pedido:', orderError);
+        throw new Error(`Erro ao buscar pedido: ${orderError.message}`);
+      }
+
+      const { data: settings } = await supabase
+        .from('settings')
+        .select('*')
+        .limit(1)
+        .single();
+
+      if (orderDetails && settings && referenceData) {
+        const emailHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Confirmação de Pedido</title>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+              .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; }
+              .header { background: #0072CE; color: white; padding: 24px; text-align: center; }
+              .content { padding: 32px; }
+              .payment-info { background: #f8fafc; border: 2px solid #0072CE; border-radius: 8px; padding: 24px; margin: 24px 0; }
+              .payment-data { font-family: monospace; font-size: 18px; font-weight: bold; color: #0072CE; }
+              .instructions { background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 20px; margin: 20px 0; }
+              .footer { background: #f8f9fa; color: #6c757d; padding: 20px; text-align: center; border-top: 1px solid #dee2e6; }
+              .order-summary { margin: 20px 0; }
+              .total { font-size: 20px; font-weight: bold; color: #0072CE; text-align: right; margin-top: 10px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>${settings.name || 'Nossa Empresa'}</h1>
+                <p>Confirmação de Pedido #${orderId.slice(0, 8)}</p>
+              </div>
+              
+              <div class="content">
+                <h2>Olá ${customerName},</h2>
+                <p>Obrigado pelo seu pedido! Para efetuar o pagamento, utilize os dados abaixo:</p>
+                
+                <div class="payment-info">
+                  <h3 style="margin-top: 0; color: #0072CE;">📱 Dados para Pagamento Multicaixa</h3>
+                  <p style="margin: 12px 0;"><strong>Nome:</strong> <span class="payment-data">${customerName}</span></p>
+                  <p style="margin: 12px 0;"><strong>Entidade:</strong> <span class="payment-data">${referenceData.entity}</span></p>
+                  <p style="margin: 12px 0;"><strong>Referência:</strong> <span class="payment-data">${referenceData.reference}</span></p>
+                  <p style="margin: 12px 0;"><strong>Valor:</strong> <span class="payment-data">${orderDetails.total.toLocaleString('pt-AO')} AOA</span></p>
+                </div>
+                
+                <div class="instructions">
+                  <h3 style="margin-top: 0; color: #856404;">📋 Instruções de Pagamento</h3>
+                  <ol style="margin: 0; padding-left: 20px;">
+                    <li><strong>Via Multicaixa Express (ATM):</strong> Selecione "Pagamentos" → "Entidade" → Digite ${referenceData.entity} → Insira a referência ${referenceData.reference} → Confirme o valor</li>
+                    <li><strong>Via Multicaixa Express Mobile:</strong> Abra o app → "Pagamentos" → "Por Referência" → Entidade ${referenceData.entity} → Insira a referência ${referenceData.reference}</li>
+                    <li><strong>Via Internet Banking:</strong> Acesse seu banco online → Pagamentos → Entidade ${referenceData.entity} → Referência ${referenceData.reference}</li>
+                  </ol>
+                  <p style="margin: 15px 0 0 0; font-weight: bold; color: #856404;">⚠️ Importante: O pagamento deve ser efetuado no prazo de 3 dias.</p>
+                </div>
+                
+                <div class="order-summary">
+                  <h3>Resumo do Pedido</h3>
+                  ${orderDetails.order_items.map(item => `
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
+                      <span>${item.products?.name || 'Produto'} (${item.quantity}x)</span>
+                      <span>${(item.quantity * item.price).toLocaleString('pt-AO')} AOA</span>
+                    </div>
+                  `).join('')}
+                  <div class="total">Total: ${orderDetails.total.toLocaleString('pt-AO')} AOA</div>
+                </div>
+                
+                <p><strong>Status:</strong> Aguardando Pagamento</p>
+                <p><strong>Método:</strong> Referência Multicaixa</p>
+              </div>
+              
+              <div class="footer">
+                <p><strong>Suporte ao Cliente</strong></p>
+                <p>Email: ${settings.email || 'contato@empresa.com'} | Telefone: ${settings.phone || '(+244) 000 000 000'}</p>
+                <p>© 2025 ${settings.name || 'Nossa Empresa'}. Todos os direitos reservados.</p>
+              </div>
+            </div>
+          </body>
+          </html>
+        `;
+
+        const emailResponse = await fetch('https://mail3.angohost.ao/email/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: user.email,
+            subject: `Confirmação de Pedido #${orderId.slice(0, 8)} - Ref: ${referenceData.reference}`,
+            html: emailHtml
+          })
+        });
+
+        if (emailResponse.ok) {
+          const emailResult = await emailResponse.json();
+          console.log('✅ Email com referência enviado:', emailResult);
+          toast.success('Email de confirmação enviado com referência!');
+        } else {
+          console.error('❌ Erro na API de email:', await emailResponse.text());
+        }
+      }
+    } catch (emailError) {
+      console.error('❌ Erro ao enviar email:', emailError);
     }
   };
 
@@ -375,8 +374,9 @@ const Checkout = () => {
                         description={generateOrderDescription()}
                         orderId={orderId}
                         onSuccess={async (referenceData) => {
-                          if (orderId && user && items && items.length > 0) {
-                            await sendOrderConfirmationEmail(user.email, profile?.name, referenceData, items[0].name);
+                          // Enviar email com referência real
+                          if (orderId) {
+                            await sendOrderConfirmationWithReference(orderId, referenceData);
                           }
                           if (orderId) {
                             navigate(`/checkout/success?orderId=${orderId}`);
