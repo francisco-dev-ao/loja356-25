@@ -109,11 +109,6 @@ const CheckoutSuccess = () => {
         
         setOrder(orderWithItems);
 
-        // Enviar email de confirmação
-        if (!emailSent) {
-          sendOrderConfirmationEmail(orderData.id);
-        }
-
         // Simular tempo para gerar fatura
         const timer = setInterval(() => {
           setSeconds((prevSeconds) => {
@@ -142,22 +137,7 @@ const CheckoutSuccess = () => {
         setPaymentReference(JSON.parse(paymentRefData));
       }
     }
-  }, [orderId, emailSent]);
-
-  const sendOrderConfirmationEmail = async (orderId: string) => {
-    try {
-      const { data, error } = await supabase.functions.invoke('send-order-confirmation', {
-        body: { orderId }
-      });
-      
-      if (error) throw error;
-      
-      console.log('Email confirmation response:', data);
-      setEmailSent(true);
-    } catch (error) {
-      console.error('Error sending order confirmation email:', error);
-    }
-  };
+  }, [orderId]);
 
   const generateInvoicePDF = async () => {
     if (!order || !profile) {

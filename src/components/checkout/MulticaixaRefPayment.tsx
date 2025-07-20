@@ -9,6 +9,7 @@ import { formatPrice } from '@/lib/formatters';
 import { InvoicePDFGenerator } from '@/lib/invoice-pdf-generator';
 import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 const companyInfo = {
   name: "Office365, Lda",
@@ -38,6 +39,7 @@ const MulticaixaRefPayment = ({
   const [referenceData, setReferenceData] = useState<MulticaixaRefResponse | null>(null);
   const { profile } = useAuth();
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [showReferenceModal, setShowReferenceModal] = useState(false);
 
   // Disparar geração automática da referência quando orderId for definido
   useEffect(() => {
@@ -111,8 +113,12 @@ const MulticaixaRefPayment = ({
 
   const handleGenerateReference = async () => {
     setIsLoading(true);
+    setShowReferenceModal(true);
     try {
       let dynamicDescription = description;
+      if (!dynamicDescription || dynamicDescription.trim() === '') {
+        dynamicDescription = 'Licença Microsoft';
+      }
       if (orderId) {
         // Buscar itens do pedido e nomes dos produtos
         const { data: orderItems, error: itemsError } = await supabase
@@ -140,6 +146,7 @@ const MulticaixaRefPayment = ({
         orderId
       });
       setReferenceData(response);
+      setShowReferenceModal(false);
       if (orderId) {
         localStorage.setItem(`payment_ref_${orderId}`, JSON.stringify(response));
       }
@@ -148,9 +155,11 @@ const MulticaixaRefPayment = ({
         await generateAndSendInvoicePDF();
       }
       if (onSuccess) {
+        console.log('Chamando envio de email de confirmação...', response);
         onSuccess(response);
       }
     } catch (error: any) {
+      setShowReferenceModal(false);
       console.error('Erro ao gerar referência:', error);
       toast.error('Erro ao gerar referência de pagamento');
       if (onError) {
@@ -228,89 +237,98 @@ const MulticaixaRefPayment = ({
       }
     };
     return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckCircle className="text-green-500" size={24} />
-            Referência Gerada
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Alert>
-            <AlertDescription>
-              Sua referência de pagamento foi gerada com sucesso. Use os dados abaixo para efetuar o pagamento.
-            </AlertDescription>
-          </Alert>
+      <>
+        <Dialog open={showReferenceModal}>
+          <DialogContent className="flex flex-col items-center justify-center gap-4 py-10">
+            <div className="animate-spin rounded-full border-4 border-blue-500 border-t-transparent h-16 w-16 mb-4"></div>
+            <h2 className="text-xl font-bold text-blue-700">Gerando sua referência de pagamento...</h2>
+            <p className="text-muted-foreground text-center max-w-xs">Por favor, aguarde enquanto criamos sua referência Multicaixa. Isso pode levar alguns segundos.</p>
+          </DialogContent>
+        </Dialog>
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="text-green-500" size={24} />
+              Referência Gerada
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert>
+              <AlertDescription>
+                Sua referência de pagamento foi gerada com sucesso. Use os dados abaixo para efetuar o pagamento.
+              </AlertDescription>
+            </Alert>
 
-          <div className="grid grid-cols-1 gap-4">
-            <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-              <div>
-                <p className="text-sm text-muted-foreground">Entidade</p>
-                <p className="font-mono text-lg font-bold">{referenceData.entity}</p>
+            <div className="grid grid-cols-1 gap-4">
+              <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                <div>
+                  <p className="text-sm text-muted-foreground">Entidade</p>
+                  <p className="font-mono text-lg font-bold">{referenceData.entity}</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyToClipboard(referenceData.entity)}
+                >
+                  <Copy size={16} />
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => copyToClipboard(referenceData.entity)}
-              >
-                <Copy size={16} />
-              </Button>
+
+              <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                <div>
+                  <p className="text-sm text-muted-foreground">Referência</p>
+                  <p className="font-mono text-lg font-bold">{referenceData.reference}</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyToClipboard(referenceData.reference)}
+                >
+                  <Copy size={16} />
+                </Button>
+              </div>
+
+              <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                <div>
+                  <p className="text-sm text-muted-foreground">Valor</p>
+                  <p className="font-mono text-lg font-bold">{formatPrice(referenceData.amount)}</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyToClipboard(referenceData.amount.toString())}
+                >
+                  <Copy size={16} />
+                </Button>
+              </div>
             </div>
 
-            <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-              <div>
-                <p className="text-sm text-muted-foreground">Referência</p>
-                <p className="font-mono text-lg font-bold">{referenceData.reference}</p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => copyToClipboard(referenceData.reference)}
-              >
-                <Copy size={16} />
-              </Button>
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+              <h4 className="font-medium mb-2">Como pagar:</h4>
+              <ol className="list-decimal list-inside space-y-1 text-sm">
+                <li>Vá a um ATM ou Multicaixa Express</li>
+                <li>Selecione "Pagamentos" → "Outros Serviços"</li>
+                <li>Digite a Entidade: <span className="font-mono font-bold">{referenceData.entity}</span></li>
+                <li>Digite a Referência: <span className="font-mono font-bold">{referenceData.reference}</span></li>
+                <li>Confirme o valor: <span className="font-mono font-bold">{formatPrice(referenceData.amount)}</span></li>
+                <li>Confirme o pagamento</li>
+              </ol>
             </div>
 
-            <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-              <div>
-                <p className="text-sm text-muted-foreground">Valor</p>
-                <p className="font-mono text-lg font-bold">{formatPrice(referenceData.amount)}</p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => copyToClipboard(referenceData.amount.toString())}
-              >
-                <Copy size={16} />
+            <Alert>
+              <AlertDescription>
+                Esta referência é válida por 3 dias. O pagamento será processado automaticamente após a confirmação.
+              </AlertDescription>
+            </Alert>
+
+            {orderId && (
+              <Button onClick={handleGenerateInvoice} className="w-full" disabled={isGeneratingPdf}>
+                {isGeneratingPdf ? 'Gerando Fatura...' : 'Gerar Fatura PDF'}
               </Button>
-            </div>
-          </div>
-
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <h4 className="font-medium mb-2">Como pagar:</h4>
-            <ol className="list-decimal list-inside space-y-1 text-sm">
-              <li>Vá a um ATM ou Multicaixa Express</li>
-              <li>Selecione "Pagamentos" → "Outros Serviços"</li>
-              <li>Digite a Entidade: <span className="font-mono font-bold">{referenceData.entity}</span></li>
-              <li>Digite a Referência: <span className="font-mono font-bold">{referenceData.reference}</span></li>
-              <li>Confirme o valor: <span className="font-mono font-bold">{formatPrice(referenceData.amount)}</span></li>
-              <li>Confirme o pagamento</li>
-            </ol>
-          </div>
-
-          <Alert>
-            <AlertDescription>
-              Esta referência é válida por 3 dias. O pagamento será processado automaticamente após a confirmação.
-            </AlertDescription>
-          </Alert>
-
-          {orderId && (
-            <Button onClick={handleGenerateInvoice} className="w-full" disabled={isGeneratingPdf}>
-              {isGeneratingPdf ? 'Gerando Fatura...' : 'Gerar Fatura PDF'}
-            </Button>
-          )}
-        </CardContent>
-      </Card>
+            )}
+          </CardContent>
+        </Card>
+      </>
     );
   }
 
