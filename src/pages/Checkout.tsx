@@ -135,6 +135,8 @@ const Checkout = () => {
           .single();
 
         if (orderDetails && settings) {
+          const customerName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Cliente';
+          
           const emailHtml = `
             <!DOCTYPE html>
             <html>
@@ -144,15 +146,15 @@ const Checkout = () => {
               <title>Confirmação de Pedido</title>
               <style>
                 body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
-                .container { max-width: 600px; margin: 0 auto; background: white; }
-                .header { background: #0072CE; color: white; padding: 20px; text-align: center; }
-                .content { padding: 20px; }
-                .order-summary { background: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; }
-                .footer { background: #333; color: white; padding: 20px; text-align: center; }
-                .btn { display: inline-block; padding: 12px 25px; background: #0072CE; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }
-                table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-                th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-                th { background-color: #f2f2f2; font-weight: bold; }
+                .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; }
+                .header { background: #0072CE; color: white; padding: 24px; text-align: center; }
+                .content { padding: 32px; }
+                .payment-info { background: #f8fafc; border: 2px solid #0072CE; border-radius: 8px; padding: 24px; margin: 24px 0; }
+                .payment-data { font-family: monospace; font-size: 18px; font-weight: bold; color: #0072CE; }
+                .instructions { background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 20px; margin: 20px 0; }
+                .footer { background: #f8f9fa; color: #6c757d; padding: 20px; text-align: center; border-top: 1px solid #dee2e6; }
+                .order-summary { margin: 20px 0; }
+                .total { font-size: 20px; font-weight: bold; color: #0072CE; text-align: right; margin-top: 10px; }
               </style>
             </head>
             <body>
@@ -163,49 +165,43 @@ const Checkout = () => {
                 </div>
                 
                 <div class="content">
-                  <h2>Olá Cliente,</h2>
-                  <p>Obrigado pelo seu pedido! Aqui estão os detalhes:</p>
+                  <h2>Olá ${customerName},</h2>
+                  <p>Obrigado pelo seu pedido! Para efetuar o pagamento, utilize os dados abaixo:</p>
+                  
+                  <div class="payment-info">
+                    <h3 style="margin-top: 0; color: #0072CE;">📱 Dados para Pagamento Multicaixa</h3>
+                    <p style="margin: 12px 0;"><strong>Entidade:</strong> <span class="payment-data">11333</span></p>
+                    <p style="margin: 12px 0;"><strong>Referência:</strong> <span class="payment-data">[A referência será exibida na próxima tela]</span></p>
+                    <p style="margin: 12px 0;"><strong>Valor:</strong> <span class="payment-data">${orderDetails.total.toLocaleString('pt-AO')} AOA</span></p>
+                  </div>
+                  
+                  <div class="instructions">
+                    <h3 style="margin-top: 0; color: #856404;">📋 Instruções de Pagamento</h3>
+                    <ol style="margin: 0; padding-left: 20px;">
+                      <li><strong>Via Multicaixa Express (ATM):</strong> Selecione "Pagamentos" → "Entidade" → Digite 11333 → Insira a referência → Confirme o valor</li>
+                      <li><strong>Via Multicaixa Express Mobile:</strong> Abra o app → "Pagamentos" → "Por Referência" → Entidade 11333 → Insira a referência</li>
+                      <li><strong>Via Internet Banking:</strong> Acesse seu banco online → Pagamentos → Entidade 11333 → Referência fornecida</li>
+                    </ol>
+                    <p style="margin: 15px 0 0 0; font-weight: bold; color: #856404;">⚠️ Importante: O pagamento deve ser efetuado no prazo de 24 horas.</p>
+                  </div>
                   
                   <div class="order-summary">
                     <h3>Resumo do Pedido</h3>
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Produto</th>
-                          <th>Quantidade</th>
-                          <th>Preço Unit.</th>
-                          <th>Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        ${orderDetails.order_items.map(item => `
-                          <tr>
-                            <td>${item.products?.name || 'Produto'}</td>
-                            <td>${item.quantity}</td>
-                            <td>${item.price.toLocaleString('pt-AO')} AOA</td>
-                            <td>${(item.quantity * item.price).toLocaleString('pt-AO')} AOA</td>
-                          </tr>
-                        `).join('')}
-                      </tbody>
-                    </table>
-                    <div style="text-align: right; font-size: 18px; font-weight: bold; margin-top: 15px;">
-                      Total: ${orderDetails.total.toLocaleString('pt-AO')} AOA
-                    </div>
+                    ${orderDetails.order_items.map(item => `
+                      <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
+                        <span>${item.products?.name || 'Produto'} (${item.quantity}x)</span>
+                        <span>${(item.quantity * item.price).toLocaleString('pt-AO')} AOA</span>
+                      </div>
+                    `).join('')}
+                    <div class="total">Total: ${orderDetails.total.toLocaleString('pt-AO')} AOA</div>
                   </div>
                   
-                  <p><strong>Status do Pagamento:</strong> Pendente</p>
-                  <p><strong>Método de Pagamento:</strong> ${orderDetails.payment_method === 'multicaixa_ref' ? 'Referência Multicaixa' : orderDetails.payment_method}</p>
-                  
-                  <div style="background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                    <h3>📱 Próximos Passos:</h3>
-                    <p>1. Use a referência Multicaixa para efetuar o pagamento</p>
-                    <p>2. O pagamento será processado automaticamente</p>
-                    <p>3. Você receberá uma confirmação quando o pagamento for aprovado</p>
-                  </div>
+                  <p><strong>Status:</strong> Aguardando Pagamento</p>
+                  <p><strong>Método:</strong> Referência Multicaixa</p>
                 </div>
                 
                 <div class="footer">
-                  <p>Para dúvidas, entre em contato conosco:</p>
+                  <p><strong>Suporte ao Cliente</strong></p>
                   <p>Email: ${settings.email || 'contato@empresa.com'} | Telefone: ${settings.phone || '(+244) 000 000 000'}</p>
                   <p>© 2025 ${settings.name || 'Nossa Empresa'}. Todos os direitos reservados.</p>
                 </div>
@@ -387,9 +383,6 @@ const Checkout = () => {
                       <MulticaixaExpressPayment
                         amount={finalTotal}
                         description={generateOrderDescription()}
-                        onError={(error) => {
-                          toast.error(`Erro no pagamento: ${error}`);
-                        }}
                       />
                     )}
 
