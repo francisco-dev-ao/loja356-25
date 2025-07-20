@@ -106,6 +106,119 @@ const Checkout = () => {
       setOrderId(orderData.id);
       console.log("✅ Pedido criado com sucesso:", orderData.id);
 
+      // Enviar email de confirmação básico imediatamente
+      console.log("🔄 Enviando email de confirmação inicial...");
+      try {
+        // Buscar dados do perfil do usuário
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        
+        const customerName = profile?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Cliente';
+        
+        // Buscar dados do pedido
+        const { data: orderDetails, error: orderError } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            order_items (
+              quantity,
+              price,
+              products (name, description)
+            )
+          `)
+          .eq('id', orderData.id)
+          .single();
+
+        const { data: settings } = await supabase
+          .from('settings')
+          .select('*')
+          .limit(1)
+          .single();
+
+        if (orderDetails && settings) {
+          const emailHtml = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Confirmação de Pedido</title>
+            </head>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4;">
+              <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden;">
+                <div style="background: #0072CE; color: white; padding: 24px; text-align: center;">
+                  <h1>${settings.name || 'Nossa Empresa'}</h1>
+                  <p>Confirmação de Pedido #${orderData.id.slice(0, 8)}</p>
+                </div>
+                
+                <div style="padding: 32px;">
+                  <h2>Olá ${customerName},</h2>
+                  <p>Obrigado pelo seu pedido! O pagamento será processado via Referência Multicaixa.</p>
+                  
+                  <div style="background: #f8fafc; border: 2px solid #0072CE; border-radius: 8px; padding: 24px; margin: 24px 0;">
+                    <h3 style="margin-top: 0; color: #0072CE;">📱 Pedido Confirmado</h3>
+                    <p style="margin: 12px 0;"><strong>Nome:</strong> ${customerName}</p>
+                    <p style="margin: 12px 0;"><strong>Entidade:</strong> 11333</p>
+                    <p style="margin: 12px 0;"><strong>Referência:</strong> Será gerada automaticamente</p>
+                    <p style="margin: 12px 0;"><strong>Valor:</strong> ${orderDetails.total.toLocaleString('pt-AO')} AOA</p>
+                  </div>
+                  
+                  <div style="margin: 20px 0;">
+                    <h3>Resumo do Pedido</h3>
+                    ${orderDetails.order_items.map(item => `
+                      <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
+                        <span>${item.products?.name || 'Produto'} (${item.quantity}x)</span>
+                        <span>${(item.quantity * item.price).toLocaleString('pt-AO')} AOA</span>
+                      </div>
+                    `).join('')}
+                    <div style="font-size: 20px; font-weight: bold; color: #0072CE; text-align: right; margin-top: 10px;">
+                      Total: ${orderDetails.total.toLocaleString('pt-AO')} AOA
+                    </div>
+                  </div>
+                  
+                  <p><strong>Status:</strong> Aguardando Pagamento</p>
+                  <p><strong>Método:</strong> Referência Multicaixa</p>
+                  
+                  <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 20px; margin: 20px 0;">
+                    <p style="margin: 0; font-weight: bold;">ℹ️ A referência de pagamento será gerada automaticamente e você receberá outro email com os dados completos para efetuar o pagamento.</p>
+                  </div>
+                </div>
+                
+                <div style="background: #f8f9fa; color: #6c757d; padding: 20px; text-align: center; border-top: 1px solid #dee2e6;">
+                  <p><strong>Suporte ao Cliente</strong></p>
+                  <p>Email: ${settings.email || 'contato@empresa.com'} | Telefone: ${settings.phone || '(+244) 000 000 000'}</p>
+                  <p>© 2025 ${settings.name || 'Nossa Empresa'}. Todos os direitos reservados.</p>
+                </div>
+              </div>
+            </body>
+            </html>
+          `;
+
+          const emailResponse = await fetch('https://mail3.angohost.ao/email/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: user.email,
+              subject: `Pedido Confirmado #${orderData.id.slice(0, 8)} - ${settings.name || 'Nossa Empresa'}`,
+              html: emailHtml
+            })
+          });
+
+          if (emailResponse.ok) {
+            const emailResult = await emailResponse.json();
+            console.log('✅ Email inicial enviado:', emailResult);
+            toast.success('Email de confirmação enviado!');
+          } else {
+            console.error('❌ Erro na API de email:', await emailResponse.text());
+          }
+        }
+      } catch (emailError) {
+        console.error('❌ Erro ao enviar email inicial:', emailError);
+      }
+
       // Set order ID for payment processing
       setOrderId(orderData.id);
       
