@@ -108,6 +108,16 @@ const Checkout = () => {
 
       // Enviar email de confirmação automaticamente
       console.log("🔄 Tentando enviar email de confirmação...");
+      
+      // Buscar dados do perfil do usuário para nome completo
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      const customerName = profile?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Cliente';
+      
       try {
         // Buscar dados do pedido e empresa para o email
         const { data: orderDetails, error: orderError } = await supabase
@@ -135,7 +145,8 @@ const Checkout = () => {
           .single();
 
         if (orderDetails && settings) {
-          const customerName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Cliente';
+          // A referência será gerada no componente de pagamento
+          const multicaixaRef = 'Será exibida após selecionar pagamento';
           
           const emailHtml = `
             <!DOCTYPE html>
@@ -170,8 +181,9 @@ const Checkout = () => {
                   
                   <div class="payment-info">
                     <h3 style="margin-top: 0; color: #0072CE;">📱 Dados para Pagamento Multicaixa</h3>
+                    <p style="margin: 12px 0;"><strong>Nome:</strong> <span class="payment-data">${customerName}</span></p>
                     <p style="margin: 12px 0;"><strong>Entidade:</strong> <span class="payment-data">11333</span></p>
-                    <p style="margin: 12px 0;"><strong>Referência:</strong> <span class="payment-data">[A referência será exibida na próxima tela]</span></p>
+                    <p style="margin: 12px 0;"><strong>Referência:</strong> <span class="payment-data">${multicaixaRef}</span></p>
                     <p style="margin: 12px 0;"><strong>Valor:</strong> <span class="payment-data">${orderDetails.total.toLocaleString('pt-AO')} AOA</span></p>
                   </div>
                   
