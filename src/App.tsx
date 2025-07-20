@@ -24,6 +24,7 @@ import ForgotPassword from "./pages/customer/ForgotPassword";
 import ResetPassword from "./pages/customer/ResetPassword";
 import CustomerDashboard from "./pages/customer/Dashboard";
 import AdminDashboard from "./pages/admin/Dashboard";
+import AtivarMulticaixaExpressPage from "./pages/AtivarMulticaixaExpress";
 import NotFound from "./pages/NotFound";
 
 const AppWithProviders = () => {
@@ -61,6 +62,11 @@ const AppWithProviders = () => {
                 <Route path="/admin/dashboard" element={
                   <AdminRoute>
                     <AdminDashboard />
+                  </AdminRoute>
+                } />
+                <Route path="/ativar-multicaixa-express" element={
+                  <AdminRoute>
+                    <AtivarMulticaixaExpressPage />
                   </AdminRoute>
                 } />
 

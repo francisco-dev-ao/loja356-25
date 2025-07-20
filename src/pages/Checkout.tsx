@@ -17,6 +17,8 @@ import CheckoutSummary from '@/components/checkout/CheckoutSummary';
 import PaymentMethods from '@/components/checkout/PaymentMethods';
 import AccountTabs from '@/components/checkout/AccountTabs';
 import MulticaixaRefPayment from '@/components/checkout/MulticaixaRefPayment';
+import MulticaixaExpressPayment from '@/components/checkout/MulticaixaExpressPayment';
+import { sendEmail } from '@/services/email';
 
 
 const Checkout = () => {
@@ -24,7 +26,7 @@ const Checkout = () => {
   const { isAuthenticated, user, profile } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('account');
-  const [paymentMethod, setPaymentMethod] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('multicaixa_ref');
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
 
@@ -253,6 +255,52 @@ const Checkout = () => {
     setPaymentMethod(method);
   };
 
+  // Função para gerar descrição amigável do pedido
+  const generateOrderDescription = () => {
+    if (!items || items.length === 0) {
+      return 'Licença Microsoft';
+    }
+    return items[0].name || 'Licença Microsoft';
+  };
+
+  // Função para enviar email profissional com dados da referência e confirmação do pedido
+  const sendOrderConfirmationEmail = async (userEmail: string, userName: string, referenceData: any, productName: string) => {
+    const subject = `Confirmação do Pedido - Referência Multicaixa (${referenceData.reference})`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; overflow: hidden; border: 1px solid #e5e7eb;">
+        <div style="background: #0072CE; color: #fff; padding: 24px 32px;">
+          <h2 style="margin: 0; font-size: 24px;">Confirmação do Pedido</h2>
+        </div>
+        <div style="padding: 32px;">
+          <p>Olá <strong>${userName || 'Cliente'}</strong>,</p>
+          <p>Obrigado pelo seu pedido! Aqui estão os dados para pagamento:</p>
+          <div style="background: #f1f5f9; border-radius: 6px; padding: 20px; margin: 24px 0; font-size: 16px;">
+            <p style="margin: 0 0 8px 0;"><strong>Entidade:</strong> <span style="font-family: monospace; font-size: 18px;">${referenceData.entity}</span></p>
+            <p style="margin: 0 0 8px 0;"><strong>Referência:</strong> <span style="font-family: monospace; font-size: 18px;">${referenceData.reference}</span></p>
+            <p style="margin: 0 0 8px 0;"><strong>Valor:</strong> <span style="font-family: monospace; font-size: 18px;">${Number(referenceData.amount).toLocaleString('pt-AO')} AOA</span></p>
+          </div>
+          <h3 style="margin-top: 32px; color: #0072CE;">Instruções de Pagamento</h3>
+          <ol style="padding-left: 20px; color: #374151; font-size: 15px;">
+            <li>Vá a um ATM ou Multicaixa Express</li>
+            <li>Selecione "Pagamentos" → "Outros Serviços"</li>
+            <li>Digite a Entidade: <strong>${referenceData.entity}</strong></li>
+            <li>Digite a Referência: <strong>${referenceData.reference}</strong></li>
+            <li>Confirme o valor: <strong>${Number(referenceData.amount).toLocaleString('pt-AO')} AOA</strong></li>
+            <li>Confirme o pagamento</li>
+          </ol>
+          <p style="margin-top: 32px; color: #64748b; font-size: 13px;">Esta referência é válida por 3 dias. O pagamento será processado automaticamente após a confirmação.</p>
+          <p style="margin-top: 24px; color: #64748b; font-size: 13px;">Se tiver dúvidas, basta responder este email ou entrar em contato pelo WhatsApp: <strong>+244 923 456 789</strong></p>
+        </div>
+        <div style="background: #f1f5f9; color: #64748b; text-align: center; padding: 16px 0; font-size: 13px;">&copy; 2025 Office365, Lda</div>
+      </div>
+    `;
+    await sendEmail({
+      to: userEmail,
+      subject,
+      html
+    });
+  };
+
   // Redirect to home page if cart is empty
   if (items.length === 0) {
     return (
@@ -316,9 +364,12 @@ const Checkout = () => {
                     {paymentMethod === 'multicaixa_ref' && (
                       <MulticaixaRefPayment
                         amount={finalTotal}
-                        description={`Pedido ${orderId || 'checkout'}`}
+                        description={generateOrderDescription()}
                         orderId={orderId}
-                        onSuccess={() => {
+                        onSuccess={async (referenceData) => {
+                          if (orderId && user && items && items.length > 0) {
+                            await sendOrderConfirmationEmail(user.email, profile?.name, referenceData, items[0].name);
+                          }
                           if (orderId) {
                             navigate(`/checkout/success?orderId=${orderId}`);
                             clearCart();
@@ -326,6 +377,16 @@ const Checkout = () => {
                             handleCreateOrder();
                           }
                         }}
+                        onError={(error) => {
+                          toast.error(`Erro no pagamento: ${error}`);
+                        }}
+                      />
+                    )}
+
+                    {paymentMethod === 'multicaixa_express' && (
+                      <MulticaixaExpressPayment
+                        amount={finalTotal}
+                        description={generateOrderDescription()}
                         onError={(error) => {
                           toast.error(`Erro no pagamento: ${error}`);
                         }}

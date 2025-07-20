@@ -384,7 +384,7 @@ const Dashboard = () => {
                       filteredOrders.map((order) => (
                         <tr key={order.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            {order.id.substring(0, 8)}...
+                            {`PED-${order.id.substring(0, 8).toUpperCase()}`}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {new Date(order.created_at).toLocaleDateString('pt-AO')}

@@ -231,7 +231,7 @@ const CheckoutSuccess = () => {
                   <div className="border rounded-md p-4 space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Número do Pedido:</span>
-                      <span className="font-medium">{orderId}</span>
+                      <span className="font-medium">{order ? `PED-${order.id.substring(0, 8).toUpperCase()}` : '-'}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Data:</span>

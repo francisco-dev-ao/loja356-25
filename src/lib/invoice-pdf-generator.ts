@@ -67,11 +67,8 @@ export class InvoicePDFGenerator {
 
   private addInvoiceInfo(order: any): void {
     let yPos = 60;
-    
     this.doc.setTextColor(0, 0, 0);
     this.doc.setFontSize(11);
-    
-    // Calcular validade (3 dias após emissão, com hora e minutos)
     let validade = null;
     if (order.created_at) {
       validade = new Date(order.created_at);
@@ -79,12 +76,11 @@ export class InvoicePDFGenerator {
     }
     // Invoice details in a professional layout
     const invoiceDetails = [
-      ['Nº da Proforma:', `PROF-${order.id.substring(0, 8).toUpperCase()}`],
-      ['Data de Emissão:', new Date(order.created_at).toLocaleDateString('pt-PT') + ' ' + new Date(order.created_at).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })],
+      ['Nº do Pedido:', `PED-${(order.id || '').substring(0, 8).toUpperCase()}`],
+      ['Data de Emissão:', order.created_at ? new Date(order.created_at).toLocaleDateString('pt-PT') + ' ' + new Date(order.created_at).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }) : '-'],
       ['Data de Vencimento:', validade ? `${validade.toLocaleDateString('pt-PT')} ${validade.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}` : '-'],
       ['Status:', order.payment_status === 'paid' ? 'PAGO' : 'PENDENTE']
     ];
-
     invoiceDetails.forEach(([label, value], index) => {
       this.doc.setFont('helvetica', 'bold');
       this.doc.text(label, 20, yPos + (index * 7));
@@ -137,8 +133,12 @@ export class InvoicePDFGenerator {
   }
 
   private addItemsTable(items: any[]): void {
-    if (!items || items.length === 0) return;
-
+    if (!items || items.length === 0) {
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.setTextColor(220, 38, 38);
+      this.doc.text('Nenhum item encontrado neste pedido.', 20, 155);
+      return;
+    }
     const tableColumn = ['Descrição', 'Qtd', 'Preço Unitário', 'Total'];
     const tableRows = items.map((item: any) => [
       item.product?.name || item.productName || 'Produto',
@@ -146,7 +146,6 @@ export class InvoicePDFGenerator {
       `${this.formatCurrency(item.price)} AOA`,
       `${this.formatCurrency(item.price * item.quantity)} AOA`
     ]);
-
     // @ts-ignore
     this.doc.autoTable({
       head: [tableColumn],
@@ -157,24 +156,40 @@ export class InvoicePDFGenerator {
         fillColor: [41, 128, 185],
         textColor: [255, 255, 255],
         fontStyle: 'bold',
-        fontSize: 11,
-        halign: 'center'
+        fontSize: 12,
+        halign: 'center',
       },
       bodyStyles: {
-        fontSize: 10,
-        textColor: [50, 50, 50]
+        fontSize: 11,
+        textColor: [50, 50, 50],
+        minCellHeight: 10,
       },
       styles: {
-        lineColor: [200, 200, 200],
-        lineWidth: 0.5
+        lineColor: [220, 220, 220],
+        lineWidth: 0.5,
+        cellPadding: 3,
+        overflow: 'linebreak',
+        valign: 'middle',
+        font: 'helvetica',
+        fontSize: 11,
+        tableWidth: 'auto',
+        minPageContentHeight: 100,
       },
       columnStyles: {
-        0: { cellWidth: 95, halign: 'left' },
+        0: { cellWidth: 90, halign: 'left' },
         1: { cellWidth: 25, halign: 'center' },
         2: { cellWidth: 35, halign: 'right' },
-        3: { cellWidth: 35, halign: 'right' }
+        3: { cellWidth: 35, halign: 'right' },
       },
-      margin: { left: 15, right: 15 }
+      margin: { left: 15, right: 15 },
+      didDrawPage: (data) => {
+        // Cabeçalho fixo estilo Alibaba
+        this.doc.setFontSize(16);
+        this.doc.setTextColor(41, 128, 185);
+        this.doc.setFont('helvetica', 'bold');
+        this.doc.text('ITENS DO PEDIDO', 20, 145);
+      },
+      pageBreak: 'auto',
     });
   }
 

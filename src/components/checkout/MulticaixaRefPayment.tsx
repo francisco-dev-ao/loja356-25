@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -39,9 +39,16 @@ const MulticaixaRefPayment = ({
   const { profile } = useAuth();
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
+  // Disparar geração automática da referência quando orderId for definido
+  useEffect(() => {
+    if (orderId && !referenceData && !isLoading) {
+      handleGenerateReference();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderId]);
+
   const generateAndSendInvoicePDF = async () => {
     if (!orderId || !profile) return;
-    
     setIsGeneratingPdf(true);
     try {
       // Buscar detalhes do pedido
@@ -51,14 +58,12 @@ const MulticaixaRefPayment = ({
         .eq('id', orderId)
         .single();
       if (orderError) throw orderError;
-      
       // Buscar itens do pedido
       const { data: orderItems, error: itemsError } = await supabase
         .from('order_items')
         .select('*')
         .eq('order_id', orderId);
       if (itemsError) throw itemsError;
-      
       // Buscar nomes dos produtos
       const productIds = orderItems.map(item => item.product_id);
       const { data: products, error: productsError } = await supabase
@@ -66,7 +71,6 @@ const MulticaixaRefPayment = ({
         .select('id, name')
         .in('id', productIds);
       if (productsError) throw productsError;
-      
       // Associar nomes aos itens
       const itemsWithProductNames = orderItems.map(item => {
         const product = products.find(p => p.id === item.product_id);
@@ -75,12 +79,17 @@ const MulticaixaRefPayment = ({
           productName: product?.name || 'Produto não encontrado'
         };
       });
-      
       const orderWithItems = {
         ...orderData,
         items: itemsWithProductNames
       };
-      
+      // LOG para depuração
+      console.log('🔎 orderWithItems para PDF:', orderWithItems);
+      if (!itemsWithProductNames || itemsWithProductNames.length === 0) {
+        toast.error('Não há itens no pedido para gerar a fatura PDF!');
+        setIsGeneratingPdf(false);
+        return;
+      }
       // Gerar PDF
       const pdfGenerator = new InvoicePDFGenerator();
       await pdfGenerator.generateProfessionalInvoice({
@@ -89,7 +98,6 @@ const MulticaixaRefPayment = ({
         companyInfo,
         paymentReference: referenceData
       });
-      
       // Baixar automaticamente
       pdfGenerator.save(`PROFORMA-${orderId.substring(0, 8)}.pdf`);
       toast.success('Proforma/Fatura PDF gerada e baixada automaticamente!');
@@ -103,35 +111,48 @@ const MulticaixaRefPayment = ({
 
   const handleGenerateReference = async () => {
     setIsLoading(true);
-    
     try {
+      let dynamicDescription = description;
+      if (orderId) {
+        // Buscar itens do pedido e nomes dos produtos
+        const { data: orderItems, error: itemsError } = await supabase
+          .from('order_items')
+          .select('*')
+          .eq('order_id', orderId);
+        if (!itemsError && orderItems && orderItems.length > 0) {
+          const productIds = orderItems.map(item => item.product_id);
+          const { data: products, error: productsError } = await supabase
+            .from('products')
+            .select('id, name')
+            .in('id', productIds);
+          if (!productsError && products) {
+            const nomes = orderItems.map(item => {
+              const prod = products.find(p => p.id === item.product_id);
+              return prod?.name || 'Produto';
+            });
+            dynamicDescription = nomes.join(', ').substring(0, 80); // Limite de 80 caracteres
+          }
+        }
+      }
       const response = await createMulticaixaReference({
         amount,
-        description,
+        description: dynamicDescription,
         orderId
       });
-
       setReferenceData(response);
-      
-      // Store reference data locally for PDF generation
       if (orderId) {
         localStorage.setItem(`payment_ref_${orderId}`, JSON.stringify(response));
       }
-      
       toast.success('Referência gerada com sucesso!');
-      
-      // Gerar e enviar fatura PDF automaticamente
       if (orderId && profile) {
         await generateAndSendInvoicePDF();
       }
-      
       if (onSuccess) {
         onSuccess(response);
       }
     } catch (error: any) {
       console.error('Erro ao gerar referência:', error);
       toast.error('Erro ao gerar referência de pagamento');
-      
       if (onError) {
         onError(error.message);
       }

@@ -1,9 +1,15 @@
 /// <reference types="https://deno.land/x/deno/cli/types/dts/index.d.ts" />
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from "../_shared/cors.ts";
 
 console.log("payment-callback function initializing...");
+
+// Initialize Supabase client
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
 serve(async (req: Request) => {
   console.log("payment-callback function invoked. Method:", req.method);
@@ -17,111 +23,159 @@ serve(async (req: Request) => {
     const payload = await req.json();
     console.log("Received payment callback payload:", JSON.stringify(payload, null, 2));
 
-    // TODO: Implement EMIS callback validation logic here
-    // 1. Verify the source of the request (e.g., check for a secret header or IP if EMIS provides one)
-    // 2. Validate the payload structure and required fields (transactionId, status, reference, amount, etc.)
-    
-    // Exemplo de campos esperados (ajuste conforme a documentação da EMIS):
-    const transactionId = payload.transactionId || payload.transaction_id;
-    const paymentStatus = payload.status || payload.transaction_status;
-    const orderReference = payload.reference || payload.order_reference || payload.merchRef; // merchRef é comum
-    const amountPaid = payload.amount; // Pode vir como string ou número
+    // Extrair dados do callback da EMIS
+    const transactionId = payload.transactionId || payload.transaction_id || payload.id;
+    const paymentStatus = payload.status || payload.transaction_status || payload.payment_status;
+    const orderReference = payload.reference || payload.order_reference || payload.merchRef || payload.order_id;
+    const amountPaid = payload.amount || payload.amount_paid;
+    const paymentMethod = payload.payment_method || 'multicaixa_express';
 
     console.log(`Processing callback for Order Ref: ${orderReference}, Transaction ID: ${transactionId}, Status: ${paymentStatus}, Amount: ${amountPaid}`);
 
-    // A EMIS geralmente envia o status como uma string.
-    // Verifique a documentação da EMIS para os valores exatos de status.
-    // Exemplo: "00" - Sucesso, "05" - Recusado, etc.
-    // Para este exemplo, vamos assumir que "AUTHORIZATION" ou "PAYMENT" no campo apropriado indica sucesso,
-    // ou um código numérico como "00".
-    // É CRUCIAL verificar a documentação da EMIS para os valores corretos.
-    
+    // Determinar se o pagamento foi bem-sucedido
     let isSuccess = false;
     if (typeof paymentStatus === 'string') {
-        // Adapte esta lógica com base nos valores reais de status da EMIS
-        if (paymentStatus.toUpperCase() === "SUCCESS" || paymentStatus === "00" || paymentStatus.toUpperCase() === "AUTHORIZATION" || paymentStatus.toUpperCase() === "PAYMENT_SUCCESSFUL" || paymentStatus.toUpperCase() === "COMPLETED") {
-            isSuccess = true;
-        }
+        // Status de sucesso da EMIS (ajuste conforme documentação)
+        const successStatuses = [
+            "SUCCESS", "00", "AUTHORIZATION", "PAYMENT_SUCCESSFUL", 
+            "COMPLETED", "APPROVED", "PAID", "SUCCESSFUL"
+        ];
+        isSuccess = successStatuses.some(status => 
+            paymentStatus.toUpperCase() === status
+        );
     } else if (typeof paymentStatus === 'number') {
-        if (paymentStatus === 0) { // Exemplo, pode ser outro número que indique sucesso
-            isSuccess = true;
-        }
+        // Códigos numéricos de sucesso (ajuste conforme documentação)
+        const successCodes = [0, 200, 201];
+        isSuccess = successCodes.includes(paymentStatus);
     }
 
-    // Para interagir com o Supabase, você precisaria do cliente.
-    // A forma padrão é:
-    // import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-    // const supabaseClient = createClient(
-    //   Deno.env.get('SUPABASE_URL')!,
-    //   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')! // Use SERVICE_ROLE_KEY para operações de backend
-    // );
-    // Se você já tem o supabaseClient disponível no escopo de outra forma, ajuste aqui.
-    // Por enquanto, o código abaixo assumirá que supabaseClient será definido.
-    // **COMENTÁRIO PARA VOCÊ:** Descomente e ajuste a inicialização do supabaseClient acima se necessário.
+    // Salvar callback no banco de dados
+    try {
+      const { data: callbackData, error: callbackError } = await supabaseClient
+        .from('multicaixa_express_callbacks')
+        .insert({
+          raw_data: JSON.stringify(payload),
+          payment_reference: orderReference,
+          amount: amountPaid,
+          status: paymentStatus,
+          ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown',
+          processed_successfully: true
+        })
+        .select()
+        .single();
+
+      if (callbackError) {
+        console.error('Error saving callback:', callbackError);
+      } else {
+        console.log('Callback saved successfully:', callbackData);
+      }
+    } catch (callbackError) {
+      console.error('Error saving callback:', callbackError);
+    }
 
     if (isSuccess) {
       console.log(`Payment successful for order ${orderReference}. Transaction ID: ${transactionId}.`);
       
-      // **INÍCIO DA LÓGICA DE ATUALIZAÇÃO DO BANCO DE DADOS (ASSUMINDO QUE supabaseClient ESTÁ DEFINIDO)**
-      // try {
-      //   const { data: orderData, error: orderError } = await supabaseClient
-      //     .from('orders') // Certifique-se que 'orders' é o nome correto da sua tabela de pedidos
-      //     .update({ 
-      //         payment_status: 'paid', // Ou o status que indica pagamento concluído
-      //         emis_transaction_id: transactionId, // Armazena o ID da transação da EMIS
-      //         payment_provider_payload: payload, // Opcional: armazenar todo o payload para auditoria
-      //         updated_at: new Date().toISOString() 
-      //     })
-      //     .eq('id', orderReference) // Assumindo que 'id' na tabela 'orders' é o orderReference
-      //     .eq('payment_status', 'pending_payment') // Idempotência: atualiza apenas se ainda estiver pendente
-      //     .select(); // Para retornar os dados atualizados, se necessário
+      try {
+        // Atualizar status do pagamento Multicaixa Express
+        const { data: paymentData, error: paymentError } = await supabaseClient
+          .from('multicaixa_express_payments')
+          .update({ 
+            status: 'completed',
+            emis_response: payload,
+            completed_at: new Date().toISOString()
+          })
+          .eq('reference', orderReference)
+          .eq('status', 'pending')
+          .select()
+          .single();
 
-      //   if (orderError) {
-      //     console.error(`DB update failed for order ${orderReference}: `, orderError);
-      //     // Considerar se deve retornar um erro 500 aqui ou apenas logar
-      //   } else {
-      //     console.log(\`Order ${orderReference} updated successfully in DB.\`, orderData);
-      //     // TODO: Aqui você pode acionar a criação da fatura (invoice)
-      //     // Exemplo: await createInvoiceForOrder(supabaseClient, orderReference, companyId, customerId, etc.);
-      //   }
-      // } catch (dbError) {
-      //   console.error(\`Error during database operations for order ${orderReference}: \`, dbError);
-      // }
-      // **FIM DA LÓGICA DE ATUALIZAÇÃO DO BANCO DE DADOS**
+        if (paymentError) {
+          console.error(`Payment update failed for reference ${orderReference}:`, paymentError);
+        } else {
+          console.log(`Payment ${orderReference} updated successfully.`, paymentData);
+        }
 
-      // Placeholder para lógica de criação de fatura (deve ser implementada)
-      console.log(`Placeholder: Invoice creation logic would be triggered here for order ${orderReference}.`);
+        // Buscar pedido pelo payment_reference
+        const { data: orderData } = await supabaseClient
+          .from('orders')
+          .select('*')
+          .eq('payment_reference', orderReference)
+          .single();
+
+        if (orderData) {
+          // Atualizar pedido
+          await supabaseClient.from('orders').update({
+            payment_status: 'paid',
+            status: 'completed',
+            updated_at: new Date().toISOString()
+          }).eq('id', orderData.id);
+
+          // Atualizar fatura vinculada
+          await supabaseClient.from('invoices').update({
+            status: 'paid',
+            updated_at: new Date().toISOString()
+          }).eq('order_id', orderData.id);
+        }
+
+      } catch (dbError) {
+        console.error(`Error during database operations for order ${orderReference}:`, dbError);
+      }
 
     } else {
-      console.warn(`Payment failed, not successful, or status unclear for order ${orderReference}. Status: ${paymentStatus}, Transaction ID: ${transactionId}. Payload:`, payload);
+      console.warn(`Payment failed for order ${orderReference}. Status: ${paymentStatus}, Transaction ID: ${transactionId}.`);
       
-      // **INÍCIO DA LÓGICA DE ATUALIZAÇÃO PARA PAGAMENTO FALHADO (ASSUMINDO supabaseClient DEFINIDO)**
-      // try {
-      //   const { data: failedOrderData, error: failedOrderError } = await supabaseClient
-      //     .from('orders')
-      //     .update({ 
-      //         payment_status: 'payment_failed', // Ou o status que indica falha no pagamento
-      //         emis_transaction_id: transactionId,
-      //         payment_provider_payload: payload,
-      //         updated_at: new Date().toISOString()
-      //     })
-      //     .eq('id', orderReference)
-      //     .select();
+      try {
+        // Atualizar status do pagamento para falhado
+        const { data: paymentData, error: paymentError } = await supabaseClient
+          .from('multicaixa_express_payments')
+          .update({ 
+            status: 'failed',
+            emis_response: payload,
+            completed_at: new Date().toISOString()
+          })
+          .eq('reference', orderReference)
+          .eq('status', 'pending')
+          .select()
+          .single();
 
-      //   if (failedOrderError) {
-      //     console.error(\`DB update for failed payment on order ${orderReference} also failed: \`, failedOrderError);
-      //   } else {
-      //     console.log(\`Order ${orderReference} status updated to 'payment_failed' in DB.\`, failedOrderData);
-      //   }
-      // } catch (dbFailedError) {
-      //   console.error(\`Error during database operations for failed payment on order ${orderReference}: \`, dbFailedError);
-      // }
-      // **FIM DA LÓGICA DE ATUALIZAÇÃO PARA PAGAMENTO FALHADO**
+        if (paymentError) {
+          console.error(`Payment update failed for reference ${orderReference}:`, paymentError);
+        } else {
+          console.log(`Payment ${orderReference} marked as failed.`, paymentData);
+        }
+
+        // Atualizar status do pedido para falhado
+        const { data: orderData, error: orderError } = await supabaseClient
+          .from('orders')
+          .update({ 
+            payment_status: 'payment_failed',
+            status: 'cancelled',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', orderReference)
+          .eq('payment_status', 'pending_payment')
+          .select()
+          .single();
+
+        if (orderError) {
+          console.error(`Order update failed for ${orderReference}:`, orderError);
+        } else {
+          console.log(`Order ${orderReference} marked as failed.`, orderData);
+        }
+
+      } catch (dbError) {
+        console.error(`Error during database operations for failed payment on order ${orderReference}:`, dbError);
+      }
     }
 
-    // A EMIS espera uma resposta 200 OK para confirmar o recebimento do callback.
-    // O corpo da resposta geralmente é ignorado pela EMIS, mas pode ser útil para seu próprio registro.
-    return new Response(JSON.stringify({ received: true, message: "Callback processed." }), {
+    // Retornar resposta de sucesso para a EMIS
+    return new Response(JSON.stringify({ 
+      received: true, 
+      message: "Callback processed successfully.",
+      orderReference,
+      status: isSuccess ? 'success' : 'failed'
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
@@ -132,17 +186,14 @@ serve(async (req: Request) => {
     if (error instanceof Error && error.stack) {
       console.error("Error Stack Trace:", error.stack);
     }
-    // Mesmo em caso de erro do seu lado, a EMIS pode esperar um 200 OK.
-    // Verifique a documentação da EMIS. Se eles tentarem novamente em não-200, você pode querer retornar 500
-    // para erros que justifiquem uma nova tentativa, e 200 para erros que não (por exemplo, dados de solicitação incorretos).
-    // Por enquanto, retornando 200 para confirmar o recebimento, mas registrando o erro.
+    
     return new Response(JSON.stringify({
-      received: true, // Confirmando o recebimento
+      received: true,
       error: "Error processing callback.",
       details: errorMessage
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200, // Ou 500 se a EMIS precisar tentar novamente
+      status: 200,
     });
   }
 });

@@ -25,3 +25,11 @@ verify_jwt = false
 [functions.payment-callback]
 verify_jwt = false
 
+# Multicaixa Express callback function
+[functions.multicaixa-express-callback]
+verify_jwt = false
+
+# Generate EMIS token function
+[functions.generate-emis-token]
+verify_jwt = false
+
