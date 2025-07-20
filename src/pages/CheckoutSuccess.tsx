@@ -49,15 +49,16 @@ const CheckoutSuccess = () => {
   const [isGenerating, setIsGenerating] = useState(true);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [hasGeneratedPdf, setHasGeneratedPdf] = useState(false);
   
   // Informações da empresa
   const companyInfo: CompanyInfo = {
-    name: "Office365, Lda",
-    address: "Rua Comandante Gika, n.º 100, Luanda, Angola",
-    nif: "5417124080",
-    phone: "+244 923 456 789",
-    email: "financeiro@office365.ao",
-    website: "www.office365.ao"
+    name: "ANGOHOST, Lda",
+    address: "Av Pedro de Castro Vandune",
+    nif: "5000088927",
+    phone: "+244 942 090 108",
+    email: "support@office.it.ao",
+    website: "www.office.it.ao"
   };
 
   // Adicionar estado para referência de pagamento
@@ -139,14 +140,38 @@ const CheckoutSuccess = () => {
     }
   }, [orderId]);
 
+  useEffect(() => {
+    if (!hasGeneratedPdf && order && paymentReference) {
+      // Gera o PDF automaticamente apenas uma vez
+      (async () => {
+        setIsGeneratingPdf(true);
+        try {
+          const pdfGenerator = new InvoicePDFGenerator();
+          await pdfGenerator.generateProfessionalInvoice({
+            order,
+            profile,
+            companyInfo,
+            paymentReference
+          });
+          pdfGenerator.save(`FATURA-${orderId.substring(0, 8)}.pdf`);
+          toast.success('Fatura PDF gerada e baixada com sucesso!');
+          setHasGeneratedPdf(true);
+        } catch (error) {
+          console.error('Erro ao gerar PDF:', error);
+          toast.error('Erro ao gerar a Fatura PDF');
+        } finally {
+          setIsGeneratingPdf(false);
+        }
+      })();
+    }
+  }, [order, paymentReference, hasGeneratedPdf, companyInfo, profile, orderId]);
+
   const generateInvoicePDF = async () => {
     if (!order || !profile) {
       toast.error('Dados insuficientes para gerar a fatura');
       return;
     }
-
     setIsGeneratingPdf(true);
-
     try {
       // Get payment reference data if exists
       const paymentRefData = orderId ? localStorage.getItem(`payment_ref_${orderId}`) : null;
@@ -154,36 +179,20 @@ const CheckoutSuccess = () => {
       if (paymentRefData) {
         paymentReference = JSON.parse(paymentRefData);
       }
-
       // Create professional PDF
       const pdfGenerator = new InvoicePDFGenerator();
-      pdfGenerator.generateProfessionalInvoice({
+      await pdfGenerator.generateProfessionalInvoice({
         order,
         profile,
         companyInfo,
         paymentReference
       });
-
       // Save the PDF
       pdfGenerator.save(`FATURA-${orderId.substring(0, 8)}.pdf`);
-
-      // Enviar por e-mail
-      const pdfBase64 = pdfGenerator.output().split(',')[1];
-      await sendEmail({
-        to: profile.email,
-        subject: 'Sua Proforma/Confirmação de Pedido',
-        html: `<p>Olá, ${profile.name || 'cliente'}!<br>Sua Proforma está em anexo.<br>Qualquer dúvida, estamos à disposição.</p>`,
-        attachments: [
-          {
-            filename: `PROFORMA-${orderId.substring(0, 8)}.pdf`,
-            content: pdfBase64
-          }
-        ]
-      });
-      toast.success('Proforma enviada para seu e-mail!');
+      toast.success('Fatura PDF gerada e baixada com sucesso!');
     } catch (error) {
-      console.error('Erro ao gerar/enviar PDF:', error);
-      toast.error('Erro ao gerar ou enviar a Proforma por e-mail');
+      console.error('Erro ao gerar PDF:', error);
+      toast.error('Erro ao gerar a Fatura PDF');
     } finally {
       setIsGeneratingPdf(false);
     }
