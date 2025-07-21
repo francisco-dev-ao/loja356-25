@@ -1,5 +1,10 @@
 
-import { Session, User } from '@supabase/supabase-js';
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+}
 
 export interface Profile {
   id: string;
@@ -14,7 +19,7 @@ export interface Profile {
 export interface AuthContextType {
   user: User | null;
   profile: Profile | null;
-  session: Session | null;
+  session: any | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;

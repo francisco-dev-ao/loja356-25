@@ -10,7 +10,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api-client';
 
 // Components
 import CheckoutSteps from '@/components/checkout/CheckoutSteps';
@@ -54,32 +54,22 @@ const Checkout = () => {
 
     setIsProcessing(true);
     try {
-      const { data: orderData, error: orderError } = await supabase.from('orders').insert({
-        user_id: user.id,
+      const { data: orderData, error: orderError } = await apiClient.createOrder({
+        items: items.map(item => ({
+          product_id: item.id,
+          quantity: item.quantity,
+          price: item.price
+        })),
         total: finalTotal,
-        subtotal: total,
-        discount_amount: appliedCoupon ? (total - finalTotal) : 0,
-        coupon_code: appliedCoupon ? appliedCoupon.code : null,
         payment_method: paymentMethod,
-        payment_status: 'pending',
-        status: 'pending'
-      }).select().single();
+        coupon_code: appliedCoupon ? appliedCoupon.code : null
+      });
 
-      if (orderError) throw new Error(`Erro ao criar pedido: ${orderError.message}`);
+      if (orderError) throw new Error(`Erro ao criar pedido: ${orderError}`);
 
-      const orderItems = items.map(item => ({
-        order_id: orderData.id,
-        product_id: item.id,
-        quantity: item.quantity,
-        price: item.price
-      }));
-
-      const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
-      if (itemsError) throw new Error(`Erro ao adicionar itens ao pedido: ${itemsError.message}`);
-
-      localStorage.setItem('latest_order_id', orderData.id);
-      setOrderId(orderData.id);
-      console.log("✅ Pedido criado com sucesso:", orderData.id);
+      localStorage.setItem('latest_order_id', (orderData as any).id);
+      setOrderId((orderData as any).id);
+      console.log("✅ Pedido criado com sucesso:", (orderData as any).id);
 
     } catch (error: any) {
       console.error('Erro ao criar pedido:', error);
@@ -92,91 +82,22 @@ const Checkout = () => {
   const sendOrderConfirmationWithReference = async (orderId: string, referenceData: any) => {
     console.log("🔄 Enviando email com referência:", referenceData);
     try {
-      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-      const customerName = profile?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Cliente';
-      const { data: orderDetails } = await supabase.from('orders').select(`*, order_items ( quantity, price, products (name, description) )`).eq('id', orderId).single();
-      const { data: settings } = await supabase.from('settings').select('*').limit(1).single();
-
-      if (!orderDetails || !settings || !referenceData) {
-        toast.error('Dados insuficientes para envio de email.');
-        return;
-      }
-
-      let validadeStr = '';
-      if (orderDetails?.created_at) {
-        const validade = new Date(orderDetails.created_at);
-        validade.setDate(validade.getDate() + 3);
-        validadeStr = `${validade.toLocaleDateString('pt-PT')} ${validade.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}`;
-      }
-
-      // Montar tabela de itens do pedido
-      let itemsTable = `<table style='width:100%;border-collapse:collapse;margin-top:16px;'>
-        <thead>
-          <tr>
-            <th style='border:1px solid #ddd;padding:8px;text-align:left;'>Produto</th>
-            <th style='border:1px solid #ddd;padding:8px;text-align:left;'>Descrição</th>
-            <th style='border:1px solid #ddd;padding:8px;text-align:center;'>Qtd</th>
-            <th style='border:1px solid #ddd;padding:8px;text-align:right;'>Valor Unitário</th>
-            <th style='border:1px solid #ddd;padding:8px;text-align:right;'>Subtotal</th>
-          </tr>
-        </thead>
-        <tbody>`;
-      for (const item of orderDetails.order_items) {
-        itemsTable += `<tr>
-          <td style='border:1px solid #ddd;padding:8px;'>${item.products?.name || '-'}</td>
-          <td style='border:1px solid #ddd;padding:8px;'>${item.products?.description || '-'}</td>
-          <td style='border:1px solid #ddd;padding:8px;text-align:center;'>${item.quantity}</td>
-          <td style='border:1px solid #ddd;padding:8px;text-align:right;'>${Number(item.price).toLocaleString('pt-AO')} AOA</td>
-          <td style='border:1px solid #ddd;padding:8px;text-align:right;'>${Number(item.price * item.quantity).toLocaleString('pt-AO')} AOA</td>
-        </tr>`;
-      }
-      itemsTable += `</tbody></table>`;
-
-      // Montar HTML do e-mail
-      const html = `
-        <div style="font-family:Arial,sans-serif;padding:20px;max-width:600px;margin:auto;">
-          <h2 style="color:#2d3748;">Olá, ${customerName}!</h2>
-          <p>Seu pedido foi confirmado com sucesso. Seguem os detalhes:</p>
-          <hr style="margin:16px 0;"/>
-          <p><strong>Entidade:</strong> ${referenceData.entity}</p>
-          <p><strong>Referência:</strong> ${referenceData.reference}</p>
-          <p><strong>Valor:</strong> ${Number(referenceData.amount).toLocaleString('pt-AO')} AOA</p>
-          <p><strong>Validade:</strong> ${validadeStr}</p>
-          <hr style="margin:16px 0;"/>
-          <h3 style="margin-bottom:8px;">Itens do Pedido</h3>
-          ${itemsTable}
-          <p style="margin-top:16px;"><strong>Total:</strong> ${Number(referenceData.amount).toLocaleString('pt-AO')} AOA</p>
-          <hr style="margin:16px 0;"/>
-          <p style="margin-top:16px;">Se tiver qualquer dúvida, basta responder a este e-mail.<br/>Agradecemos pela sua preferência!</p>
-          <p style="margin-top:24px;font-size:13px;color:#888;">Atenciosamente,<br/>Equipe ${settings?.name || 'Loja 356'}</p>
-        </div>
-      `;
-
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
-
-      const response = await fetch('https://mail3.angohost.ao/email/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({
-          to: user.email,
-          subject: `Pedido #${orderId.slice(0, 8)} - Ref: ${referenceData.reference}`,
-          html
-        })
+      const customerName = user?.name || 'Cliente';
+      
+      // Use the API client to send order confirmation
+      const { error } = await apiClient.sendOrderConfirmation({
+        orderId,
+        customerEmail: user?.email || '',
+        customerName
       });
 
-      clearTimeout(timeout);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Falha no envio:', errorText);
+      if (error) {
+        console.error('❌ Falha no envio:', error);
         toast.error('Erro ao enviar email!');
         return;
       }
 
-      const result = await response.json();
-      console.log('✅ Email enviado:', result);
+      console.log('✅ Email enviado com sucesso');
       toast.success('Email de confirmação enviado!');
 
     } catch (err: any) {

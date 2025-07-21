@@ -14,7 +14,7 @@ import {
   CreditCard
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api-client';
 
 const AtivarMulticaixaExpress = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -27,20 +27,16 @@ const AtivarMulticaixaExpress = () => {
     try {
       setIsLoading(true);
       
-      const { data, error } = await supabase
-        .from('multicaixa_express_config')
-        .select('*')
-        .eq('is_active', true)
-        .single();
+      const { data, error } = await apiClient.getMulticaixaExpressConfig();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Erro ao verificar status:', error);
         setIsActive(false);
         setConfig(null);
         return;
       }
 
-      if (data) {
+      if (data && (data as any).is_active) {
         setIsActive(true);
         setConfig(data);
         toast.success('Multicaixa Express está ativo!');
@@ -62,43 +58,20 @@ const AtivarMulticaixaExpress = () => {
     try {
       setIsLoading(true);
       
-      // 1. Criar configuração
+      // Criar configuração
       const configData = {
         frame_token: 'a53787fd-b49e-4469-a6ab-fa6acf19db48',
-        callback_url: 'https://angohost.co.ao/pay/MulticaixaExpress/02e7e7694cea3a9b472271420efb0029/callback',
-        success_url: 'https://angohost.co.ao/pay/successful',
-        error_url: 'https://angohost.co.ao/pay/unsuccessful',
-        css_url: null,
-        commission_rate: 0,
+        pos_id: 'ONLINE_PAYMENT',
+        return_url: 'https://angohost.co.ao/pay/successful',
         is_active: true
       };
 
-      const { data: configResult, error: configError } = await supabase
-        .from('multicaixa_express_config')
-        .insert(configData)
-        .select()
-        .single();
+      const { data: configResult, error: configError } = await apiClient.saveMulticaixaExpressConfig(configData);
 
       if (configError) {
         console.error('Erro ao criar configuração:', configError);
         toast.error('Erro ao criar configuração');
         return;
-      }
-
-      // 2. Criar método de pagamento
-      const paymentMethodData = {
-        name: 'Multicaixa Express',
-        description: 'Pagamento via Multicaixa Express Online',
-        is_active: true
-      };
-
-      const { error: paymentError } = await supabase
-        .from('payment_methods')
-        .upsert(paymentMethodData, { onConflict: 'name' });
-
-      if (paymentError) {
-        console.error('Erro ao criar método de pagamento:', paymentError);
-        // Não falhar se já existir
       }
 
       setConfig(configResult);

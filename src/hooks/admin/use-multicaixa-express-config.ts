@@ -1,7 +1,21 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { MulticaixaExpressConfig } from '@/services/payment/multicaixa-express';
+import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
+
+interface MulticaixaExpressConfig {
+  id?: string;
+  frame_token: string;
+  pos_id: string;
+  return_url: string;
+  callback_url?: string;
+  success_url?: string;
+  error_url?: string;
+  css_url?: string;
+  commission_rate?: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export const useMulticaixaExpressConfig = () => {
   const [config, setConfig] = useState<MulticaixaExpressConfig | null>(null);
@@ -12,11 +26,7 @@ export const useMulticaixaExpressConfig = () => {
   const loadConfig = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('multicaixa_express_config')
-        .select('*')
-        .eq('is_active', true)
-        .single();
+      const { data, error } = await apiClient.getMulticaixaExpressConfig();
 
       if (error) {
         console.error('Erro ao carregar configuração:', error);
@@ -24,7 +34,7 @@ export const useMulticaixaExpressConfig = () => {
         return null;
       }
 
-      setConfig(data);
+      setConfig(data as MulticaixaExpressConfig);
       return data;
     } catch (error) {
       console.error('Erro ao carregar configuração:', error);
@@ -40,40 +50,15 @@ export const useMulticaixaExpressConfig = () => {
     try {
       setSaving(true);
       
-      let result;
-      
-      if (config?.id) {
-        // Update existing config
-        const { data, error } = await supabase
-          .from('multicaixa_express_config')
-          .update({
-            ...newConfig,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', config.id)
-          .select()
-          .single();
+      const { data, error } = await apiClient.saveMulticaixaExpressConfig(newConfig);
 
-        if (error) throw error;
-        result = data;
-      } else {
-        // Create new config
-        const { data, error } = await supabase
-          .from('multicaixa_express_config')
-          .insert({
-            ...newConfig,
-            is_active: true
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-        result = data;
+      if (error) {
+        throw new Error(error);
       }
 
-      setConfig(result);
+      setConfig(data as MulticaixaExpressConfig);
       toast.success('Configuração salva com sucesso!');
-      return result;
+      return data;
     } catch (error: any) {
       console.error('Erro ao salvar configuração:', error);
       toast.error(`Erro ao salvar configuração: ${error.message}`);
@@ -91,19 +76,14 @@ export const useMulticaixaExpressConfig = () => {
       setSaving(true);
       const newActiveStatus = !config.is_active;
       
-      const { data, error } = await supabase
-        .from('multicaixa_express_config')
-        .update({
-          is_active: newActiveStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', config.id)
-        .select()
-        .single();
+      const { data, error } = await apiClient.saveMulticaixaExpressConfig({
+        ...config,
+        is_active: newActiveStatus
+      });
 
-      if (error) throw error;
+      if (error) throw new Error(error);
 
-      setConfig(data);
+      setConfig(data as MulticaixaExpressConfig);
       toast.success(
         newActiveStatus 
           ? 'Multicaixa Express ativado com sucesso!' 
@@ -135,8 +115,7 @@ export const useMulticaixaExpressConfig = () => {
         mobile: 'PAYMENT',
         card: 'DISABLED',
         qrCode: 'PAYMENT',
-        cssUrl: config.css_url,
-        callbackUrl: config.callback_url,
+        callbackUrl: config.callback_url || config.return_url,
       };
 
       const response = await fetch('https://pagamentonline.emis.co.ao/online-payment-gateway/portal/frameToken', {
@@ -164,30 +143,15 @@ export const useMulticaixaExpressConfig = () => {
     }
   };
 
-  // Get payment statistics
+  // Get payment statistics (disabled for now - would need API endpoint)
   const getPaymentStats = async () => {
-    try {
-      const { data: payments, error } = await supabase
-        .from('multicaixa_express_payments')
-        .select('*');
-
-      if (error) throw error;
-
-      const stats = {
-        total: payments.length,
-        pending: payments.filter(p => p.status === 'pending').length,
-        completed: payments.filter(p => p.status === 'completed').length,
-        failed: payments.filter(p => p.status === 'failed').length,
-        totalAmount: payments
-          .filter(p => p.status === 'completed')
-          .reduce((sum, p) => sum + p.amount, 0)
-      };
-
-      return stats;
-    } catch (error: any) {
-      console.error('Erro ao buscar estatísticas:', error);
-      return null;
-    }
+    return {
+      total: 0,
+      pending: 0,
+      completed: 0,
+      failed: 0,
+      totalAmount: 0
+    };
   };
 
   // Load config on mount
