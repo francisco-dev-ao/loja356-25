@@ -2,93 +2,55 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { Session, User } from '@supabase/supabase-js';
+import { apiClient } from '@/lib/api-client';
 import { AuthContext } from './auth-context';
 import { Profile } from './types';
+
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+}
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Configurar o listener de mudança de estado de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-
-        if (currentSession?.user) {
-          // Buscar o perfil do usuário após autenticação
-          setTimeout(async () => {
-            try {
-              const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', currentSession.user.id)
-                .single();
-
-              if (error) {
-                console.error('Erro ao buscar perfil:', error);
-              } else {
-                setProfile(data as Profile);
-              }
-            } catch (error) {
-              console.error('Erro inesperado:', error);
-            }
-          }, 0);
+    // Verificar se já existe token de autenticação
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      apiClient.getMe().then(({ data, error }) => {
+        if (data && !error) {
+          setUser(data as User);
+          setProfile(data as Profile);
         } else {
-          setProfile(null);
+          localStorage.removeItem('auth_token');
         }
-      }
-    );
-
-    // Verificar se já existe uma sessão
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-
-      if (currentSession?.user) {
-        // Buscar o perfil do usuário se estiver autenticado
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', currentSession.user.id)
-          .single()
-          .then(({ data, error }) => {
-            if (error) {
-              console.error('Erro ao buscar perfil:', error);
-            } else {
-              setProfile(data as Profile);
-            }
-            setIsLoading(false);
-          });
-      } else {
         setIsLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+      });
+    } else {
+      setIsLoading(false);
+    }
   }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      const { data, error } = await apiClient.login(email, password);
       
       if (error) {
-        throw new Error(error.message);
+        throw new Error(error);
       }
 
+      localStorage.setItem('auth_token', (data as any).token);
+      setUser((data as any).user);
+      setProfile((data as any).user);
       toast.success('Login bem-sucedido!');
-      
-      // Redirecionamento será feito automaticamente pelo onAuthStateChange
+      navigate('/');
     } catch (error: any) {
       toast.error(error.message || 'Falha no login. Verifique suas credenciais.');
       console.error(error);
@@ -96,40 +58,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsLoading(false);
     }
   };
+
   const register = async (name: string, email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Registrar o usuário
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name
-          }
-        }
-      });
+      const { data, error } = await apiClient.register(name, email, password);
       
       if (error) {
-        throw new Error(error.message);
+        throw new Error(error);
       }
 
-      if (data.user) {
-        // Configurar o papel do usuário como 'customer' por padrão
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({ 
-            name,
-            role: 'customer' 
-          })
-          .eq('id', data.user.id);
-          
-        if (profileError) {
-          throw new Error(profileError.message);
-        }
-      }
-      
-      toast.success('Registro completo! Verifique seu email para confirmar sua conta.');
+      localStorage.setItem('auth_token', (data as any).token);
+      setUser((data as any).user);
+      setProfile((data as any).user);
+      toast.success('Registro realizado com sucesso!');
+      navigate('/');
     } catch (error: any) {
       toast.error(error.message || 'Falha no registro. Tente novamente.');
       console.error(error);
@@ -142,16 +85,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (!user) return;
     
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update(data)
-        .eq('id', user.id);
+      const { error } = await apiClient.updateProfile({ name: data.name || '' });
       
       if (error) {
-        throw new Error(error.message);
+        throw new Error(error);
       }
       
-      // Atualiza o perfil localmente
       setProfile(prev => prev ? { ...prev, ...data } : null);
       toast.success('Perfil atualizado com sucesso!');
     } catch (error: any) {
@@ -162,10 +101,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
+      localStorage.removeItem('auth_token');
       setUser(null);
       setProfile(null);
-      setSession(null);
       toast.info('Você foi desconectado');
       navigate('/');
     } catch (error) {
@@ -177,7 +115,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     <AuthContext.Provider value={{ 
       user, 
       profile,
-      session,
+      session: null,
       isLoading, 
       isAuthenticated: !!user,
       login,
