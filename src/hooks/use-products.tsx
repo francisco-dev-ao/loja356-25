@@ -1,128 +1,62 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api-client';
 import { useState } from 'react';
 
-export type Product = {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  base_price: number | null;
-  discount_type: 'percentage' | 'fixed' | null;
-  discount_value: number | null;
-  image: string;
-  category: string;
-  stock: number;
-  quantity: number;  // Changed from optional to required to match use-cart.tsx
-  active: boolean;
+export const useProducts = () => {
+  const { data: products, isLoading, error } = useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
+      const response = await apiClient.getProducts();
+      return response.data || [];
+    },
+  });
+
+  return {
+    products: products || [],
+    isLoading,
+    error,
+  };
 };
 
-export const useProducts = (category?: string) => {
-  const [isFiltering, setIsFiltering] = useState(false);
-
-  const fetchProducts = async (): Promise<Product[]> => {
-    let query = supabase.from('products')
-      .select('*')
-      // Apenas produtos ativos na listagem pública
-      .eq('active', true);
-    
-    if (category && category !== 'all') {
-      setIsFiltering(true);
-      query = query.eq('category', category);
-    } else {
-      setIsFiltering(false);
-    }
-
-    const { data, error } = await query;
-    
-    if (error) {
-      console.error('Error fetching products:', error);
-      throw new Error('Failed to fetch products');
-    }
-    
-    // Initialize quantity for all products and handle discount_type properly
-    return (data || []).map(item => ({
-      ...item,
-      discount_type: item.discount_type as 'percentage' | 'fixed' | null,
-      quantity: 1  // Default quantity to 1 for compatibility with cart
-    })) as Product[];
-  };
-
-  return useQuery({
-    queryKey: ['products', category || 'all'],
-    queryFn: fetchProducts,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+export const useProduct = (productId?: string) => {
+  const { data: product, isLoading, error } = useQuery({
+    queryKey: ['product', productId],
+    queryFn: async () => {
+      if (!productId) return null;
+      const response = await apiClient.getProduct(productId);
+      return response.data;
+    },
+    enabled: !!productId,
   });
+
+  return {
+    product,
+    isLoading,
+    error,
+  };
 };
 
-export const useProduct = (id: string) => {
-  const fetchProduct = async (): Promise<Product> => {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('id', id)
-      .eq('active', true)  // Garante que apenas produtos ativos sejam carregados
-      .single();
-    
-    if (error) {
-      console.error('Error fetching product:', error);
-      throw new Error('Failed to fetch product');
-    }
-    
-    // Initialize quantity
-    return {
-      ...data,
-      quantity: 1  // Default quantity to 1 for compatibility with cart
-    } as unknown as Product;
-  };
+export const useProductSearch = () => {
+  const [searchTerm, setSearchTerm] = useState('');
 
-  return useQuery({
-    queryKey: ['product', id],
-    queryFn: fetchProduct,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+  const { data: searchResults, isLoading } = useQuery({
+    queryKey: ['productSearch', searchTerm],
+    queryFn: async () => {
+      if (!searchTerm.trim()) return [];
+      const response = await apiClient.getProducts();
+      const filtered = response.data?.filter((p: any) => 
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.description.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      return filtered || [];
+    },
+    enabled: searchTerm.trim().length > 0,
   });
-};
 
-// Hook to fetch and validate coupon code
-export const useCoupon = (code: string | null) => {
-  const fetchCoupon = async () => {
-    if (!code) return null;
-    
-    const { data, error } = await supabase
-      .from('coupons')
-      .select('*')
-      .eq('code', code)
-      .maybeSingle();
-      
-    if (error) {
-      console.error('Error fetching coupon:', error);
-      throw new Error('Failed to fetch coupon');
-    }
-    
-    if (!data) return null;
-    
-    // Validate coupon
-    const now = new Date();
-    const validFrom = new Date(data.valid_from);
-    const validUntil = data.valid_until ? new Date(data.valid_until) : null;
-    
-    // Check if coupon is within valid date range
-    if (validFrom > now || (validUntil && validUntil < now)) {
-      return { error: 'Cupom expirado ou ainda não válido' };
-    }
-    
-    // Check if max uses not exceeded
-    if (data.max_uses && data.current_uses >= data.max_uses) {
-      return { error: 'Limite de uso do cupom excedido' };
-    }
-    
-    return data;
+  return {
+    searchResults: searchResults || [],
+    isLoading,
+    searchTerm,
+    setSearchTerm,
   };
-  
-  return useQuery({
-    queryKey: ['coupon', code],
-    queryFn: fetchCoupon,
-    enabled: !!code,
-    staleTime: 1000 * 60, // 1 minute
-  });
 };

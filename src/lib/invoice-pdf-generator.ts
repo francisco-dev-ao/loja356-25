@@ -113,10 +113,9 @@ export class InvoicePDFGenerator {
     this.doc.text(`Tel: ${companyInfo.phone}`, 20, y + 34);
     this.doc.text(companyInfo.email, 20, y + 40);
 
-        // Client block - fundo cinza claro sem borda
+    // Client block - fundo cinza claro
     this.doc.setFillColor(248, 249, 250);
-    this.doc.setDrawColor(248, 249, 250);
-    this.doc.rect(110, y, 85, 50, 'FD');(110, y, 85, 50, 'F');
+    this.doc.rect(110, y, 85, 50, 'F');
     this.doc.setFontSize(12);
     this.doc.setFont('helvetica', 'bold');
     this.doc.setTextColor(41, 128, 185);
@@ -148,7 +147,7 @@ export class InvoicePDFGenerator {
   private addItemsTable(items: any[]): void {
     const startY = 155;
 
-    this.doc.autoTable({
+    (this.doc as any).autoTable({
       startY,
       head: [['Descrição', 'Qtd', 'Preço Unitário', 'Total']],
       body: items.map(item => [

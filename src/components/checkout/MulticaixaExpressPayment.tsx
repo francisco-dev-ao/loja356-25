@@ -35,31 +35,40 @@ export default function MulticaixaExpressPayment({ amount, description }: Multic
   // Função para adicionar log
   const addLog = (msg: string) => setLogs(logs => [...logs, `[${new Date().toLocaleTimeString()}] ${msg}`]);
 
-  // WebSocket para monitorar pagamentos
+  // Monitor payment status via polling instead of websocket
   useEffect(() => {
-    // @ts-ignore
-    if (window.io) {
-      socketRef.current = window.io(API_URL);
-      socketRef.current.on('connect', () => addLog('Conectado ao WebSocket'));
-      socketRef.current.on('disconnect', () => addLog('Desconectado do WebSocket'));
-      socketRef.current.on('paymentProcessed', (data: any) => {
-        if (data.status === 'ACCEPTED') {
-          addLog(`✅ Pagamento aprovado! Valor: ${data.amount} ${data.currency} | Ref: ${data.reference?.id}`);
-          setStatus('aprovado');
-          setTimeout(() => {
-            setModalUrl(null);
-            window.location.href = '/checkout/success';
-          }, 2000);
-        } else {
-          addLog(`❌ Pagamento rejeitado: ${data.errorMessage || 'Motivo desconhecido'}`);
-          setStatus('rejeitado');
+    let pollInterval: NodeJS.Timeout;
+    
+    if (modalUrl) {
+      addLog('Monitorando status do pagamento...');
+      pollInterval = setInterval(async () => {
+        // Poll for payment status from backend
+        try {
+          const response = await fetch('/api/payment-status', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.status === 'approved') {
+              addLog('✅ Pagamento aprovado!');
+              setStatus('aprovado');
+              setTimeout(() => {
+                setModalUrl(null);
+                window.location.href = '/checkout/success';
+              }, 2000);
+              clearInterval(pollInterval);
+            }
+          }
+        } catch (err) {
+          console.error('Error polling payment status:', err);
         }
-      });
+      }, 3000);
     }
+    
     return () => {
-      if (socketRef.current) socketRef.current.disconnect();
+      if (pollInterval) clearInterval(pollInterval);
     };
-  }, []);
+  }, [modalUrl]);
 
   const handlePagar = async () => {
     setLoading(true);

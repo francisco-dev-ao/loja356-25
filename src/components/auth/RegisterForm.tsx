@@ -1,202 +1,105 @@
-
 import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/hooks/use-auth';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
-import { NifInput } from '../register/NifInput';
-import { PhoneInput } from '../register/PhoneInput';
-import { PasswordInput } from '../register/PasswordInput';
-import { supabase } from '@/integrations/supabase/client';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/hooks/use-auth';
+
+const registerSchema = z.object({
+  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  email: z.string().email('Email inválido'),
+  password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
+});
+
+type RegisterFormData = z.infer<typeof registerSchema>;
 
 interface RegisterFormProps {
-  redirectAfter?: boolean;
+  onSuccess?: () => void;
 }
 
-const RegisterForm = ({ redirectAfter = true }: RegisterFormProps) => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { register, isLoading } = useAuth();
-  const [nif, setNif] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [companyName, setCompanyName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
-  const [nifError, setNifError] = useState('');
+export default function RegisterForm({ onSuccess }: RegisterFormProps) {
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isNomeFiscalBloqueado, setIsNomeFiscalBloqueado] = useState(false);
-  const [isAutoFilledPhone, setIsAutoFilledPhone] = useState(false);
-  const [isAutoFilledAddress, setIsAutoFilledAddress] = useState(false);
-  const isCartPage = location.pathname === '/carrinho';
+  const { register: registerUser } = useAuth();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const { register, handleSubmit, formState: { errors } } = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
+  });
+
+  const onSubmit = async (data: RegisterFormData) => {
+    setIsLoading(true);
     setError(null);
-    
-    // Validate phone
-    const phoneRegex = /^9\d{8}$/;
-    if (!phoneRegex.test(phone)) {
-      setError('Número de telefone inválido. Deve ter 9 dígitos e começar com 9.');
-      return;
-    }
-    
-    // Validate NIF/BI
-    if (!nif) {
-      setNifError('O NIF/BI é obrigatório para criar uma conta.');
-      return;
-    }
-    
+
     try {
-      // Register with auth
-      await register(companyName, email, password);
-      
-      // Get the user ID from the newly created account
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        // Update profile with additional information
-        const { error: profileError } = await supabase
-          .from('profiles')          .update({
-            name: companyName,
-            nif: nif,
-            phone: phone,
-            address: address,
-            role: 'customer'
-          })
-          .eq('id', user.id);
-        
-        if (profileError) throw profileError;
-        
-        // Only redirect if redirectAfter is true AND we're not on the cart page
-        if (redirectAfter && !isCartPage) {
-          navigate('/cliente/dashboard');
-        }
-      }
+      await registerUser(data.name, data.email, data.password);
+      onSuccess?.();
     } catch (err: any) {
-      console.error('Registration error:', err);
-      setError(err.message || 'Ocorreu um erro ao criar a conta. Por favor, tente novamente.');
+      setError(err.message || 'Erro ao criar conta');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <div className="space-y-4">
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        
-        {/* NIF/BI Field */}
-        <NifInput 
-          nif={nif}
-          setNif={(v) => {
-            setNif(v);
-            if (!v) {
-              // Limpar todos os dados quando NIF é apagado
-              setCompanyName('');
-              setAddress('');
-              setPhone('');
-              setIsNomeFiscalBloqueado(false);
-              setIsAutoFilledPhone(false);
-              setIsAutoFilledAddress(false);
-            }
-          }}
-          setCompanyName={(v) => {
-            setCompanyName(v);
-            setIsNomeFiscalBloqueado(true);
-          }}
-          setAddress={(v) => { setAddress(v); setIsAutoFilledAddress(true); }}
-          setPhone={(v) => { setPhone(v); setIsAutoFilledPhone(true); }}
-          setNifError={setNifError}
-          nifError={nifError}
-        />
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Email Field */}
-          <div className="space-y-2">
+    <Card>
+      <CardHeader>
+        <CardTitle>Criar Conta</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          
+          <div>
+            <Label htmlFor="name">Nome</Label>
+            <Input
+              id="name"
+              {...register('name')}
+              placeholder="Seu nome completo"
+            />
+            {errors.name && (
+              <p className="text-sm text-red-600 mt-1">{errors.name.message}</p>
+            )}
+          </div>
+
+          <div>
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="nome@exemplo.com"
-              required
+              {...register('email')}
+              placeholder="seu@email.com"
             />
+            {errors.email && (
+              <p className="text-sm text-red-600 mt-1">{errors.email.message}</p>
+            )}
           </div>
-          
-          {/* Password Field */}
-          <PasswordInput
-            password={password}
-            setPassword={setPassword}
-          />
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Company Name Field */}
-          <div className="space-y-2">
-            <Label htmlFor="companyName">Nome Fiscal</Label>
-            <Input
-              id="companyName"
-              type="text"
-              value={companyName}
-              onChange={(e) => {
-                // Nome Fiscal nunca pode ser editado manualmente
-                // Apenas preenchimento automático via NIF
-              }}
-              placeholder="Nome Fiscal (preenchido automaticamente)"
-              className="bg-gray-100 cursor-not-allowed border-dashed border-microsoft-blue/40"
-              readOnly={true}
-              required
-            />
-          </div>
-          
-          {/* Phone Field */}
-          <PhoneInput
-            phone={phone}
-            setPhone={setPhone}
-            isAutoFilled={false}
-          />
-        </div>
-        
-        {/* Address Field */}
-        <div className="space-y-2">
-          <Label htmlFor="address">Endereço</Label>
-          <Input
-            id="address"
-            type="text"
-            value={address}
-            onChange={(e) => { setAddress(e.target.value); setIsAutoFilledAddress(false); }}
-            placeholder="Endereço (preenchido automaticamente)"
-            className="bg-gray-100 cursor-not-allowed border-dashed border-microsoft-blue/40"
-            readOnly={true}
-            required
-          />
-        </div>
-        
-        <Button 
-          type="submit" 
-          className="w-full bg-microsoft-blue hover:bg-microsoft-blue/90 mt-6"
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <span className="flex items-center">
-              <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-              Criando conta...
-            </span>
-          ) : (
-            "Criar nova conta"
-          )}
-        </Button>
-      </div>
-    </form>
-  );
-};
 
-export default RegisterForm;
+          <div>
+            <Label htmlFor="password">Senha</Label>
+            <Input
+              id="password"
+              type="password"
+              {...register('password')}
+              placeholder="••••••••"
+            />
+            {errors.password && (
+              <p className="text-sm text-red-600 mt-1">{errors.password.message}</p>
+            )}
+          </div>
+
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? 'Criando conta...' : 'Criar Conta'}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
