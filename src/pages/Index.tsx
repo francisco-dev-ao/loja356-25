@@ -8,7 +8,7 @@ import { useProducts } from '@/hooks/use-products';
 import { Loader } from 'lucide-react';
 
 const Index = () => {
-  const { data: products, isLoading } = useProducts();
+  const { products, isLoading } = useProducts();
   // Get featured products (first 3 active products)
   const featuredProducts = products?.filter(p => p.active).slice(0, 3) || [];
   

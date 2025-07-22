@@ -12,7 +12,7 @@ import { formatPrice } from '@/lib/formatters';
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: product, isLoading, error } = useProduct(id || '');
+  const { product, isLoading, error } = useProduct(id || '');
   const [quantity, setQuantity] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const { addItem } = useCart();

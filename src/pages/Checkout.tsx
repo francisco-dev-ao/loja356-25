@@ -150,17 +150,7 @@ const Checkout = () => {
                             {isProcessing ? 'Criando pedido...' : 'Finalizar Pedido'}
                           </Button>
                         ) : (
-                          <MulticaixaRefPayment
-                            amount={finalTotal}
-                            description={generateOrderDescription()}
-                            orderId={orderId}
-                            onSuccess={async (referenceData) => {
-                              await sendOrderConfirmationWithReference(orderId, referenceData);
-                              navigate(`/checkout/success?orderId=${orderId}`);
-                              clearCart();
-                            }}
-                            onError={(err) => toast.error(`Erro no pagamento: ${err}`)}
-                          />
+                          <MulticaixaRefPayment />
                         )}
                       </>
                     )}
