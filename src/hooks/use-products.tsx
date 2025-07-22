@@ -1,60 +1,89 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import { apiClient } from '@/lib/api-client';
-import { useState } from 'react';
+import { toast } from 'sonner';
 
 export const useProducts = () => {
-  const { data: products, isLoading, error } = useQuery({
-    queryKey: ['products'],
-    queryFn: async () => {
-      const response = await apiClient.getProducts();
-      return response.data || [];
-    },
-  });
+  const [products, setProducts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
-  return {
-    products: products || [],
-    isLoading,
-    error,
+  const loadProducts = async () => {
+    setIsLoading(true);
+    try {
+      const response = await apiClient.getProducts();
+      setProducts((response.data as any[]) || []);
+    } catch (err: any) {
+      setError(err);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  return { products, isLoading, error };
 };
 
 export const useProduct = (productId?: string) => {
-  const { data: product, isLoading, error } = useQuery({
-    queryKey: ['product', productId],
-    queryFn: async () => {
-      if (!productId) return null;
-      const response = await apiClient.getProduct(productId);
-      return response.data;
-    },
-    enabled: !!productId,
-  });
+  const [product, setProduct] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
-  return {
-    product,
-    isLoading,
-    error,
+  const loadProduct = async () => {
+    if (!productId) return;
+    setIsLoading(true);
+    try {
+      const response = await apiClient.getProduct(productId);
+      setProduct(response.data);
+    } catch (err: any) {
+      setError(err);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  useEffect(() => {
+    loadProduct();
+  }, [productId]);
+
+  return { product, isLoading, error };
 };
 
 export const useProductSearch = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const { data: searchResults, isLoading } = useQuery({
-    queryKey: ['productSearch', searchTerm],
-    queryFn: async () => {
-      if (!searchTerm.trim()) return [];
+  const search = async () => {
+    if (!searchTerm.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
       const response = await apiClient.getProducts();
-      const filtered = response.data?.filter((p: any) => 
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.description.toLowerCase().includes(searchTerm.toLowerCase())
+      const products = (response.data as any[]) || [];
+      const filtered = products.filter((p: any) => 
+        p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.description?.toLowerCase().includes(searchTerm.toLowerCase())
       );
-      return filtered || [];
-    },
-    enabled: searchTerm.trim().length > 0,
-  });
+      setSearchResults(filtered);
+    } catch (err) {
+      setSearchResults([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    search();
+  }, [searchTerm]);
 
   return {
-    searchResults: searchResults || [],
+    searchResults,
     isLoading,
     searchTerm,
     setSearchTerm,

@@ -19,6 +19,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 interface RegisterFormProps {
   onSuccess?: () => void;
+  redirectAfter?: boolean;
 }
 
 export default function RegisterForm({ onSuccess }: RegisterFormProps) {

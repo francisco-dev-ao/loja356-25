@@ -56,13 +56,13 @@ const Navbar = () => {
                       </Link>
                       
                       <ChangePasswordDialog 
-                        trigger={
-                          <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-microsoft-blue flex items-center">
-                            <Lock size={16} className="mr-2" />
-                            Alterar Senha
-                          </button>
-                        }
+                        open={false}
+                        onOpenChange={() => {}}
                       />
+                      <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-microsoft-blue flex items-center">
+                        <Lock size={16} className="mr-2" />
+                        Alterar Senha
+                      </button>
                       
                       <hr className="my-1" />
                       
@@ -121,13 +121,13 @@ const Navbar = () => {
                     </Link>
                     
                     <ChangePasswordDialog 
-                      trigger={
-                        <button className="w-full text-left py-2 hover:text-microsoft-blue transition-colors flex items-center">
-                          <Lock size={16} className="mr-2" />
-                          Alterar Senha
-                        </button>
-                      }
+                      open={false}
+                      onOpenChange={() => {}}
                     />
+                    <button className="w-full text-left py-2 hover:text-microsoft-blue transition-colors flex items-center">
+                      <Lock size={16} className="mr-2" />
+                      Alterar Senha
+                    </button>
                     
                     <button 
                       onClick={() => {

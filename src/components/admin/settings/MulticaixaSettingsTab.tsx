@@ -20,9 +20,8 @@ const MulticaixaSettingsTab = () => {
   
   const { 
     config, 
-    isLoading, 
-    saveConfig, 
-    isSaving 
+    loading, 
+    saveConfig
   } = useMulticaixaConfig();
 
   const handleSave = async () => {
@@ -36,7 +35,7 @@ const MulticaixaSettingsTab = () => {
 
   const handleSaveConfig = async () => {
     try {
-      await saveConfig();
+      await saveConfig(config);
       toast.success('Configurações avançadas do Multicaixa Express salvas com sucesso!');
     } catch (error: any) {
       toast.error('Erro ao salvar as configurações avançadas: ' + (error.message || 'Erro desconhecido'));
@@ -153,7 +152,7 @@ const MulticaixaSettingsTab = () => {
           Configurações avançadas para o Multicaixa Express
         </p>
 
-        {isLoading ? (
+        {loading ? (
           <div className="h-20 flex items-center justify-center">
             <div className="animate-spin h-6 w-6 border-2 border-microsoft-blue border-t-transparent rounded-full"></div>
           </div>
@@ -280,10 +279,10 @@ const MulticaixaSettingsTab = () => {
 
                 <Button 
                   onClick={handleSaveConfig}
-                  disabled={isSaving}
+                  disabled={loading}
                   className="w-full"
                 >
-                  {isSaving ? 'Salvando...' : 'Salvar Configurações Avançadas'}
+                  {loading ? 'Salvando...' : 'Salvar Configurações Avançadas'}
                 </Button>
               </div>
             </CardContent>

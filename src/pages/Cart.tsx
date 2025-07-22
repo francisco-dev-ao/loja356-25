@@ -7,7 +7,7 @@ import { Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Cart() {
-  const { items, updateQuantity, removeFromCart, getTotal } = useCart();
+  const { items, updateQuantity, removeItem, total, finalTotal } = useCart();
 
   if (items.length === 0) {
     return (
@@ -64,7 +64,7 @@ export default function Cart() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => removeFromCart(item.id)}
+                    onClick={() => removeItem(item.id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -82,11 +82,11 @@ export default function Cart() {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span>Subtotal:</span>
-                <span>{formatPrice(getTotal())}</span>
+                <span>{formatPrice(total)}</span>
               </div>
               <div className="flex justify-between font-semibold text-lg border-t pt-2">
                 <span>Total:</span>
-                <span>{formatPrice(getTotal())}</span>
+                <span>{formatPrice(finalTotal)}</span>
               </div>
             </div>
             <Button asChild className="w-full mt-6">

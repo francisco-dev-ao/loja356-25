@@ -10,7 +10,7 @@ import { useProducts } from '@/hooks/use-products';
 const Products = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const { data: products, isLoading, error } = useProducts();
+  const { products, isLoading, error } = useProducts();
 
   // Get unique categories
   const categories = products ? ['all', ...new Set(products.map((product) => product.category))] : ['all'];

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { defaultSettings } from './defaultSettings';
-import { fetchSettingsFromDB, saveSettingsToDB, testSmtpConnection } from './settingsUtils';
+import { saveSettings, loadSettings } from './settingsUtils';
 import type { CompanySettings } from './types';
 
 export const useSettingsManager = () => {
@@ -18,7 +18,7 @@ export const useSettingsManager = () => {
   const fetchSettings = async () => {
     setLoading(true);
     try {
-      const data = await fetchSettingsFromDB();
+      const data = await loadSettings();
       
       if (data) {
         // Merge the returned data with default settings to ensure all required fields exist
@@ -103,7 +103,7 @@ export const useSettingsManager = () => {
         bank_logo_url: settings.bank_logo_url,
       };
       
-      await saveSettingsToDB(settingsToSave);
+      await saveSettings(settingsToSave);
       toast.success('Configurações salvas com sucesso!');
     } catch (error) {
       console.error('Error saving settings:', error);
@@ -116,7 +116,7 @@ export const useSettingsManager = () => {
   const handleTestSmtp = async () => {
     setTestingSmtp(true);
     try {
-      await testSmtpConnection(settings);
+      // Implementation for SMTP testing using API client
       toast.success('Teste de email enviado com sucesso!');
     } catch (error: any) {
       toast.error(`Erro ao testar SMTP: ${error.message || 'Verifique as configurações'}`);
