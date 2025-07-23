@@ -9,7 +9,7 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { useState } from "react";
 import AdminRoute from "@/components/auth/AdminRoute";
 import CustomerRoute from "@/components/auth/CustomerRoute";
-import DatabaseConnection from "@/components/database/DatabaseConnection";
+import { DatabaseConnection } from "@/components/database/DatabaseConnection";
 import { db, DatabaseConfig } from "@/lib/database";
 
 // Pages
@@ -47,7 +47,7 @@ const AppWithProviders = () => {
   if (!dbConnected) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <DatabaseConnection onConfigChange={handleDatabaseConfig} />
+        <DatabaseConnection onConnect={() => setDbConnected(true)} />
       </div>
     );
   }
