@@ -9,6 +9,8 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { useState } from "react";
 import AdminRoute from "@/components/auth/AdminRoute";
 import CustomerRoute from "@/components/auth/CustomerRoute";
+import DatabaseConnection from "@/components/database/DatabaseConnection";
+import { db, DatabaseConfig } from "@/lib/database";
 
 // Pages
 import Index from "./pages/Index";
@@ -30,6 +32,25 @@ import NotFound from "./pages/NotFound";
 const AppWithProviders = () => {
   // Use useState to create the QueryClient instance
   const [queryClient] = useState(() => new QueryClient());
+  const [dbConnected, setDbConnected] = useState(false);
+
+  const handleDatabaseConfig = (config: DatabaseConfig | null) => {
+    if (config) {
+      db.setConfig(config);
+      setDbConnected(true);
+    } else {
+      setDbConnected(false);
+    }
+  };
+
+  // Show database connection screen if not connected
+  if (!dbConnected) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <DatabaseConnection onConfigChange={handleDatabaseConfig} />
+      </div>
+    );
+  }
   
   return (
     <QueryClientProvider client={queryClient}>
