@@ -32,7 +32,19 @@ import NotFound from "./pages/NotFound";
 const AppWithProviders = () => {
   // Use useState to create the QueryClient instance
   const [queryClient] = useState(() => new QueryClient());
-  const [dbConnected, setDbConnected] = useState(false);
+  const [dbConnected, setDbConnected] = useState(() => {
+    const saved = localStorage.getItem('db_config');
+    if (saved) {
+      try {
+        const config = JSON.parse(saved);
+        db.setConfig(config);
+        return true;
+      } catch (error) {
+        console.error('Error loading saved database config:', error);
+      }
+    }
+    return false;
+  });
 
   const handleDatabaseConfig = (config: DatabaseConfig | null) => {
     if (config) {
